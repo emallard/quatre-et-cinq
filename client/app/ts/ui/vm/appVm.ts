@@ -29,7 +29,7 @@ module qec
         
         init(container:HTMLElement)
         {
-            var simple = true;
+            var simple = false;
 
             this.simpleRenderer = new simpleRenderer();
             this.simpleRenderer.setContainerAndSize(container, 300, 300);
@@ -44,6 +44,7 @@ module qec
             var keyLight = new directionalLight();
             var fillLight = new directionalLight();
             var rimLight = new spotLight();
+            var spotKeyLight = new spotLight();
             
             keyLight.createFrom({
                 type: 'directionalLightDTO',
@@ -65,9 +66,16 @@ module qec
                 direction : [-1, -1, 0.1],
                 intensity : 0.2
             });
+
+            spotKeyLight.createFrom({
+                type: 'spotLightDTO',
+                position: [-1, -1, 5],
+                direction : [0,0,0],
+                intensity : 0.8
+            });
             
-            this.renderSettings.directionalLights.push(keyLight);//, fillLight);
-            //this.renderSettings.spotLights.push(rimLight);
+            //this.renderSettings.directionalLights.push(keyLight);//, fillLight);
+            this.renderSettings.spotLights.push(spotKeyLight, rimLight);
                
             this.sdGround = new sdBox();
             this.sdGround.getMaterial(null).setDiffuse(0.8,0.8,0.8);

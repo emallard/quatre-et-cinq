@@ -9,6 +9,7 @@ module qec {
         {
             var run = new runAll();
             run.push((_done) => resources.doReq('app/sd.glsl', _done));
+            run.push((_done) => resources.doReq('app/light.glsl', _done));
             run.push((_done) => resources.doReq('app/renderPixel.glsl', _done));
             run.run(() => {resources.loaded = true; done();});
         }

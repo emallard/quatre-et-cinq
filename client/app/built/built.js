@@ -1348,7 +1348,6 @@ var qec;
     var hardwareRenderer = (function () {
         function hardwareRenderer() {
             this.fragmentShader = '';
-            this.shadows = false;
             this.fakePos = vec3.create();
             this.inverseTransform = mat4.create();
         }
@@ -1384,6 +1383,7 @@ var qec;
             this.fragmentShader = ''
                 + qec.resources.all['app/sd.glsl']
                 + generatedPart
+                + qec.resources.all['app/light.glsl']
                 + qec.resources.all['app/renderPixel.glsl'];
             this.gViewQuad.material.fragmentShader = this.fragmentShader;
             this.gViewQuad.material.needsUpdate = true;
@@ -1440,7 +1440,7 @@ var qec;
             this.gShaderMaterial.uniforms.u_inversePMatrix = { type: "Matrix4fv", value: camera.inversePMatrix },
                 this.gShaderMaterial.uniforms.u_inverseTransformMatrix = { type: "Matrix4fv", value: camera.inverseTransformMatrix },
                 this.gShaderMaterial.uniforms.u_lightP = { type: "3f", value: light.position };
-            this.gShaderMaterial.uniforms.u_shadows = { type: "1i", value: this.shadows ? 1 : 0 };
+            this.gShaderMaterial.uniforms.u_shadows = { type: "1i", value: settings.shadows ? 1 : 0 };
             this.gRenderer.render(this.gScene, this.gCamera);
         };
         hardwareRenderer.prototype.initTHREE = function () {
@@ -3576,6 +3576,7 @@ var qec;
         resources.loadAll = function (done) {
             var run = new qec.runAll();
             run.push(function (_done) { return resources.doReq('app/sd.glsl', _done); });
+            run.push(function (_done) { return resources.doReq('app/light.glsl', _done); });
             run.push(function (_done) { return resources.doReq('app/renderPixel.glsl', _done); });
             run.run(function () { resources.loaded = true; done(); });
         };
@@ -4918,7 +4919,7 @@ var qec;
             this.indexObject = 0;
         }
         appVm.prototype.init = function (container) {
-            var simple = true;
+            var simple = false;
             this.simpleRenderer = new qec.simpleRenderer();
             this.simpleRenderer.setContainerAndSize(container, 300, 300);
             this.simpleRenderer.canvas.style.display = 'none';
@@ -4929,6 +4930,7 @@ var qec;
             var keyLight = new qec.directionalLight();
             var fillLight = new qec.directionalLight();
             var rimLight = new qec.spotLight();
+            var spotKeyLight = new qec.spotLight();
             keyLight.createFrom({
                 type: 'directionalLightDTO',
                 position: [-2, -2, 0],
@@ -4947,8 +4949,14 @@ var qec;
                 direction: [-1, -1, 0.1],
                 intensity: 0.2
             });
-            this.renderSettings.directionalLights.push(keyLight); //, fillLight);
-            //this.renderSettings.spotLights.push(rimLight);
+            spotKeyLight.createFrom({
+                type: 'spotLightDTO',
+                position: [-1, -1, 5],
+                direction: [0, 0, 0],
+                intensity: 0.8
+            });
+            //this.renderSettings.directionalLights.push(keyLight);//, fillLight);
+            this.renderSettings.spotLights.push(spotKeyLight, rimLight);
             this.sdGround = new qec.sdBox();
             this.sdGround.getMaterial(null).setDiffuse(0.8, 0.8, 0.8);
             this.sdGround.setHalfSize(2, 2, 0.01);

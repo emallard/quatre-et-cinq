@@ -16,7 +16,6 @@ module qec {
         gCamera:any;
         
         fragmentShader = '';
-        shadows  = false;
 
         expl:hardwareSignedDistanceExplorer;
         text:hardwareShaderText;
@@ -70,6 +69,7 @@ module qec {
             this.fragmentShader = ''
                 + resources.all['app/sd.glsl']
                 + generatedPart
+                + resources.all['app/light.glsl']
                 + resources.all['app/renderPixel.glsl'];
             
             this.gViewQuad.material.fragmentShader = this.fragmentShader;
@@ -142,7 +142,7 @@ module qec {
             alert('not supported');
         }
 
-        render(settings:renderSettings)//sd:signedDistance, light:pointLight, camera:camera)
+        render(settings:renderSettings)
         {
             var camera = settings.camera;
             var sd = settings.sd;
@@ -152,7 +152,7 @@ module qec {
             this.gShaderMaterial.uniforms.u_inversePMatrix = { type: "Matrix4fv", value: camera.inversePMatrix} ,
             this.gShaderMaterial.uniforms.u_inverseTransformMatrix = { type: "Matrix4fv", value: camera.inverseTransformMatrix},
             this.gShaderMaterial.uniforms.u_lightP = { type: "3f", value: light.position}
-            this.gShaderMaterial.uniforms.u_shadows = { type: "1i", value: this.shadows?1:0}
+            this.gShaderMaterial.uniforms.u_shadows = { type: "1i", value: settings.shadows?1:0}
                         
             this.gRenderer.render(this.gScene, this.gCamera);
         }

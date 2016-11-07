@@ -49,33 +49,6 @@ vec3 getNormal(in vec3 pos) {
   return normalize(nor);
 }
 
-#define SS_K  15.0
-#define SS_EPS 0.005
-#define SS_MAX_STEPS 64
-float getShadow (in vec3 pos, in vec3 toLight) {
-  float shadow = 1.0;
-  float lightDist = distance(u_lightP,pos);
-
-  float t = SS_EPS;
-  float dt;
-
-  for(int i=0; i<SS_MAX_STEPS; ++i)
-  {
-    dt = getDist(pos+(toLight*t));
-    
-    if(dt < EPS_INTERSECT)    // stop if intersect object
-      return 0.0;
-
-    shadow = min(shadow, SS_K*(dt/t));
-    
-    t += dt;
-    
-    if(t > lightDist)   // stop if reach light
-      break;
-  }
-  
-  return clamp(shadow, 0.0, 1.0);
-}
 
 vec3 rayMarch (in vec3 ro, in vec3 rd) {
   
@@ -84,22 +57,18 @@ vec3 rayMarch (in vec3 ro, in vec3 rd) {
     if (t>0.0) {      
         
         vec3 pos = ro + rd*t;
-        vec3 nor = getNormal(pos-rd*EPS_NORMAL_1);
+        vec3 normal = getNormal(pos-rd*EPS_NORMAL_1);
         
-        // diffuse lighting
-        
-        vec3 toLight = normalize(u_lightP-pos);
-        float _dot = max(dot(toLight,nor),0.0);
         vec3 col = getColor(pos);
-        col = KA*col + KD*_dot;
-
+        col = applyLight(u_lightP, u_shadows, col, pos, normal, rd);
+          /*
         // shadow
         if (u_shadows == 1)
         {
           float shadow = getShadow(pos, toLight);
           if (shadow == 0.0)
             col *= 0.5;// shadow;
-        }
+        }*/
 
         return col;
         //return vec3(1);
