@@ -1,0 +1,107 @@
+
+.hide {
+	display:none;
+}
+
+.screen {
+	position:absolute;
+	left:5px;
+	right:5px;
+	top:5px;
+	bottom:5px;
+}
+
+.screenContent {
+	position:relative;
+	left:0px;
+	top:0px;
+}
+
+
+.toolbar
+{
+	border: solid 1px black;
+	position:absolute;
+	top:0px;
+	left:0px;
+}
+
+.selectedTool
+{
+	border: solid 1px black;
+	position:absolute;
+	top:50px;
+	left:0px;
+}
+
+.renderPanel
+{
+	position:absolute;
+	top:50px;
+	left:400px;
+}
+
+
+.materialView
+{
+	vertical-align: top;
+}
+
+.profileView
+{
+	border:black solid 1px;
+}
+
+.dropZone
+{
+	border: 2px dashed #bbb;
+	border-radius: 5px;
+	padding: 25px;
+	text-align: center;
+	font: 20pt bold 'Vollkorn';
+	color: #bbb;
+}
+.paper
+{
+	width:100%;
+	height:100%;
+	position: relative;
+	padding: 10px;
+	margin: 0 auto;
+	background-color: #fff;
+	-webkit-box-shadow: 0 0 4px rgba(0, 0, 0, 0.2), inset 0 0 0px rgba(0, 0, 0, 0.1);
+	-moz-box-shadow: 0 0 4px rgba(0, 0, 0, 0.2), inset 0 0 0px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 0 5px rgba(0, 0, 0, 0.2), inset 0 0 0px rgba(0, 0, 0, 0.1);
+}
+
+
+.paper:before
+{
+	position: absolute;
+	width: 40%;
+	height: 10px;
+	content: ' ';
+	left: 12px;
+	bottom: 12px;
+	background: transparent;
+	-webkit-transform: skew(-5deg) rotate(-5deg);
+	-moz-transform: skew(-5deg) rotate(-5deg);
+	-ms-transform: skew(-5deg) rotate(-5deg);
+	-o-transform: skew(-5deg) rotate(-5deg);
+	transform: skew(-5deg) rotate(-5deg);
+	-webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+	-moz-box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+	z-index: -1;
+} 
+
+.paper:after
+{
+	left: auto;
+	right: 12px;
+	-webkit-transform: skew(5deg) rotate(5deg);
+	-moz-transform: skew(5deg) rotate(5deg);
+	-ms-transform: skew(5deg) rotate(5deg);
+	-o-transform: skew(5deg) rotate(5deg);
+	transform: skew(5deg) rotate(5deg);
+}

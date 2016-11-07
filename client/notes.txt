@@ -1,0 +1,20 @@
+
+http://nicewebtype.com/notes/2009/10/30/how-to-use-css-font-face/
+
+http://nicewebtype.com/notes/2009/10/20/where-to-get-web-fonts/
+
+https://www.theleagueofmoveabletype.com/blackout
+
+
+// buttons
+http://livetools.uiparade.com/index.html
+
+// paper
+https://www.sitepoint.com/pure-css3-paper-curls/
+
+// accordion, buttons
+http://designmodo.com/accordion-css3/
+
+// borders and shadows
+https://designshack.net/articles/css/4-fun-css-image-effects-you-can-copy-and-paste/
+

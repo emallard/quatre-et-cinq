@@ -1,0 +1,166 @@
+<html>
+
+<head>
+    <title>4et5 - application</title>
+
+    <script src="libs/three.js"></script>
+    <script src="libs/jquery.3.1.1.min.js"></script>
+    <script src="libs/bootstrap/bootstrap.min.js"></script>
+
+    <script src="libs/gl-matrix.js"></script>
+    <script src="libs/spectrum.js"></script>
+    <script src="app/built/built.js"></script>
+    <link rel="stylesheet" href="app.css">
+    <link rel="stylesheet" href="libs/spectrum.css">
+    <link rel="stylesheet" href="libs/bootstrap/bootstrap.css">
+</head>
+
+
+<body>
+    <div class='screen'>
+        <div class="toolbar">
+            Onglets: 
+            <button class='btnUpdate hide'>Update</button>
+            <button class='btnSelect hide'>Selectionner</button>
+            <button class='btnCamera hide'>Camera</button>
+            
+            <button class='btnToolImport'>Import</button>
+            <button class='btnToolModify'>Modify</button>
+            <button class='btnToolEnvironment'>Environment</button>
+            <button class='btnToolPhoto'>Share</button> 
+        </div>
+
+        <div class="selectedTool">
+            <div class='modifyTool'>
+
+                <button class="btnMoveVertically">Move Vertically</button><br/>
+                <button class="btnScaleVertically">Scale Vertically</button><br/>
+                <br/>
+
+                <div class="profileView"></div>
+                <button class="btnProfileLines">Lines</button><br/>
+                <button class="btnProfileSmooth">Curves</button><br/>
+                
+
+                <div class='materialView'>
+                    <input class="flatColorPicker" value="#B6BD79" />
+                </div>
+            </div>
+            
+            <div class="importTool">
+                 Select an SVG file
+                 <br/>
+                 <input class="btnImport" type="file" name="importFile">
+                 <br/>Or Drop below :
+                 <div class="dropZone">
+                     Drop Zone
+                 </div>
+                 <br/>
+                 Imported Image:
+                 <div class="divImportedImage">
+                     <img style="max-width:200px;max-height:200px" class='imgImportedImage'>
+                 </div>
+            </div>
+
+
+            <div class="environmentTool">
+                <button class='btnShadows'>Shadows</button><br/>
+                <button class='btnLight1'>Light1</button><br/>
+                <button class='btnLight2'>Light2</button><br/>
+                <button class='btnGroundOrientation'>Ground Orientation</button><br/>
+                <button class='btnBoundingBox'>BoundingBox</button><br/>
+                <button class='btnSoftwareRenderer'>Hardware/Software Renderer</button><br/>
+            </div>
+
+            <div class="photoTool">
+                <button class='btnPhoto'>Photo</button>
+            </div>        
+
+        </div>
+        
+        <div class='renderPanel'>
+            <div class="paper">
+                <div class='renderContainer'></div>
+            </div>
+            <div class="debug">
+            </div>
+        </div>
+        
+            
+            <div class='tools'>
+                <!--Nouveau / Selection / Hauteur-Epaisseur / Deplacement / Rotation
+                -->
+                
+            </div>
+
+<!--
+            Toolbar : Objets / Environnement / Share(Photo)
+
+            <div class='environnement'>
+                Sol Vert / Sol Horiz / Couleur du sol (Cube map d'environnement')
+                Lumiere (disque vue de dessus pour la direction + slider lumière rasante)
+                (Interaction Vue 3D (Deplacement plat sur une grille, grille qui monte ou descend))
+            </div>
+
+            <div class='share'>
+                Prendre une photo / url de partage
+                Prendre une video ?
+            </div>
+-->
+    </div>
+
+    
+<!--
+    <div class="flyout">
+        <span id="tip"></span>
+        <h2>Bienvenue</h2>
+        <p>
+            Ceci est une zone de dessin.
+            Vous pouvez charger une image de votre répertoire 
+        </p>
+    </div>
+-->
+
+    <!-- Modal -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="myModalLabel">Bienvenue</h4>
+            </div>
+            <div class="modal-body">
+                <div>
+                Pour commencer, choisissez un fichier : <input class="btnImport2" type="file" name="importFile">
+                Ou déposez-le 
+                </div>
+                <div>
+                    Ou choisissez parmi un des exemple.<br/>
+                    <div style="display:inline-block" >
+                        <img src="data/cartoon-owl.svg" style="height:100px">
+                    </div>
+                    <div style="display:inline-block">
+                        <img src="data/hearts.svg" style="height:100px">
+                    </div>
+                    <div style="display:inline-block">
+                        <img src="data/dinosaur.svg" style="height:100px">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        qec.resources.loadAll(onResourceLoaded);
+        var view = new qec.appView();
+        function onResourceLoaded()
+        {
+            view.init();
+        }
+        //$('#myModal').modal();
+    </script>
+
+</body>
+
+</html>

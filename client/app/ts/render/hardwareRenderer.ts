@@ -1,0 +1,209 @@
+declare var THREE;
+
+module qec {
+
+
+    export class hardwareRenderer implements irenderer
+    {
+        container:HTMLElement;
+        width:number;
+        height:number;
+
+        gRenderer:any;
+        gViewQuad:any;
+        gShaderMaterial:any;
+        gScene:any;
+        gCamera:any;
+        
+        fragmentShader = '';
+        shadows  = false;
+
+        expl:hardwareSignedDistanceExplorer;
+        text:hardwareShaderText;
+
+        setFragmentShader(text:string)
+        {
+            this.fragmentShader = text;
+            //console.log(text);
+        }
+
+        setContainerAndSize(container:HTMLElement, rWidth:number, rHeight:number)
+        {
+            this.container = container;
+            this.width = rWidth;
+            this.height = rHeight;
+
+            this.initTHREE();
+
+            this.expl = new hardwareSignedDistanceExplorer();
+            this.text = new hardwareShaderText();
+            this.text.expl = this.expl;
+
+            this.gShaderMaterial.uniforms.u_inverseTransforms = { type: "m4v", value: []};
+            this.gShaderMaterial.uniforms.u_diffuses = { type: "3fv", value: []};
+
+            this.gShaderMaterial.uniforms.u_topTextures = { type: "tv", value: []};
+            this.gShaderMaterial.uniforms.u_profileTextures = { type: "tv", value: []};
+            this.gShaderMaterial.uniforms.u_topBounds = { type: "4fv", value: []};
+            this.gShaderMaterial.uniforms.u_profileBounds = { type: "'fv", value: []};
+        }
+
+        getCanvas():HTMLCanvasElement
+        {
+            return this.gRenderer.domElement;
+        }
+
+        showBoundingBox(b:boolean)
+        {
+
+        }
+
+        updateShader(sd:signedDistance)
+        {
+            console.log('hardwareRenderer.updateShader');
+            
+            this.expl.explore(sd);
+            var generatedPart = 
+                  this.text.generateDistance()
+                + this.text.generateColor();
+            
+            this.fragmentShader = ''
+                + resources.all['app/sd.glsl']
+                + generatedPart
+                + resources.all['app/renderPixel.glsl'];
+            
+            this.gViewQuad.material.fragmentShader = this.fragmentShader;
+            this.gViewQuad.material.needsUpdate = true;
+
+            this.updateAllUniformsForAll();
+        }
+
+        updateAllUniformsForAll()
+        {
+            for (var i=0; i < this.expl.array.length; ++i)
+                this.updateAllUniforms(this.expl.array[i].sd);
+        }
+
+        updateAllUniforms(sd: signedDistance)
+        {
+            this.updateDiffuse(sd);
+            this.updateTransform(sd);
+            if (sd instanceof sdFields)
+                this.updateFloatTextures(sd);
+        }
+
+        fakePos = vec3.create();
+        inverseTransform = mat4.create();
+        updateDiffuse(sd: signedDistance)
+        {
+            var hsd = this.expl.getHsd(sd);
+            var diffuse = sd.getMaterial(this.fakePos).diffuse;
+            if (this.gShaderMaterial.uniforms.u_diffuses.value[hsd.index] == null)
+                this.gShaderMaterial.uniforms.u_diffuses.value[hsd.index] = new THREE.Vector3();
+            
+            this.gShaderMaterial.uniforms.u_diffuses.value[hsd.index].fromArray(diffuse);
+        }
+
+        updateTransform(sd: signedDistance)
+        {
+            var hsd = this.expl.getHsd(sd);
+            sd.getInverseTransform(this.inverseTransform);
+
+            if (this.gShaderMaterial.uniforms.u_inverseTransforms.value[hsd.index] == null)
+                this.gShaderMaterial.uniforms.u_inverseTransforms.value[hsd.index] = new THREE.Matrix4();
+
+            var m = this.gShaderMaterial.uniforms.u_inverseTransforms.value[hsd.index];
+            m.fromArray(this.inverseTransform);
+        }
+
+        updateFloatTextures(sd: sdFields)
+        {
+            var hsd = this.expl.getHsd(sd);
+            
+            var topDataTexture = new THREE.DataTexture( sd.topTexture.data, sd.topTexture.width, sd.topTexture.height, THREE.RGBAFormat, THREE.FloatType);
+            topDataTexture.needsUpdate = true;
+            var profileDataTexture = new THREE.DataTexture( sd.profileTexture.data, sd.profileTexture.width, sd.profileTexture.height, THREE.RGBAFormat, THREE.FloatType);
+            profileDataTexture.needsUpdate = true;   
+            
+            var topBounds = new THREE.Vector4();
+            topBounds.fromArray(sd.topBounds);
+
+            var profileBounds = new THREE.Vector4();
+            profileBounds.fromArray(sd.profileBounds);
+
+            this.gShaderMaterial.uniforms.u_topTextures.value[hsd.sdFieldIndex] = topDataTexture;
+            this.gShaderMaterial.uniforms.u_profileTextures.value[hsd.sdFieldIndex] = profileDataTexture;
+            this.gShaderMaterial.uniforms.u_topBounds.value[hsd.sdFieldIndex] = topBounds;
+            this.gShaderMaterial.uniforms.u_profileBounds.value[hsd.sdFieldIndex] = profileBounds;
+        }
+
+        renderDebug(x:number, y:number, settings:renderSettings)
+        {
+            alert('not supported');
+        }
+
+        render(settings:renderSettings)//sd:signedDistance, light:pointLight, camera:camera)
+        {
+            var camera = settings.camera;
+            var sd = settings.sd;
+            var light = settings.spotLights[0];
+            camera.rendererInit(this.width, this.height);               
+
+            this.gShaderMaterial.uniforms.u_inversePMatrix = { type: "Matrix4fv", value: camera.inversePMatrix} ,
+            this.gShaderMaterial.uniforms.u_inverseTransformMatrix = { type: "Matrix4fv", value: camera.inverseTransformMatrix},
+            this.gShaderMaterial.uniforms.u_lightP = { type: "3f", value: light.position}
+            this.gShaderMaterial.uniforms.u_shadows = { type: "1i", value: this.shadows?1:0}
+                        
+            this.gRenderer.render(this.gScene, this.gCamera);
+        }
+
+
+        initTHREE() {
+            // setup WebGL renderer
+            this.gRenderer = new THREE.WebGLRenderer(
+                {preserveDrawingBuffer: true}
+            );
+            this.gRenderer.setSize(this.width, this.height);
+            //gRenderer.setClearColorHex(0x000000, 1);
+            
+            this.gRenderer.setClearColor(0xffffff, 1);
+            this.gRenderer.setPixelRatio( window.devicePixelRatio );
+            //gRenderer.autoClear = false;
+
+            this.container.appendChild(this.gRenderer.domElement);
+    
+            // camera to render, orthogonal (fov=0)
+            this.gCamera = new THREE.OrthographicCamera(-.5, .5, .5, -.5, -1, 1);
+            
+            // scene for rendering
+            this.gScene = new THREE.Scene();
+            this.gScene.add(this.gCamera);
+  
+            // compile shader
+            var vertexShader = 
+            'varying vec2 vUv;'+ 
+            'void main() {vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);}' ;
+
+            var fragmentShader =
+            'varying vec2 vUv;'+ 
+            'void main() {gl_FragColor = vec4(vUv[0], vUv[1], 0 , 1);}' ;
+
+            if (this.fragmentShader) fragmentShader = this.fragmentShader;
+
+            this.gShaderMaterial = new THREE.ShaderMaterial({
+                vertexShader:   vertexShader,
+                fragmentShader: fragmentShader,
+                needsUpdate: true
+            });
+
+            // setup plane in scene for rendering
+            this.gViewQuad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 0), this.gShaderMaterial);
+            var node = new THREE.Object3D();
+            node.add(this.gViewQuad);
+            this.gScene.add(node);
+            
+            //this.recompileShader();
+        }
+    }
+
+}

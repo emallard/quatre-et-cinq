@@ -1,0 +1,11 @@
+https://code.visualstudio.com/docs/runtimes/nodejs
+
+npm install -g typings
+typings install dt~node --global --save
+typings install dt~express dt~serve-static dt~express-serve-static-core --global --save
+typings install dt~serve-favicon dt~morgan dt~body-parser dt~cookie-parser dt~mime dt~debug --global --save
+
+
+https://github.com/jonatan-alama/typescript_base_express/blob/master/app.ts
+
+http://mongodb.github.io/node-mongodb-native/2.2/quick-start/
