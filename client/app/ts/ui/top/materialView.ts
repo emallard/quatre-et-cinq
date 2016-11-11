@@ -2,14 +2,9 @@ module qec {
 
     export class materialView {
 
-        vm:appVm;
+        editor:editor = inject(qec.editor);
         selectedIndex = -1;
         spectrumElt:any;
-        
-        setVm(vm:appVm)
-        {
-            this.vm = vm;
-        }
         
 
         setElement(elt:HTMLElement)
@@ -31,7 +26,7 @@ module qec {
             this.selectedIndex = i;
             if (i >= 0)
             {
-                var m = this.vm.layers[this.selectedIndex].sd.getMaterial(fakePos);
+                var m = this.editor.editorObjects[this.selectedIndex].sd.getMaterial(fakePos);
                 this.spectrumElt.spectrum("set", "rgb("+
                     m.diffuse[0]*255+","+
                     m.diffuse[1]*255+","+
@@ -46,8 +41,8 @@ module qec {
 
             if (this.selectedIndex >= 0)
             {
-                this.vm.setDiffuse(this.selectedIndex, color._r/255, color._g/255, color._b/255)
-                this.vm.setRenderFlag();
+                this.editor.setDiffuse(this.selectedIndex, color._r/255, color._g/255, color._b/255)
+                this.editor.setRenderFlag();
             }
         }
 

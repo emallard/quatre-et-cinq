@@ -1,9 +1,6 @@
 module qec
 {
-  
-  
-
-    export class appVm
+    export class editor
     {
         //renderer = new hardwareRenderer();
         renderer:irenderer;
@@ -18,7 +15,7 @@ module qec
         sdUnion = new sdUnion();
         sdGround = new sdBox();
 
-        layers:layerVm2[] = [];
+        editorObjects:editorObject[] = [];
         selectedIndex = -1;
 
         helper = new svgHelper();
@@ -27,16 +24,23 @@ module qec
         renderFlag = false;
         updateFlag = false;
         
-        init(container:HTMLElement)
+        
+        container = ko.observable<HTMLElement>();
+        constructor()
+        {
+            this.container.subscribe(()=>this.init(this.container()))
+        }
+
+        init(containerElt:HTMLElement)
         {
             var simple = false;
 
             this.simpleRenderer = new simpleRenderer();
-            this.simpleRenderer.setContainerAndSize(container, 300, 300);
+            this.simpleRenderer.setContainerAndSize(containerElt, 300, 300);
             this.simpleRenderer.canvas.style.display = 'none';
         
             this.hardwareRenderer = new hardwareRenderer();
-            this.hardwareRenderer.setContainerAndSize(container, 800, 600);
+            this.hardwareRenderer.setContainerAndSize(containerElt, 800, 600);
 
             this.setSimpleRenderer(simple);
             
@@ -80,6 +84,16 @@ module qec
             this.sdGround = new sdBox();
             this.sdGround.getMaterial(null).setDiffuse(0.8,0.8,0.8);
             this.sdGround.setHalfSize(2, 2, 0.01);
+        }
+
+        setSelectedIndex(index: number)
+        {
+            this.selectedIndex = index;
+            this.editorObjects.forEach((o, i) => {
+                o.setSelected(i == index);
+                this.renderer.updateDiffuse(o.sd);
+            });
+            this.setRenderFlag();
         }
 
         getCamera() {
@@ -169,8 +183,8 @@ module qec
             
             //console.log('size :' , size, 'center', center, 'autoHeight', autoHeight);
 
-            var l = new layerVm2();
-            this.layers.push(l);
+            var l = new editorObject();
+            this.editorObjects.push(l);
             l.setTopImg2(this.helper.canvas2, vec4.fromValues(-0.5*size[0], -0.5*size[1], 0.5*size[0], 0.5*size[1]));
             l.setProfileHeight(autoHeight);
             
@@ -188,9 +202,9 @@ module qec
         {
             // update scene
             this.sdUnion.array = [this.sdGround];
-            for (var i=0; i < this.layers.length; ++i)
+            for (var i=0; i < this.editorObjects.length; ++i)
             {
-                this.sdUnion.array.push(this.layers[i].sd);
+                this.sdUnion.array.push(this.editorObjects[i].sd);
             }
             this.renderSettings.sd = this.sdUnion;
             this.renderer.updateShader(this.sdUnion);
@@ -198,6 +212,8 @@ module qec
 
         private render()
         {     
+            if (this.renderer == null)
+                return;
             this.renderSettings.sd = this.sdUnion;
             //console.log("render");
             this.renderer.render(this.renderSettings);
@@ -232,15 +248,15 @@ module qec
 
         setDiffuse(i:number, r:number, g:number, b:number)
         {
-            this.layers[i].sd.getMaterial(null).setDiffuse(r, g, b);
-            var sd = this.layers[i].sd;
+            this.editorObjects[i].sd.getMaterial(null).setDiffuse(r, g, b);
+            var sd = this.editorObjects[i].sd;
             if (this.renderer instanceof hardwareRenderer)
                 (<hardwareRenderer> this.renderer).updateDiffuse(sd);
         }
 
-        getLayersSd() : signedDistance[]
+        getAllSd() : signedDistance[]
         {
-            return this.layers.map( l => l.sd);
+            return this.editorObjects.map( l => l.sd);
         }
 
         toggleShadows()

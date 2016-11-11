@@ -3,12 +3,10 @@ module qec {
     export class importView {
 
         importedContent:string;
-        vm:appVm;
-        view:appView;
-        setVm(vm:appVm, view:appView)
+        editor:editor = inject(qec.editor);
+        
+        set()
         {
-            this.view = view;
-            this.vm = vm;
         }
 
         setElement(elt:HTMLElement)
@@ -47,8 +45,8 @@ module qec {
             reader.onload = (event) => {
                 
                 this.importedContent = reader.result;
-                this.vm.importSvg(this.importedContent,    
-                    ()=>this.view.setSelectedIndex(0)
+                this.editor.importSvg(this.importedContent,    
+                    ()=>{}//this.editor.setSelectedIndex(0)
                 );
 
                 // show in UI
@@ -61,8 +59,5 @@ module qec {
                 reader.readAsText(file);
             }
         }
-
-
     }
-
 }

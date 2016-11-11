@@ -1,7 +1,7 @@
 module qec {
     
 
-    export class layerVm2
+    export class editorObject
     {
         //canvas = document.createElement('canvas');
 
@@ -10,7 +10,7 @@ module qec {
         top = new distanceFieldCanvas();
         profile = new distanceFieldCanvas();
         
-        diffuseColor:Float32Array;
+        diffuseColor = vec3.create();
         inverseTransform = mat4.create();
 
         bsplineDrawer = new bsplineDrawer();
@@ -34,13 +34,22 @@ module qec {
 
         setColor(rgb:number[])
         {
+            vec3.set(this.diffuseColor, rgb[0], rgb[1], rgb[2]);
             this.sd.material.setDiffuse(rgb[0], rgb[1], rgb[2]);
+        }
+
+        setSelected(b:boolean)
+        {
+            if (b)
+                this.sd.material.setDiffuse(1, 0, 0);
+            else
+                this.sd.material.setDiffuse(this.diffuseColor[0], this.diffuseColor[1], this.diffuseColor[2]);    
         }
 
         setProfileHeight(height:number)
         {
-            //var newBounds = vec4.fromValues(-this.top.distanceField.maxDepth, 0, 0, height);
-            var newBounds = vec4.fromValues(this.profileBounds[0],this.profileBounds[1],this.profileBounds[2], height);
+            var newBounds = vec4.fromValues(-this.top.distanceField.maxDepth, 0, 0, height);
+            //var newBounds = vec4.fromValues(this.profileBounds[0],this.profileBounds[1],this.profileBounds[2], height);
   
             this.scaleProfilePoints(newBounds);
         }

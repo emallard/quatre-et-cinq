@@ -3,16 +3,15 @@ module qec {
     export class controllerManager
     {
         camActive = true;
-        cameraController = new cameraController();
+        cameraController:cameraController = inject(cameraController);
         currentController:iController;
-        vm:appVm;
-        view:appView;
 
-        constructor()
+        afterInject()
         {
             this.cameraController.setButton(2);
+            //this.cameraController.updateCamera();
         }
-
+        /*
         setElement(elt:Element)
         {
             // register on mouse move
@@ -24,15 +23,8 @@ module qec {
             elt.addEventListener('mouseup', (e) => this.onMouseUp(e));
             elt.addEventListener('mousewheel', (e) => this.onMouseWheel(e));
             elt.addEventListener('DOMMouseScroll', (e) => this.onMouseWheel(e));
-        }
+        }*/
 
-        setVm(vm:appVm, view:appView)
-        {
-            this.vm = vm;
-            this.view = view;
-            this.cameraController.set(vm);
-            this.cameraController.updateCamera();
-        }
 
         setController(c:iController)
         {
@@ -40,7 +32,7 @@ module qec {
                 this.currentController.unset();
             
             this.currentController = c;
-            c.set(this.vm, this.view);
+            c.set();    
         }
 
         onMouseMove(e:Event)
@@ -73,10 +65,10 @@ module qec {
         onMouseWheel(e:Event)
         {
             if (this.camActive)
-                this.cameraController.onMouseWheel(<MouseWheelEvent> e);
+                this.cameraController.onMouseWheel(<WheelEvent> e);
 
             if (this.currentController != null)
-                this.currentController.onMouseWheel(<MouseWheelEvent> e);
+                this.currentController.onMouseWheel(<WheelEvent> e);
         }
 
         updateLoop()
@@ -92,12 +84,12 @@ module qec {
 
     export interface iController
     {
-        set(vm:appVm, view:appView);
+        set();
         unset();
         onMouseMove(e:MouseEvent);
         onMouseDown(e:MouseEvent);
         onMouseUp(e:MouseEvent);
-        onMouseWheel(e:MouseWheelEvent);
+        onMouseWheel(e:WheelEvent);
         updateLoop();
     }
 }

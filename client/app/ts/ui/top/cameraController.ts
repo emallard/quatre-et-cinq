@@ -3,9 +3,8 @@ module qec {
 
     export class cameraController implements iController {
 
-        vm:appVm;
-        view:appView;
-
+        editor:editor = inject(editor);
+        
         minZoom = 0;
         maxZoom = 100;
 
@@ -41,14 +40,9 @@ module qec {
             this.button = button;
         }
 
-        setView(view:appView)
+        set()
         {
-            this.view = view;
-        }
 
-        set(vm:appVm)
-        {
-            this.vm = vm;;
         }
 
         unset()
@@ -92,8 +86,8 @@ module qec {
             var z = radius * Math.sin( phi );
             
             //console.log(x, y, z);
-            this.vm.getCamera().setPosition(vec3.fromValues(x, y, z));
-            this.vm.setRenderFlag();
+            this.editor.getCamera().setPosition(vec3.fromValues(x, y, z));
+            this.editor.setRenderFlag();
         }
 
         setFromVector3( p:Float32Array ) 
@@ -139,9 +133,8 @@ module qec {
 
         onMouseDown(e:MouseEvent)
         {
-            //console.log('coucou');
             if (e.button == this.button)
-            {
+            {   
                 this.spherical.theta += this.sphericalDelta.theta;
 			    this.spherical.phi += this.sphericalDelta.phi;
 
@@ -164,9 +157,12 @@ module qec {
             this.isMouseDown = false;
         }
 
-        onMouseWheel(e:MouseWheelEvent)
+        onMouseWheel(e:WheelEvent)
         {
-            var d = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
+            var orig = (<any> e).originalEvent;
+            var d = Math.max(-1, Math.min(1, (orig.deltaY)));
+            //console.log('mousewheel', orig.deltaY);
+
             this.spherical.radius *= 1 - d*0.1;
             this.updateFlag = true;
         }

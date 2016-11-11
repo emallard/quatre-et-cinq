@@ -2,7 +2,8 @@ module qec {
 
     export class profileView {
 
-        vm:appVm;
+        editor:editor = inject(qec.editor);
+
         canvas:HTMLCanvasElement;
         bsplineDrawer = new bsplineDrawer();
         lineDrawer = new lineDrawer();
@@ -18,33 +19,14 @@ module qec {
 
         offsetX = 20;
         offsetY = 20;
-        setVm(vm:appVm)
+        
+        container = ko.observable<HTMLElement>();
+        constructor()
         {
-            this.vm = vm;
+            this.container.subscribe(()=>this.init(this.container()))
         }
-
-        setElement(elt:HTMLElement)
+        init(elt:HTMLElement)
         {
-
-            $('.btnProfileLines').on('click', e => 
-            {
-                if (this.selectedIndex >= 0)
-                {
-                    var l = this.vm.layers[this.selectedIndex];
-                    l.profileSmooth = false;
-                    this.draw(); this.updateVm();
-                }
-            });
-
-            $('.btnProfileSmooth').on('click', e => 
-            {
-                if (this.selectedIndex >= 0)
-                {
-                    var l = this.vm.layers[this.selectedIndex];
-                    l.profileSmooth = true;
-                    this.draw(); this.updateVm();
-                }
-            });
 
             this.canvas = document.createElement('canvas');
             this.canvas.style.border = 'solid 1px red';
@@ -61,6 +43,26 @@ module qec {
             this.draw();
         }
 
+        setAsLines() 
+        {
+            if (this.selectedIndex >= 0)
+            {
+                var l = this.editor.editorObjects[this.selectedIndex];
+                l.profileSmooth = false;
+                this.draw(); this.updateEditor();
+            }
+        };
+
+        setAsSmooth()
+        {
+            if (this.selectedIndex >= 0)
+            {
+                var l = this.editor.editorObjects[this.selectedIndex];
+                l.profileSmooth = true;
+                this.draw(); this.updateEditor();
+            }
+        }
+
         setSelectedIndex(i:number)
         {
             this.selectedIndex = i;
@@ -69,7 +71,7 @@ module qec {
 
             //console.log('profileView.setSelectedIndex');
 
-            var l = this.vm.layers[i];
+            var l = this.editor.editorObjects[i];
             var profileBounds = l.profileBounds;
             var boundW = profileBounds[2] - profileBounds[0];
             var boundH = profileBounds[3] - profileBounds[1];
@@ -106,12 +108,12 @@ module qec {
             this.draw();
         }
 
-        updateVm()
+        updateEditor()
         {
             if (this.selectedIndex < 0)
                 return;
 
-            var l = this.vm.layers[this.selectedIndex];
+            var l = this.editor.editorObjects[this.selectedIndex];
             var profileBounds = l.profileBounds;
             
             // convert points to real coordinates
@@ -133,8 +135,8 @@ module qec {
             }
 
             l.setProfilePoints(profilePoints);
-            this.vm.renderer.updateFloatTextures(l.sd);
-            this.vm.setRenderFlag();
+            this.editor.renderer.updateFloatTextures(l.sd);
+            this.editor.setRenderFlag();
         }
 
         draw()
@@ -142,7 +144,7 @@ module qec {
             if (this.selectedIndex < 0)
                 return;
 
-            var l = this.vm.layers[this.selectedIndex];
+            var l = this.editor.editorObjects[this.selectedIndex];
 
             var ctx = this.canvas.getContext('2d');
             ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
@@ -221,7 +223,7 @@ module qec {
             {
                 this.doUpdate = false;
                 this.draw();
-                this.updateVm();
+                this.updateEditor();
             }
         }
     }

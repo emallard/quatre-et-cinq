@@ -5,22 +5,15 @@ module qec {
 
 
         collide = new renderCollide(); 
-        vm:appVm;
-        view:appView;
+        editor:editor = inject(qec.editor);
+        editorView:editorView = inject(editorView);
         
-        setView(view:appView)
+        set()
         {
-            this.view = view;
-        }
-
-        set(vm:appVm)
-        {
-            this.vm = vm;
         }
 
         unset()
         {
-
         }
 
         isMouseDown = false; 
@@ -64,11 +57,11 @@ module qec {
             var iMin = -1;
 
             this.isMouseDown = false;
-            this.vm.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+            this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
 
-            for (var i=0; i < this.vm.layers.length; ++i)
+            for (var i=0; i < this.editor.editorObjects.length; ++i)
             {
-                this.collide.collide(this.vm.layers[i].sd, this.ro, this.rd);
+                this.collide.collide(this.editor.editorObjects[i].sd, this.ro, this.rd);
                 //console.log(this.collide.pos);
                 //console.log(this.collide.minDist);
 
@@ -83,8 +76,7 @@ module qec {
 
             if (iMin > -1)
             {
-                this.vm.selectedIndex = iMin;
-                this.view.setSelectedIndex(iMin);
+                this.editorView.setSelectedIndex(iMin);
                 //console.log(iMin);
                 //this.vm.layers[iMin].sd.material.setDiffuse(1,0,0);
             }
@@ -92,7 +84,7 @@ module qec {
             //this.vm.setUpdateFlag();;
         }
 
-        onMouseWheel(e:MouseWheelEvent)
+        onMouseWheel(e:WheelEvent)
         {
 
         }

@@ -11,9 +11,18 @@ module qec {
 
         optimizedBounds = vec4.create();
 
+        dfMaxWidth = 400;
+        dfMaxHeight = 400;
+        
         constructor()
         {
             this.canvas = document.createElement('canvas');
+        }
+
+        setDistanceFieldMaxSize(maxWidth:number, maxHeight:number)
+        {
+            this.dfMaxWidth = maxWidth;
+            this.dfMaxHeight = maxHeight;
         }
 
         private initCommon(fieldSize:number, bounds:Float32Array)
@@ -58,8 +67,8 @@ module qec {
             var totalBoundW = this.totalBounds[2] - this.totalBounds[0];
             var totalBoundH = this.totalBounds[3] - this.totalBounds[1];
             
-            var dfWidth = 400;
-            var dfHeight = 400;
+            var dfWidth = this.dfMaxWidth;
+            var dfHeight = this.dfMaxHeight;
 
             if (totalBoundH > totalBoundW)
                 dfWidth = Math.round(dfHeight * (totalBoundW/totalBoundH));
@@ -101,72 +110,11 @@ module qec {
                 this.distanceField = new distanceField();
             }
             var df = this.distanceField;
-            df.initCommon(dfWidth, dfHeight , 1 , 1);
-
             var imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-            df.initFromImageData(imageData.data, this.canvas.width, this.canvas.height, 0.5*boundW, 0.5*boundH);
+            df.initFromImageData(imageData.data, this.canvas.width, this.canvas.height, 0.5*totalBoundW, 0.5*totalBoundH);
             df.setSignFromImageData(imageData.data, this.canvas.width, this.canvas.height);
-
         }
-/*
-        private drawUserCanvasBaseOld(img:HTMLCanvasElement | HTMLImageElement, margin:number, profile:boolean)
-        {
-            var ctx = this.canvas.getContext('2d');
-            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            // compute draw size so that it fits the canvas distance field
 
-            var margin = 100;
-            
-            var drawHeight = this.canvas.height - margin;
-            var drawWidth = this.canvas.width - margin;
-            var scaleHeight = img.height / drawHeight;
-            var scaleWidth = img.width / drawWidth;
-
-            var scale = Math.max(scaleHeight, scaleWidth);
-            
-            var newImgHeight = img.height / scale; 
-            var newImgWidth = img.width / scale; 
-            var offsetY = (this.canvas.height - newImgHeight) / 2;
-            var offsetX = (this.canvas.width - newImgWidth) / 2;
-
-            ctx.drawImage(img, 0, 0, img.width, img.height, offsetX, offsetY, newImgWidth, newImgHeight);
-
-            var pixelSize = newImgWidth / (this.boundsSetByUser[2] - this.boundsSetByUser[0]);
-            //var pixelSize = newImgHeight / (this.boundsSetByUser[3] - this.boundsSetByUser[1]);
-            
-            // update halfSize
-            this.bounds[0] = this.boundsSetByUser[0] - margin/2 * pixelSize;
-            this.bounds[1] = this.boundsSetByUser[1] - margin/2 * pixelSize;
-            this.bounds[2] = this.boundsSetByUser[2] + margin/2 * pixelSize;
-            this.bounds[3] = this.boundsSetByUser[3] + margin/2 * pixelSize;
-            
-            //this.halfSize[0] = this.halfSizeSetByUser[0] / newImgWidth * this.canvas.width;
-            //this.halfSize[1] = this.halfSizeSetByUser[1] / newImgHeight * this.canvas.height;
-
-            // update bounding box
-            this.optimizedBounds[0] = this.bounds[0] + offsetX * pixelSize;
-            this.optimizedBounds[1] = this.bounds[1] + offsetY * pixelSize;
-            this.optimizedBounds[2] = this.bounds[2] - offsetX * pixelSize;
-            this.optimizedBounds[3] = this.bounds[3] - offsetY * pixelSize;
-
-            //this.boundingHalf[0] = (newImgWidth / this.canvas.width) * this.halfSize[0];
-            //this.boundingHalf[1] = (newImgHeight / this.canvas.height) * this.halfSize[1];
-            
-            /*
-            console.log(this.canvas.width + ',' + this.canvas.height);
-            console.log(img.width + ',' + img.height);
-            console.log(vec2.str(this.halfSizeSetByUser));
-            console.log(vec2.str(this.boundingHalf));*/
-
-            /*
-            if (profile)
-            {
-                for (var i=0; i<offsetX; ++i)
-                {
-
-                }
-            }*/
-        //}
 
         update()
         {

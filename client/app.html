@@ -9,6 +9,7 @@
 
     <script src="libs/gl-matrix.js"></script>
     <script src="libs/spectrum.js"></script>
+    <script src="libs/knockout-3.4.1.js"></script>
     <script src="app/built/built.js"></script>
     <link rel="stylesheet" href="app.css">
     <link rel="stylesheet" href="libs/spectrum.css">
@@ -33,13 +34,17 @@
         <div class="selectedTool">
             <div class='modifyTool'>
 
-                <button class="btnMoveVertically">Move Vertically</button><br/>
-                <button class="btnScaleVertically">Scale Vertically</button><br/>
+                <button data-bind="click: setMoveController" >Move Vertically</button><br/>
+                <button data-bind="click: setScaleController">Scale Vertically</button><br/>
                 <br/>
 
-                <div class="profileView"></div>
-                <button class="btnProfileLines">Lines</button><br/>
-                <button class="btnProfileSmooth">Curves</button><br/>
+                <div data-bind="with: profileView">
+                    <div data-bind="element: container">
+                    </div>
+                    <button data-bind="click: setAsLines">Lines</button><br/>
+                    <button data-bind="click: setAsSmooth">Curves</button><br/>
+                
+                </div>
                 
 
                 <div class='materialView'>
@@ -47,10 +52,12 @@
                 </div>
             </div>
             
-            <div class="importTool">
+            <div class="importTool" data-bind="with: importView">
                  Select an SVG file
                  <br/>
-                 <input class="btnImport" type="file" name="importFile">
+                 <input class="btnImport" type="file" name="importFile" 
+                        data-bind="event: { change: function() { $data.readImage($element.files[0]) } }">
+                 
                  <br/>Or Drop below :
                  <div class="dropZone">
                      Drop Zone
@@ -80,7 +87,8 @@
         
         <div class='renderPanel'>
             <div class="paper">
-                <div class='renderContainer'></div>
+                <div class='renderContainer' 
+                     data-bind="element: editor.container, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }"></div>
             </div>
             <div class="debug">
             </div>
@@ -153,12 +161,24 @@
 
     <script>
         qec.resources.loadAll(onResourceLoaded);
+
+
+        /*
         var view = new qec.appView();
-        function onResourceLoaded()
-        {
+        
             view.init();
         }
         //$('#myModal').modal();
+        */
+        function onResourceLoaded()
+        {
+            var injector = new qec.injector();
+            var editorView = injector.create(qec.editorView);
+            ko.applyBindings(editorView);
+
+            $( ".renderContainer canvas" ).contextmenu(function() {return false});
+
+        }
     </script>
 
 </body>

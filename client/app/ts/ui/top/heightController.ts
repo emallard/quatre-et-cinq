@@ -3,6 +3,8 @@ module qec {
 
     export class heightController implements iController {
 
+        editor:editor = inject(editor);
+        editorView:editorView = inject(editorView);
 
         isMouseDown = false;
         updateFlag = false;
@@ -15,15 +17,13 @@ module qec {
         mousePos = vec3.create();
         deltaPos = vec3.create();
 
-        selected:layerVm2;
+        selected:editorObject;
         startTransform = mat4.create();
         startHalfSizeProfile = vec2.create();
 
         startBounds = vec4.create();
         newBounds = vec4.create();
 
-        vm:appVm;
-        view:appView;
         ro = vec3.create();
         rd = vec3.create();
         
@@ -37,11 +37,9 @@ module qec {
         isScaleMode = false;
 
 
-        set(vm:appVm, view:appView)
+        set()
         {
-            console.log('heightController');
-            this.vm = vm;
-            this.view = view;
+            //console.log('heightController');
             this.updateFlag = false;
             this.isMouseDown = false;
         }
@@ -57,7 +55,7 @@ module qec {
             {
                 this.updateFlag = false;
 
-                this.vm.getCamera().getRay(this.mouseX, this.mouseY, this.ro, this.rd);
+                this.editor.getCamera().getRay(this.mouseX, this.mouseY, this.ro, this.rd);
 
                 // project mouse on up ray from startPos
                 this.lineUp.setOriginAndDirection(this.startPos, this.dirUp);
@@ -73,8 +71,8 @@ module qec {
                     mat4.translate(this.selected.sd.inverseTransform, this.startTransform, this.deltaPos);
                     mat4.invert(this.selected.sd.inverseTransform, this.selected.sd.inverseTransform);
                     
-                    this.vm.renderer.updateTransform(this.selected.sd);
-                    this.vm.setRenderFlag();
+                    this.editor.renderer.updateTransform(this.selected.sd);
+                    this.editor.setRenderFlag();
                 }
                 else
                 { 
@@ -82,8 +80,8 @@ module qec {
                     this.newBounds[3] += this.deltaPos[2];
                     this.selected.scaleProfilePoints(this.newBounds);
                     this.selected.updateSignedDistance();
-                    this.vm.renderer.updateFloatTextures(this.selected.sd);
-                    this.vm.setRenderFlag();
+                    this.editor.renderer.updateFloatTextures(this.selected.sd);
+                    this.editor.setRenderFlag();
                 }
             }
         }
@@ -104,8 +102,8 @@ module qec {
             if (e.button != 0)
                 return;
 
-            this.vm.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
-            this.collide.collideAll(this.vm.getLayersSd(), this.ro, this.rd);
+            this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+            this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
 
             if (this.collide.hasCollided)
             {
@@ -116,12 +114,12 @@ module qec {
                 this.startY =  (<MouseEvent> e).offsetY;
                 
                 vec3.copy(this.startPos, this.collide.pos);
-                this.selected = this.vm.layers[this.collide.sdIndex];
+                this.selected = this.editor.editorObjects[this.collide.sdIndex];
                 mat4.invert(this.startTransform, this.selected.sd.inverseTransform);
 
                 vec4.copy(this.startBounds, this.selected.profileBounds); 
 
-                this.view.setSelectedIndex(this.collide.sdIndex);
+                this.editorView.setSelectedIndex(this.collide.sdIndex);
             }
         }
 
@@ -130,7 +128,7 @@ module qec {
             this.isMouseDown = false;
         }
 
-        onMouseWheel(e:MouseWheelEvent)
+        onMouseWheel(e:WheelEvent)
         {
 
         }
