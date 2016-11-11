@@ -56,7 +56,7 @@ module qec {
         }
 
 
-        updateShader(sd:signedDistance) {}
+        updateShader(sd:signedDistance, lightCount:number) {}
         updateAllUniformsForAll() {}
         updateAllUniforms(sd: signedDistance) {}
         updateDiffuse(sd: signedDistance) {}

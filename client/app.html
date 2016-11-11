@@ -10,6 +10,7 @@
     <script src="libs/gl-matrix.js"></script>
     <script src="libs/spectrum.js"></script>
     <script src="libs/knockout-3.4.1.js"></script>
+    <script src="libs/jszip.min.js"></script>
     <script src="app/built/built.js"></script>
     <link rel="stylesheet" href="app.css">
     <link rel="stylesheet" href="libs/spectrum.css">
@@ -25,14 +26,15 @@
             <button class='btnSelect hide'>Selectionner</button>
             <button class='btnCamera hide'>Camera</button>
             
-            <button class='btnToolImport'>Import</button>
-            <button class='btnToolModify'>Modify</button>
-            <button class='btnToolEnvironment'>Environment</button>
-            <button class='btnToolPhoto'>Share</button> 
+            <button data-bind="click: showImportToolbar">Import</button>
+            <button data-bind="click: showModifyToolbar">Modify</button>
+            <button data-bind="click: showEnvironmentToolbar">Environment</button>
+            <button data-bind="click: showPhotoToolbar">Share</button> 
         </div>
 
         <div class="selectedTool">
-            <div class='modifyTool'>
+            
+            <div data-bind="visible: modifyToolbarVisible">
 
                 <button data-bind="click: setMoveController" >Move Vertically</button><br/>
                 <button data-bind="click: setScaleController">Scale Vertically</button><br/>
@@ -52,7 +54,7 @@
                 </div>
             </div>
             
-            <div class="importTool" data-bind="with: importView">
+            <div data-bind="with: importView, visible:importToolbarVisible">
                  Select an SVG file
                  <br/>
                  <input class="btnImport" type="file" name="importFile" 
@@ -70,16 +72,18 @@
             </div>
 
 
-            <div class="environmentTool">
-                <button class='btnShadows'>Shadows</button><br/>
-                <button class='btnLight1'>Light1</button><br/>
-                <button class='btnLight2'>Light2</button><br/>
+            <div data-bind="visible: environmentToolbarVisible">
+                <div data-bind="with: editor">
+                    <button data-bind="click: toggleShadows">Shadows</button><br/>
+                    <button data-bind="click: light1">Light1</button><br/>
+                    <button data-bind="click: light2">Light2</button><br/>
+                </div>
                 <button class='btnGroundOrientation'>Ground Orientation</button><br/>
                 <button class='btnBoundingBox'>BoundingBox</button><br/>
                 <button class='btnSoftwareRenderer'>Hardware/Software Renderer</button><br/>
             </div>
 
-            <div class="photoTool">
+            <div data-bind="visible: photoToolbarVisible">
                 <button class='btnPhoto'>Photo</button>
             </div>        
 

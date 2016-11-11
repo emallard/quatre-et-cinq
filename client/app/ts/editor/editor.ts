@@ -2,6 +2,7 @@ module qec
 {
     export class editor
     {
+        originalSvgContent:string;
         //renderer = new hardwareRenderer();
         renderer:irenderer;
 
@@ -17,6 +18,11 @@ module qec
 
         editorObjects:editorObject[] = [];
         selectedIndex = -1;
+
+        rimLight = new spotLight();
+        keyLight = new spotLight();
+        fillLight = new spotLight();
+            
 
         helper = new svgHelper();
         svgAutoHeightHelper = new svgAutoHeightHelper();
@@ -45,11 +51,7 @@ module qec
             this.setSimpleRenderer(simple);
             
             this.renderSettings.camera.setCam(vec3.fromValues(0, -1, 3), vec3.fromValues(0,0,0), vec3.fromValues(0,0,1));
-            var keyLight = new directionalLight();
-            var fillLight = new directionalLight();
-            var rimLight = new spotLight();
-            var spotKeyLight = new spotLight();
-            
+            /* 
             keyLight.createFrom({
                 type: 'directionalLightDTO',
                 position: [-2, -2, 0],
@@ -63,23 +65,30 @@ module qec
                 direction : [-1, 1, -1],
                 intensity : 0.2
             });
-
-            rimLight.createFrom({
+            */
+            this.rimLight.createFrom({
                 type: 'spotLightDTO',
                 position: [2, 2, 0.5],
                 direction : [-1, -1, 0.1],
                 intensity : 0.2
             });
 
-            spotKeyLight.createFrom({
+            this.keyLight.createFrom({
                 type: 'spotLightDTO',
                 position: [-1, -1, 5],
                 direction : [0,0,0],
                 intensity : 0.8
             });
+
+            this.fillLight.createFrom({
+                type: 'spotLightDTO',
+                position: [2, -2, 0.5],
+                direction : [-1, 1, -1],
+                intensity : 0.2
+            });
             
             //this.renderSettings.directionalLights.push(keyLight);//, fillLight);
-            this.renderSettings.spotLights.push(spotKeyLight, rimLight);
+            this.renderSettings.spotLights.push(this.keyLight, this.fillLight, this.rimLight);
                
             this.sdGround = new sdBox();
             this.sdGround.getMaterial(null).setDiffuse(0.8,0.8,0.8);
@@ -141,6 +150,7 @@ module qec
 
         importSvg(content:string, done:() => void)
         {
+            this.originalSvgContent = content;
             this.svgAutoHeightHelper.setSvg(content, ()=>
             {
                 this.helper.setSvg(content, ()=> this.nextImport(done));
@@ -207,7 +217,7 @@ module qec
                 this.sdUnion.array.push(this.editorObjects[i].sd);
             }
             this.renderSettings.sd = this.sdUnion;
-            this.renderer.updateShader(this.sdUnion);
+            this.renderer.updateShader(this.sdUnion, this.renderSettings.spotLights.length);
         }
 
         private render()
@@ -264,5 +274,22 @@ module qec
             this.renderSettings.shadows = !this.renderSettings.shadows;
             this.setRenderFlag();
         }
+
+        light1()
+        {
+            this.keyLight.intensity = 0.8;
+            this.fillLight.intensity = 0.2;
+            this.rimLight.intensity = 0.2;
+            this.setRenderFlag();
+        }
+
+        light2()
+        {
+            this.keyLight.intensity = 0;
+            this.fillLight.intensity = 0.5;
+            this.rimLight.intensity = 0.5;
+            this.setRenderFlag();
+        }
+
     }
 }

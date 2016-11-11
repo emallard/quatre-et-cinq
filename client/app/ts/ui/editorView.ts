@@ -34,6 +34,11 @@ module qec
             this.controllerManager.setController(this.heightController);
         }
 
+        setSelectController()
+        {
+            this.controllerManager.setController(this.selectController);
+        }
+
         setSelectedIndex(i: number)
         {
             this.editor.setSelectedIndex(i);
@@ -46,6 +51,30 @@ module qec
             this.editor.updateLoop();
             this.profileView.updateLoop()
             requestAnimationFrame(()=>this.updateLoop());
+        }
+
+
+        // toolbars
+        importToolbarVisible = ko.observable<boolean>(true);
+        modifyToolbarVisible = ko.observable<boolean>(false);
+        environmentToolbarVisible = ko.observable<boolean>(false);
+        photoToolbarVisible = ko.observable<boolean>(false);
+
+        toolbarsVisible:KnockoutObservable<boolean>[] = [
+            this.importToolbarVisible, 
+            this.modifyToolbarVisible, 
+            this.environmentToolbarVisible,
+            this.photoToolbarVisible];
+
+        showImportToolbar() { this.setToolbar(this.importToolbarVisible); }
+        showModifyToolbar() { this.setToolbar(this.modifyToolbarVisible);}
+        showEnvironmentToolbar() { this.setToolbar(this.environmentToolbarVisible);}
+        showPhotoToolbar() { this.setToolbar(this.photoToolbarVisible);}
+
+        setToolbar(selected:KnockoutObservable<boolean>)
+        {
+            this.toolbarsVisible.forEach(t => t(false));
+            selected(true);
         }
     }
 }

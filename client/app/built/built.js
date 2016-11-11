@@ -47,6 +47,9 @@ var qec;
             this.sdGround = new qec.sdBox();
             this.editorObjects = [];
             this.selectedIndex = -1;
+            this.rimLight = new qec.spotLight();
+            this.keyLight = new qec.spotLight();
+            this.fillLight = new qec.spotLight();
             this.helper = new qec.svgHelper();
             this.svgAutoHeightHelper = new qec.svgAutoHeightHelper();
             this.renderFlag = false;
@@ -64,36 +67,41 @@ var qec;
             this.hardwareRenderer.setContainerAndSize(containerElt, 800, 600);
             this.setSimpleRenderer(simple);
             this.renderSettings.camera.setCam(vec3.fromValues(0, -1, 3), vec3.fromValues(0, 0, 0), vec3.fromValues(0, 0, 1));
-            var keyLight = new qec.directionalLight();
-            var fillLight = new qec.directionalLight();
-            var rimLight = new qec.spotLight();
-            var spotKeyLight = new qec.spotLight();
+            /*
             keyLight.createFrom({
                 type: 'directionalLightDTO',
                 position: [-2, -2, 0],
-                direction: [1, 1, -2],
-                intensity: 0.8
+                direction : [1, 1, -2],
+                intensity : 0.8
             });
+
             fillLight.createFrom({
                 type: 'directionalLightDTO',
                 position: [2, -2, 0],
-                direction: [-1, 1, -1],
-                intensity: 0.2
+                direction : [-1, 1, -1],
+                intensity : 0.2
             });
-            rimLight.createFrom({
+            */
+            this.rimLight.createFrom({
                 type: 'spotLightDTO',
                 position: [2, 2, 0.5],
                 direction: [-1, -1, 0.1],
                 intensity: 0.2
             });
-            spotKeyLight.createFrom({
+            this.keyLight.createFrom({
                 type: 'spotLightDTO',
                 position: [-1, -1, 5],
                 direction: [0, 0, 0],
                 intensity: 0.8
             });
+            this.fillLight.createFrom({
+                type: 'spotLightDTO',
+                position: [2, -2, 0.5],
+                direction: [-1, 1, -1],
+                intensity: 0.2
+            });
             //this.renderSettings.directionalLights.push(keyLight);//, fillLight);
-            this.renderSettings.spotLights.push(spotKeyLight, rimLight);
+            this.renderSettings.spotLights.push(this.keyLight, this.fillLight, this.rimLight);
             this.sdGround = new qec.sdBox();
             this.sdGround.getMaterial(null).setDiffuse(0.8, 0.8, 0.8);
             this.sdGround.setHalfSize(2, 2, 0.01);
@@ -142,6 +150,7 @@ var qec;
         };
         editor.prototype.importSvg = function (content, done) {
             var _this = this;
+            this.originalSvgContent = content;
             this.svgAutoHeightHelper.setSvg(content, function () {
                 _this.helper.setSvg(content, function () { return _this.nextImport(done); });
             });
@@ -191,7 +200,7 @@ var qec;
                 this.sdUnion.array.push(this.editorObjects[i].sd);
             }
             this.renderSettings.sd = this.sdUnion;
-            this.renderer.updateShader(this.sdUnion);
+            this.renderer.updateShader(this.sdUnion, this.renderSettings.spotLights.length);
         };
         editor.prototype.render = function () {
             if (this.renderer == null)
@@ -229,6 +238,18 @@ var qec;
         };
         editor.prototype.toggleShadows = function () {
             this.renderSettings.shadows = !this.renderSettings.shadows;
+            this.setRenderFlag();
+        };
+        editor.prototype.light1 = function () {
+            this.keyLight.intensity = 0.8;
+            this.fillLight.intensity = 0.2;
+            this.rimLight.intensity = 0.2;
+            this.setRenderFlag();
+        };
+        editor.prototype.light2 = function () {
+            this.keyLight.intensity = 0;
+            this.fillLight.intensity = 0.5;
+            this.rimLight.intensity = 0.5;
             this.setRenderFlag();
         };
         return editor;
@@ -369,6 +390,37 @@ var qec;
         return lineDrawer;
     }());
     qec.lineDrawer = lineDrawer;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var saveWork = (function () {
+        function saveWork() {
+        }
+        saveWork.prototype.generateContent = function (editor) {
+            var svg = editor.originalSvgContent;
+            var zip = new JSZip();
+            zip.file("svg.svg", svg);
+            // 3d
+            editor.editorObjects.forEach(function (o) {
+                var data = {
+                    // o.profilePoints;
+                    // o.profileBounds;
+                    // o.profileSmooth;
+                    inverseTransform: o.sd.inverseTransform,
+                    diffuseColor: o.diffuseColor,
+                };
+                JSON.stringify(data);
+            });
+            // camera and lights position
+            zip.generateAsync({ type: "blob" })
+                .then(function (content) {
+                // see FileSaver.js
+                //saveAs(content, "example.zip");
+            });
+        };
+        return saveWork;
+    }());
+    qec.saveWork = saveWork;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -1171,15 +1223,17 @@ var qec;
         };
         hardwareRenderer.prototype.showBoundingBox = function (b) {
         };
-        hardwareRenderer.prototype.updateShader = function (sd) {
+        hardwareRenderer.prototype.updateShader = function (sd, lightCount) {
             console.log('hardwareRenderer.updateShader');
             this.expl.explore(sd);
             var generatedPart = this.text.generateDistance()
                 + this.text.generateColor();
+            var generatedLight = this.text.generateLight(lightCount);
             this.fragmentShader = ''
                 + qec.resources.all['app/sd.glsl']
                 + generatedPart
                 + qec.resources.all['app/light.glsl']
+                + generatedLight
                 + qec.resources.all['app/renderPixel.glsl'];
             this.gViewQuad.material.fragmentShader = this.fragmentShader;
             this.gViewQuad.material.needsUpdate = true;
@@ -1229,14 +1283,25 @@ var qec;
             alert('not supported');
         };
         hardwareRenderer.prototype.render = function (settings) {
+            var _this = this;
             var camera = settings.camera;
             var sd = settings.sd;
-            var light = settings.spotLights[0];
             camera.rendererInit(this.width, this.height);
             this.gShaderMaterial.uniforms.u_inversePMatrix = { type: "Matrix4fv", value: camera.inversePMatrix },
                 this.gShaderMaterial.uniforms.u_inverseTransformMatrix = { type: "Matrix4fv", value: camera.inverseTransformMatrix },
-                this.gShaderMaterial.uniforms.u_lightP = { type: "3f", value: light.position };
-            this.gShaderMaterial.uniforms.u_shadows = { type: "1i", value: settings.shadows ? 1 : 0 };
+                this.gShaderMaterial.uniforms.u_shadows = { type: "1i", value: settings.shadows ? 1 : 0 };
+            if (this.gShaderMaterial.uniforms.u_lightPositions == null) {
+                this.gShaderMaterial.uniforms.u_lightPositions = { type: "3fv", value: [] };
+                this.gShaderMaterial.uniforms.u_lightIntensities = { type: "1fv", value: [] };
+            }
+            settings.spotLights.forEach(function (l, i) {
+                if (_this.gShaderMaterial.uniforms.u_lightPositions.value[i] == null) {
+                    _this.gShaderMaterial.uniforms.u_lightPositions.value[i] = new THREE.Vector3();
+                    _this.gShaderMaterial.uniforms.u_lightIntensities.value[i] = 0;
+                }
+                _this.gShaderMaterial.uniforms.u_lightPositions.value[i].fromArray(l.position);
+                _this.gShaderMaterial.uniforms.u_lightIntensities.value[i] = l.intensity;
+            });
             this.gRenderer.render(this.gScene, this.gCamera);
         };
         hardwareRenderer.prototype.initTHREE = function () {
@@ -1278,52 +1343,6 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var hardwareSignedDistance = (function () {
-        function hardwareSignedDistance() {
-            this.sdFieldIndex = -1;
-        }
-        return hardwareSignedDistance;
-    }());
-    qec.hardwareSignedDistance = hardwareSignedDistance;
-    var hardwareSignedDistanceExplorer = (function () {
-        function hardwareSignedDistanceExplorer() {
-            this.array = [];
-        }
-        hardwareSignedDistanceExplorer.prototype.explore = function (sd) {
-            this.recCount = 0;
-            this.sdFieldsCount = 0;
-            this.array = [];
-            this.exploreRec(sd);
-        };
-        hardwareSignedDistanceExplorer.prototype.exploreRec = function (sd) {
-            var hsd = new hardwareSignedDistance();
-            this.array.push(hsd);
-            hsd.sd = sd;
-            hsd.index = this.recCount;
-            this.recCount++;
-            if (sd instanceof qec.sdFields) {
-                hsd.sdFieldIndex = this.sdFieldsCount;
-                this.sdFieldsCount++;
-            }
-            else if (sd instanceof qec.sdUnion) {
-                for (var i = 0; i < sd.array.length; ++i)
-                    this.exploreRec(sd.array[i]);
-            }
-        };
-        hardwareSignedDistanceExplorer.prototype.getSdFieldsCount = function () {
-            var c = 0;
-            for (var i = 0; i < this.array.length; ++i)
-                if (this.array[i].sd instanceof qec.sdFields)
-                    c++;
-            return c;
-        };
-        hardwareSignedDistanceExplorer.prototype.getHsd = function (sd) {
-            var found = this.array.find(function (hsd) { return hsd.sd == sd; });
-            return found;
-        };
-        return hardwareSignedDistanceExplorer;
-    }());
-    qec.hardwareSignedDistanceExplorer = hardwareSignedDistanceExplorer;
     var hardwareShaderText = (function () {
         function hardwareShaderText() {
         }
@@ -1424,9 +1443,70 @@ var qec;
                 return 'vec3 getColor_' + hsd.index + '(vec3 pos) { return u_diffuses[' + hsd.index + ']; }';
             }
         };
+        hardwareShaderText.prototype.generateLight = function (count) {
+            var shader = '';
+            shader += '\n\nuniform vec3 u_lightPositions[' + count + '];\n\n';
+            shader += '\n\nuniform float u_lightIntensities[' + count + '];\n\n';
+            shader += 'vec3 getLight(int shadows, vec3 col, vec3 pos, vec3 normal, vec3 rd) { \n';
+            shader += '    vec3 result = vec3(0.0,0.0,0.0);\n';
+            for (var i = 0; i < count; ++i) {
+                shader += '    result = result + applyLight(u_lightPositions[' + i + '], u_lightIntensities[' + i + '], shadows, col, pos, normal, rd);\n';
+            }
+            shader += '    return result;\n}\n\n';
+            return shader;
+        };
         return hardwareShaderText;
     }());
     qec.hardwareShaderText = hardwareShaderText;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var hardwareSignedDistance = (function () {
+        function hardwareSignedDistance() {
+            this.sdFieldIndex = -1;
+        }
+        return hardwareSignedDistance;
+    }());
+    qec.hardwareSignedDistance = hardwareSignedDistance;
+    var hardwareSignedDistanceExplorer = (function () {
+        function hardwareSignedDistanceExplorer() {
+            this.array = [];
+        }
+        hardwareSignedDistanceExplorer.prototype.explore = function (sd) {
+            this.recCount = 0;
+            this.sdFieldsCount = 0;
+            this.array = [];
+            this.exploreRec(sd);
+        };
+        hardwareSignedDistanceExplorer.prototype.exploreRec = function (sd) {
+            var hsd = new hardwareSignedDistance();
+            this.array.push(hsd);
+            hsd.sd = sd;
+            hsd.index = this.recCount;
+            this.recCount++;
+            if (sd instanceof qec.sdFields) {
+                hsd.sdFieldIndex = this.sdFieldsCount;
+                this.sdFieldsCount++;
+            }
+            else if (sd instanceof qec.sdUnion) {
+                for (var i = 0; i < sd.array.length; ++i)
+                    this.exploreRec(sd.array[i]);
+            }
+        };
+        hardwareSignedDistanceExplorer.prototype.getSdFieldsCount = function () {
+            var c = 0;
+            for (var i = 0; i < this.array.length; ++i)
+                if (this.array[i].sd instanceof qec.sdFields)
+                    c++;
+            return c;
+        };
+        hardwareSignedDistanceExplorer.prototype.getHsd = function (sd) {
+            var found = this.array.find(function (hsd) { return hsd.sd == sd; });
+            return found;
+        };
+        return hardwareSignedDistanceExplorer;
+    }());
+    qec.hardwareSignedDistanceExplorer = hardwareSignedDistanceExplorer;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -2236,7 +2316,7 @@ var qec;
             imageData.data.set(this.renderUnit.getImageData());
             ctx.putImageData(imageData, 0, 0, 0, 0, this.canvas.width, this.canvas.height);
         };
-        simpleRenderer.prototype.updateShader = function (sd) { };
+        simpleRenderer.prototype.updateShader = function (sd, lightCount) { };
         simpleRenderer.prototype.updateAllUniformsForAll = function () { };
         simpleRenderer.prototype.updateAllUniforms = function (sd) { };
         simpleRenderer.prototype.updateDiffuse = function (sd) { };
@@ -3798,6 +3878,7 @@ var qec;
     var sdUnion = (function () {
         function sdUnion() {
             this.array = [];
+            this.inverseTransform = mat4.identity(mat4.create());
         }
         sdUnion.prototype.createFrom = function (dto) {
             this.array[0] = (dto.a['__instance']);
@@ -3831,7 +3912,7 @@ var qec;
             return minMat;
         };
         sdUnion.prototype.getInverseTransform = function (out) {
-            mat4.identity(out);
+            mat4.copy(out, this.inverseTransform);
         };
         sdUnion.prototype.getBoundingBox = function (out) {
             vec3.set(out, 100, 100, 100);
@@ -4586,230 +4667,6 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    // http://www.williammalone.com/articles/create-html5-canvas-javascript-drawing-app
-    var drawInCanvas = (function () {
-        function drawInCanvas() {
-            this.paint = false;
-            this.clickX = new Array();
-            this.clickY = new Array();
-            this.clickDrag = new Array();
-            this.color = 'black';
-        }
-        drawInCanvas.prototype.setColor = function (color) {
-            this.color = color;
-            this.context.strokeStyle = this.color;
-            this.context.fillStyle = this.color;
-        };
-        drawInCanvas.prototype.setElement = function (canvas) {
-            var _this = this;
-            this.canvas = canvas;
-            this.context = this.canvas.getContext('2d');
-            this.context.strokeStyle = this.color;
-            this.context.fillStyle = this.color;
-            this.context.lineJoin = "round";
-            this.context.lineWidth = 20;
-            canvas.addEventListener('mousedown', function (e) {
-                var rect = canvas.getBoundingClientRect();
-                var mouseX = e.clientX - rect.left - 0.5;
-                var mouseY = e.clientY - rect.top;
-                //console.log(mouseX, mouseY);
-                _this.paint = true;
-                _this.addClick(mouseX, mouseY, false);
-                _this.redraw();
-            });
-            canvas.addEventListener('mousemove', function (e) {
-                var rect = canvas.getBoundingClientRect();
-                var mouseX = e.clientX - rect.left;
-                var mouseY = e.clientY - rect.top;
-                if (_this.paint) {
-                    _this.addClick(mouseX, mouseY, true);
-                    _this.redraw();
-                }
-            });
-            canvas.addEventListener('mouseup', function (e) {
-                _this.paint = false;
-            });
-            canvas.addEventListener('mouseleave', function (e) {
-                _this.paint = false;
-            });
-        };
-        drawInCanvas.prototype.addClick = function (x, y, dragging) {
-            this.clickX.push(x);
-            this.clickY.push(y);
-            this.clickDrag.push(dragging);
-        };
-        drawInCanvas.prototype.redraw = function () {
-            //this.context = this.canvas.getContext("2d");
-            //console.log(this.clickX); 
-            var context = this.context;
-            //context.clearRect(0, 0, context.canvas.width, context.canvas.height); // Clears the canvas
-            for (var i = 0; i < this.clickX.length; i++) {
-                context.beginPath();
-                if (this.clickDrag[i] && i) {
-                    context.moveTo(this.clickX[i - 1], this.clickY[i - 1]);
-                }
-                else {
-                    context.moveTo(this.clickX[i] - 1, this.clickY[i]);
-                }
-                context.lineTo(this.clickX[i], this.clickY[i]);
-                context.closePath();
-                context.stroke();
-            }
-            this.clickX = [];
-            this.clickY = [];
-            this.clickDrag = [];
-            if (this.afterRedraw != null)
-                this.afterRedraw();
-        };
-        return drawInCanvas;
-    }());
-    qec.drawInCanvas = drawInCanvas;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    var index2 = (function () {
-        function index2() {
-            /*
-            sd:signedDistance;
-            light:spotLight;
-            cam: camera;
-            */
-            this.isParallel = false;
-            this.isHardware = false;
-            this.renderSteps = false;
-            this.renderSettings = new qec.renderSettings();
-            this.t = 5;
-            this.camDist = 0;
-        }
-        index2.prototype.start = function (element) {
-            var _this = this;
-            var select = document.createElement('select');
-            var option0 = document.createElement('option');
-            option0.value = "";
-            option0.text = "<select>";
-            select.appendChild(option0);
-            var examples = qec.getExamples();
-            for (var i in examples) {
-                var option = document.createElement('option');
-                option.value = examples[i].title;
-                option.text = option.value;
-                select.appendChild(option);
-            }
-            document.body.appendChild(select);
-            select.addEventListener('change', function (e) {
-                return window.location.href =
-                    '?scene=' + select.value +
-                        '&isParallel=' + (_this.isParallel ? '1' : '0') +
-                        '&isHardware=' + (_this.isHardware ? '1' : '0') +
-                        '&renderSteps=' + (_this.renderSteps ? '1' : '0');
-            });
-            this.element = element;
-            var sceneName = getParameterByName('scene', undefined);
-            if (!sceneName)
-                sceneName = 'Sphere';
-            this.createScene(sceneName);
-        };
-        index2.prototype.createScene = function (title) {
-            var _this = this;
-            this.sceneDTO = qec.createExample(title);
-            if (!this.isParallel) {
-                this.sc = new qec.scene();
-                this.sc.setDebug(true);
-                this.sc.create(this.sceneDTO, function () {
-                    if (_this.isHardware)
-                        _this.renderer = new qec.hardwareRenderer();
-                    else {
-                        var sr = new qec.simpleRenderer();
-                        sr.setRenderSteps(_this.renderSteps);
-                        _this.renderer = sr;
-                    }
-                    _this.renderer.setContainerAndSize(_this.element, 600, 600);
-                    var scrend = _this.sc.get(function (o) { return o instanceof qec.scRenderer; }, 'render');
-                    _this.renderSettings = scrend.settings;
-                    _this.renderSettings.shadows = true;
-                    _this.render(function () { });
-                });
-            }
-            else {
-                this.rendererParallel = new qec.parallelRenderer();
-                this.rendererParallel.setContainerAndSize(this.element, 400, 400);
-                this.rendererParallel.initDTO(this.sceneDTO, function () {
-                    var sc = new qec.scene();
-                    //this.cam = <camera> sc.createOne(this.sceneDTO, 'camera');
-                    _this.render(function () { });
-                });
-            }
-        };
-        index2.prototype.render = function (done) {
-            if (!this.isParallel) {
-                this.renderer.updateShader(this.renderSettings.sd);
-                this.renderer.render(this.renderSettings);
-                done();
-            }
-            else
-                this.rendererParallel.render(this.renderSettings.camera, done);
-        };
-        index2.prototype.debug = function (x, y) {
-            if (!this.isParallel)
-                this.renderer.renderDebug(x, y, this.renderSettings);
-        };
-        index2.prototype.startRenderLoop = function () {
-            var cam = this.renderSettings.camera;
-            this.t = 5;
-            this.camDist = vec2.distance(cam.target, cam.position);
-            this.renderLoop();
-        };
-        index2.prototype.renderLoop = function () {
-            var _this = this;
-            if (this.t > 10)
-                return;
-            var cam = this.renderSettings.camera;
-            cam.position[0] = cam.target[0] + this.camDist * Math.cos(Math.PI * 2 * this.t / 10);
-            cam.position[1] = cam.target[1] + this.camDist * Math.sin(Math.PI * 2 * this.t / 10);
-            cam.setPosition(cam.position);
-            this.render(function () {
-                _this.t += 0.5;
-                setTimeout(function () { return _this.renderLoop(); }, 0);
-            });
-        };
-        return index2;
-    }());
-    qec.index2 = index2;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    var index3 = (function () {
-        function index3() {
-        }
-        index3.prototype.start = function (element) {
-            var dfCanvas = new qec.distanceFieldCanvas();
-            var dfCanvas2 = new qec.distanceFieldCanvas();
-            dfCanvas2.initSquare(512, 0.5, 1, 1);
-            dfCanvas.computeDistanceFieldFromSrcs('data/cubeTop.png', 1, 1, function () {
-                dfCanvas.debugInfoInCanvas();
-                document.getElementById('debug').appendChild(dfCanvas.canvas);
-                dfCanvas2.debugInfoInCanvas();
-                document.getElementById('debug').appendChild(dfCanvas2.canvas);
-            });
-        };
-        index3.prototype.start2 = function (element) {
-            var dfCanvas = new qec.distanceFieldCanvas();
-            var dfCanvas2 = new qec.distanceFieldCanvas();
-            dfCanvas.computeDistanceFieldFromSrcs('data/cubeTop.png', 1, 1, function () {
-                dfCanvas2.computeDistanceFieldFromSrcs('data/cubeProfile.png', 1, 1, function () {
-                    dfCanvas.debugInfoInCanvas();
-                    document.getElementById('debug').appendChild(dfCanvas.canvas);
-                    dfCanvas2.debugInfoInCanvas();
-                    document.getElementById('debug').appendChild(dfCanvas2.canvas);
-                });
-            });
-        };
-        return index3;
-    }());
-    qec.index3 = index3;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
     var cameraController = (function () {
         function cameraController() {
             this.editor = qec.inject(qec.editor);
@@ -4993,6 +4850,87 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    // http://www.williammalone.com/articles/create-html5-canvas-javascript-drawing-app
+    var drawInCanvas = (function () {
+        function drawInCanvas() {
+            this.paint = false;
+            this.clickX = new Array();
+            this.clickY = new Array();
+            this.clickDrag = new Array();
+            this.color = 'black';
+        }
+        drawInCanvas.prototype.setColor = function (color) {
+            this.color = color;
+            this.context.strokeStyle = this.color;
+            this.context.fillStyle = this.color;
+        };
+        drawInCanvas.prototype.setElement = function (canvas) {
+            var _this = this;
+            this.canvas = canvas;
+            this.context = this.canvas.getContext('2d');
+            this.context.strokeStyle = this.color;
+            this.context.fillStyle = this.color;
+            this.context.lineJoin = "round";
+            this.context.lineWidth = 20;
+            canvas.addEventListener('mousedown', function (e) {
+                var rect = canvas.getBoundingClientRect();
+                var mouseX = e.clientX - rect.left - 0.5;
+                var mouseY = e.clientY - rect.top;
+                //console.log(mouseX, mouseY);
+                _this.paint = true;
+                _this.addClick(mouseX, mouseY, false);
+                _this.redraw();
+            });
+            canvas.addEventListener('mousemove', function (e) {
+                var rect = canvas.getBoundingClientRect();
+                var mouseX = e.clientX - rect.left;
+                var mouseY = e.clientY - rect.top;
+                if (_this.paint) {
+                    _this.addClick(mouseX, mouseY, true);
+                    _this.redraw();
+                }
+            });
+            canvas.addEventListener('mouseup', function (e) {
+                _this.paint = false;
+            });
+            canvas.addEventListener('mouseleave', function (e) {
+                _this.paint = false;
+            });
+        };
+        drawInCanvas.prototype.addClick = function (x, y, dragging) {
+            this.clickX.push(x);
+            this.clickY.push(y);
+            this.clickDrag.push(dragging);
+        };
+        drawInCanvas.prototype.redraw = function () {
+            //this.context = this.canvas.getContext("2d");
+            //console.log(this.clickX); 
+            var context = this.context;
+            //context.clearRect(0, 0, context.canvas.width, context.canvas.height); // Clears the canvas
+            for (var i = 0; i < this.clickX.length; i++) {
+                context.beginPath();
+                if (this.clickDrag[i] && i) {
+                    context.moveTo(this.clickX[i - 1], this.clickY[i - 1]);
+                }
+                else {
+                    context.moveTo(this.clickX[i] - 1, this.clickY[i]);
+                }
+                context.lineTo(this.clickX[i], this.clickY[i]);
+                context.closePath();
+                context.stroke();
+            }
+            this.clickX = [];
+            this.clickY = [];
+            this.clickDrag = [];
+            if (this.afterRedraw != null)
+                this.afterRedraw();
+        };
+        return drawInCanvas;
+    }());
+    qec.drawInCanvas = drawInCanvas;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var editorView = (function () {
         function editorView() {
             this.editor = qec.inject(qec.editor);
@@ -5002,6 +4940,16 @@ var qec;
             this.heightController = qec.inject(qec.heightController);
             this.importView = qec.inject(qec.importView);
             this.profileView = qec.inject(qec.profileView);
+            // toolbars
+            this.importToolbarVisible = ko.observable(true);
+            this.modifyToolbarVisible = ko.observable(false);
+            this.environmentToolbarVisible = ko.observable(false);
+            this.photoToolbarVisible = ko.observable(false);
+            this.toolbarsVisible = [
+                this.importToolbarVisible,
+                this.modifyToolbarVisible,
+                this.environmentToolbarVisible,
+                this.photoToolbarVisible];
         }
         editorView.prototype.afterInject = function () {
             this.editor.setRenderFlag();
@@ -5019,6 +4967,9 @@ var qec;
             this.heightController.isScaleMode = true;
             this.controllerManager.setController(this.heightController);
         };
+        editorView.prototype.setSelectController = function () {
+            this.controllerManager.setController(this.selectController);
+        };
         editorView.prototype.setSelectedIndex = function (i) {
             this.editor.setSelectedIndex(i);
             this.profileView.setSelectedIndex(i);
@@ -5029,6 +4980,14 @@ var qec;
             this.editor.updateLoop();
             this.profileView.updateLoop();
             requestAnimationFrame(function () { return _this.updateLoop(); });
+        };
+        editorView.prototype.showImportToolbar = function () { this.setToolbar(this.importToolbarVisible); };
+        editorView.prototype.showModifyToolbar = function () { this.setToolbar(this.modifyToolbarVisible); };
+        editorView.prototype.showEnvironmentToolbar = function () { this.setToolbar(this.environmentToolbarVisible); };
+        editorView.prototype.showPhotoToolbar = function () { this.setToolbar(this.photoToolbarVisible); };
+        editorView.prototype.setToolbar = function (selected) {
+            this.toolbarsVisible.forEach(function (t) { return t(false); });
+            selected(true);
         };
         return editorView;
     }());
@@ -5176,6 +5135,117 @@ var qec;
         return importView;
     }());
     qec.importView = importView;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var index2 = (function () {
+        function index2() {
+            /*
+            sd:signedDistance;
+            light:spotLight;
+            cam: camera;
+            */
+            this.isParallel = false;
+            this.isHardware = false;
+            this.renderSteps = false;
+            this.renderSettings = new qec.renderSettings();
+            this.t = 5;
+            this.camDist = 0;
+        }
+        index2.prototype.start = function (element) {
+            var _this = this;
+            var select = document.createElement('select');
+            var option0 = document.createElement('option');
+            option0.value = "";
+            option0.text = "<select>";
+            select.appendChild(option0);
+            var examples = qec.getExamples();
+            for (var i in examples) {
+                var option = document.createElement('option');
+                option.value = examples[i].title;
+                option.text = option.value;
+                select.appendChild(option);
+            }
+            document.body.appendChild(select);
+            select.addEventListener('change', function (e) {
+                return window.location.href =
+                    '?scene=' + select.value +
+                        '&isParallel=' + (_this.isParallel ? '1' : '0') +
+                        '&isHardware=' + (_this.isHardware ? '1' : '0') +
+                        '&renderSteps=' + (_this.renderSteps ? '1' : '0');
+            });
+            this.element = element;
+            var sceneName = getParameterByName('scene', undefined);
+            if (!sceneName)
+                sceneName = 'Sphere';
+            this.createScene(sceneName);
+        };
+        index2.prototype.createScene = function (title) {
+            var _this = this;
+            this.sceneDTO = qec.createExample(title);
+            if (!this.isParallel) {
+                this.sc = new qec.scene();
+                this.sc.setDebug(true);
+                this.sc.create(this.sceneDTO, function () {
+                    if (_this.isHardware)
+                        _this.renderer = new qec.hardwareRenderer();
+                    else {
+                        var sr = new qec.simpleRenderer();
+                        sr.setRenderSteps(_this.renderSteps);
+                        _this.renderer = sr;
+                    }
+                    _this.renderer.setContainerAndSize(_this.element, 600, 600);
+                    var scrend = _this.sc.get(function (o) { return o instanceof qec.scRenderer; }, 'render');
+                    _this.renderSettings = scrend.settings;
+                    _this.renderSettings.shadows = true;
+                    _this.render(function () { });
+                });
+            }
+            else {
+                this.rendererParallel = new qec.parallelRenderer();
+                this.rendererParallel.setContainerAndSize(this.element, 400, 400);
+                this.rendererParallel.initDTO(this.sceneDTO, function () {
+                    var sc = new qec.scene();
+                    //this.cam = <camera> sc.createOne(this.sceneDTO, 'camera');
+                    _this.render(function () { });
+                });
+            }
+        };
+        index2.prototype.render = function (done) {
+            if (!this.isParallel) {
+                this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length);
+                this.renderer.render(this.renderSettings);
+                done();
+            }
+            else
+                this.rendererParallel.render(this.renderSettings.camera, done);
+        };
+        index2.prototype.debug = function (x, y) {
+            if (!this.isParallel)
+                this.renderer.renderDebug(x, y, this.renderSettings);
+        };
+        index2.prototype.startRenderLoop = function () {
+            var cam = this.renderSettings.camera;
+            this.t = 5;
+            this.camDist = vec2.distance(cam.target, cam.position);
+            this.renderLoop();
+        };
+        index2.prototype.renderLoop = function () {
+            var _this = this;
+            if (this.t > 10)
+                return;
+            var cam = this.renderSettings.camera;
+            cam.position[0] = cam.target[0] + this.camDist * Math.cos(Math.PI * 2 * this.t / 10);
+            cam.position[1] = cam.target[1] + this.camDist * Math.sin(Math.PI * 2 * this.t / 10);
+            cam.setPosition(cam.position);
+            this.render(function () {
+                _this.t += 0.5;
+                setTimeout(function () { return _this.renderLoop(); }, 0);
+            });
+        };
+        return index2;
+    }());
+    qec.index2 = index2;
 })(qec || (qec = {}));
 ko.bindingHandlers['element'] =
     {

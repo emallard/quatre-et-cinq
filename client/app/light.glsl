@@ -42,11 +42,11 @@ float getSpecular(vec3 pos, vec3 normal, vec3 toLight, vec3 rd)
     return specular;
 }
 
-vec3 applyLight(vec3 lightPos, int isShadow, vec3 color, vec3 pos, vec3 normal, vec3 rd)
+vec3 applyLight(vec3 lightPos, float intensity, int isShadow, vec3 color, vec3 pos, vec3 normal, vec3 rd)
 {
     //float intensity = this.spotLights[i].intensity; 
     //vec3 lightPos = this.spotLights[i].position;
-    float intensity = 1.0;
+    //float intensity = 1.0;
     vec3 toLight = normalize(lightPos - pos);
 
     float lightDist = distance(lightPos,pos);

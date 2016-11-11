@@ -60,7 +60,7 @@ vec3 rayMarch (in vec3 ro, in vec3 rd) {
         vec3 normal = getNormal(pos-rd*EPS_NORMAL_1);
         
         vec3 col = getColor(pos);
-        col = applyLight(u_lightP, u_shadows, col, pos, normal, rd);
+        col = getLight(u_shadows, col, pos, normal, rd);
           /*
         // shadow
         if (u_shadows == 1)

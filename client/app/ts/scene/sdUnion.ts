@@ -10,6 +10,7 @@ module qec{
     export class sdUnion implements signedDistance, canCreate<sdUnionDTO>
     {
         array : signedDistance[] = [];
+        inverseTransform = mat4.identity(mat4.create());
 
         createFrom(dto:sdUnionDTO)
         {
@@ -57,7 +58,7 @@ module qec{
 
         getInverseTransform(out:Float32Array)
         {
-            mat4.identity(out);
+            mat4.copy(out, this.inverseTransform);
         }
 
         getBoundingBox(out: Float32Array)

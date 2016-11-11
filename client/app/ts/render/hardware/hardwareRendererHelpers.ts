@@ -1,64 +1,7 @@
 module qec {
 
-    export class hardwareSignedDistance
-    {
-        sd: signedDistance;
-        index:number;
-        sdFieldIndex = -1;
-        //shaderText:string;
-    }
     
-    export class hardwareSignedDistanceExplorer
-    {
-
-        array:hardwareSignedDistance[] = [];
-        recCount:number;
-        sdFieldsCount:number;
-
-        explore(sd: signedDistance)
-        {
-            this.recCount = 0;
-            this.sdFieldsCount = 0;
-            this.array = [];    
-            this.exploreRec(sd);
-        }
-
-        private exploreRec(sd: signedDistance)
-        {
-            var hsd = new hardwareSignedDistance();
-            this.array.push(hsd);
-
-            hsd.sd = sd;
-            hsd.index = this.recCount;
-            this.recCount++;
-
-            if (sd instanceof sdFields)
-            {
-                hsd.sdFieldIndex = this.sdFieldsCount;
-                this.sdFieldsCount++;
-            }
-
-            else if (sd instanceof sdUnion)
-            {
-                for (var i=0; i < sd.array.length; ++i)
-                    this.exploreRec(sd.array[i]);
-            }
-        }
-
-        getSdFieldsCount():number {
-            var c = 0;
-            for (var i=0; i < this.array.length; ++i)
-                if (this.array[i].sd instanceof sdFields)
-                    c++;
-            return c;
-        }
-
-        getHsd(sd: signedDistance)
-        {
-            var found = this.array.find(hsd => hsd.sd == sd);
-            return found;
-        }
-    }
+   
 
     export class hardwareShaderText
     {
@@ -197,5 +140,22 @@ module qec {
             }
         }
 
+        generateLight(count:number) : string
+        {
+            var shader = '';
+            
+            shader += '\n\nuniform vec3 u_lightPositions[' + count + '];\n\n'
+            shader += '\n\nuniform float u_lightIntensities[' + count + '];\n\n'
+            
+            shader += 'vec3 getLight(int shadows, vec3 col, vec3 pos, vec3 normal, vec3 rd) { \n'
+            shader += '    vec3 result = vec3(0.0,0.0,0.0);\n'
+            for (var i=0; i < count; ++i)
+            {
+                shader += '    result = result + applyLight(u_lightPositions['+i+'], u_lightIntensities['+i+'], shadows, col, pos, normal, rd);\n';
+            }
+            shader += '    return result;\n}\n\n';
+
+            return shader;
+        }
     }
 }

@@ -6,6 +6,7 @@
     <script src="libs/jquery.3.1.1.min.js"></script>
     <script src="libs/three.js"></script>
     <script src="libs/gl-matrix.js"></script>
+    <script src="libs/knockout-3.4.1.js"></script>
     <script src="app/built/built.js"></script>
 
 </head>
@@ -42,6 +43,8 @@
             //if (!p) p = 'index2';
 
             //var p2 = eval('new qec.'+p+'()');
+            //var injector = new qec.injector();
+            //var p2 = injector.create(qec.index2());
             var p2 = new qec.index2();
             p2.isParallel = getParameterByName('isParallel') == '1';
             p2.isHardware = getParameterByName('isHardware') == '1';

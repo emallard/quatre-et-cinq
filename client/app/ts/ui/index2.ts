@@ -91,7 +91,7 @@ module qec {
         {
             if (!this.isParallel)
             {
-                this.renderer.updateShader(this.renderSettings.sd);
+                this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length);
                 this.renderer.render(this.renderSettings);
                 done();
             }
