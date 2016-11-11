@@ -5,6 +5,7 @@ module qec {
 
         editor:editor = inject(editor);
         editorView:editorView = inject(editorView);
+        profileView:profileView = inject(profileView);
 
         isMouseDown = false;
         updateFlag = false;
@@ -83,6 +84,11 @@ module qec {
                     this.editor.renderer.updateFloatTextures(this.selected.sd);
                     this.editor.setRenderFlag();
                 }
+
+                if (this.isScaleMode)
+                {
+                    this.profileView.refresh();
+                }
             }
         }
 
@@ -99,13 +105,18 @@ module qec {
 
         onMouseDown(e:MouseEvent)
         {
+            this.isMouseDown = false;
             if (e.button != 0)
                 return;
 
             this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
             this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
 
-            if (this.collide.hasCollided)
+            if (!this.collide.hasCollided)
+            {
+                this.editorView.setSelectedIndex(-1);
+            }
+            else 
             {
                 this.isMouseDown = true;
                 

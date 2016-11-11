@@ -32,7 +32,7 @@ module qec {
             //$('.debug').append(this.profile.canvas);    
         }
 
-        setColor(rgb:number[])
+        setDiffuseColor(rgb:number[])
         {
             vec3.set(this.diffuseColor, rgb[0], rgb[1], rgb[2]);
             this.sd.material.setDiffuse(rgb[0], rgb[1], rgb[2]);

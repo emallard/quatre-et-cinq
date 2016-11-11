@@ -185,7 +185,7 @@ var qec;
             this.editorObjects.push(l);
             l.setTopImg2(this.helper.canvas2, vec4.fromValues(-0.5 * size[0], -0.5 * size[1], 0.5 * size[0], 0.5 * size[1]));
             l.setProfileHeight(autoHeight);
-            l.setColor(this.helper.getColor());
+            l.setDiffuseColor(this.helper.getColor());
             mat4.identity(l.inverseTransform);
             mat4.translate(l.inverseTransform, l.inverseTransform, vec3.fromValues(center[0], center[1], 0));
             mat4.invert(l.inverseTransform, l.inverseTransform);
@@ -227,12 +227,14 @@ var qec;
         editor.prototype.setUpdateFlag = function () {
             this.updateFlag = true;
         };
-        editor.prototype.setDiffuse = function (i, r, g, b) {
+        /*
+        setDiffuse(i:number, r:number, g:number, b:number)
+        {
             this.editorObjects[i].sd.getMaterial(null).setDiffuse(r, g, b);
             var sd = this.editorObjects[i].sd;
-            if (this.renderer instanceof qec.hardwareRenderer)
-                this.renderer.updateDiffuse(sd);
-        };
+            if (this.renderer instanceof hardwareRenderer)
+                (<hardwareRenderer> this.renderer).updateDiffuse(sd);
+        }*/
         editor.prototype.getAllSd = function () {
             return this.editorObjects.map(function (l) { return l.sd; });
         };
@@ -278,7 +280,7 @@ var qec;
             //this.profile.canvas.style.border = 'solid 1px red';
             //$('.debug').append(this.profile.canvas);    
         }
-        editorObject.prototype.setColor = function (rgb) {
+        editorObject.prototype.setDiffuseColor = function (rgb) {
             vec3.set(this.diffuseColor, rgb[0], rgb[1], rgb[2]);
             this.sd.material.setDiffuse(rgb[0], rgb[1], rgb[2]);
         };
@@ -4940,6 +4942,7 @@ var qec;
             this.heightController = qec.inject(qec.heightController);
             this.importView = qec.inject(qec.importView);
             this.profileView = qec.inject(qec.profileView);
+            this.materialView = qec.inject(qec.materialView);
             // toolbars
             this.importToolbarVisible = ko.observable(true);
             this.modifyToolbarVisible = ko.observable(false);
@@ -4973,6 +4976,7 @@ var qec;
         editorView.prototype.setSelectedIndex = function (i) {
             this.editor.setSelectedIndex(i);
             this.profileView.setSelectedIndex(i);
+            this.materialView.setSelectedIndex(i);
         };
         editorView.prototype.updateLoop = function () {
             var _this = this;
@@ -4999,6 +5003,7 @@ var qec;
         function heightController() {
             this.editor = qec.inject(qec.editor);
             this.editorView = qec.inject(qec.editorView);
+            this.profileView = qec.inject(qec.profileView);
             this.isMouseDown = false;
             this.updateFlag = false;
             this.startX = 0;
@@ -5051,6 +5056,9 @@ var qec;
                     this.editor.renderer.updateFloatTextures(this.selected.sd);
                     this.editor.setRenderFlag();
                 }
+                if (this.isScaleMode) {
+                    this.profileView.refresh();
+                }
             }
         };
         heightController.prototype.onMouseMove = function (e) {
@@ -5061,11 +5069,15 @@ var qec;
             }
         };
         heightController.prototype.onMouseDown = function (e) {
+            this.isMouseDown = false;
             if (e.button != 0)
                 return;
             this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
             this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
-            if (this.collide.hasCollided) {
+            if (!this.collide.hasCollided) {
+                this.editorView.setSelectedIndex(-1);
+            }
+            else {
                 this.isMouseDown = true;
                 // Initial state
                 this.startX = e.offsetX;
@@ -5253,6 +5265,13 @@ ko.bindingHandlers['element'] =
             valueAccessor()(element);
         }
     };
+ko.bindingHandlers['setElement'] =
+    {
+        init: function (element, valueAccessor, allBindingsAccessor, viewModel) {
+            var fct = valueAccessor();
+            fct.call(viewModel, element);
+        }
+    };
 var qec;
 (function (qec) {
     var materialView = (function () {
@@ -5262,7 +5281,7 @@ var qec;
         }
         materialView.prototype.setElement = function (elt) {
             var _this = this;
-            this.spectrumElt = $(elt).find('.flatColorPicker');
+            this.spectrumElt = $(elt); //.find('.flatColorPicker');
             this.spectrumElt.spectrum({
                 flat: true,
                 showInput: true,
@@ -5274,23 +5293,102 @@ var qec;
             var fakePos = vec3.create();
             this.selectedIndex = i;
             if (i >= 0) {
-                var m = this.editor.editorObjects[this.selectedIndex].sd.getMaterial(fakePos);
+                var m = this.editor.editorObjects[this.selectedIndex].diffuseColor;
                 this.spectrumElt.spectrum("set", "rgb(" +
-                    m.diffuse[0] * 255 + "," +
-                    m.diffuse[1] * 255 + "," +
-                    m.diffuse[2] * 255 + ")");
+                    m[0] * 255 + "," +
+                    m[1] * 255 + "," +
+                    m[2] * 255 + ")");
             }
         };
         materialView.prototype.onColorChange = function (color) {
             var fakePos = vec3.create();
             if (this.selectedIndex >= 0) {
-                this.editor.setDiffuse(this.selectedIndex, color._r / 255, color._g / 255, color._b / 255);
+                var o = this.editor.editorObjects[this.selectedIndex];
+                o.setDiffuseColor([color._r / 255, color._g / 255, color._b / 255]);
+                this.editor.renderer.updateDiffuse(o.sd);
                 this.editor.setRenderFlag();
             }
         };
         return materialView;
     }());
     qec.materialView = materialView;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var profileExample = (function () {
+        function profileExample() {
+            this.profileView = qec.inject(qec.profileView);
+            this.editor = qec.inject(qec.editor);
+            this.points = [];
+            this.canvas = document.createElement('canvas');
+            this.bsplineDrawer = qec.inject(qec.bsplineDrawer);
+        }
+        profileExample.prototype.setContainer = function (elt) {
+            elt.appendChild(this.canvas);
+        };
+        profileExample.prototype.setPoints = function (points) {
+            this.points = points;
+            this.canvas.width = 50;
+            this.canvas.height = 100;
+            var canvasPoints = [];
+            for (var i = 0; i < points.length; ++i) {
+                var px = this.points[i][0];
+                var py = this.points[i][1];
+                canvasPoints.push([px * this.canvas.width, (1 - py) * this.canvas.height]);
+            }
+            var ctx = this.canvas.getContext('2d');
+            ctx.strokeStyle = "rgba(0,0,0,1)";
+            ctx.fillStyle = "rgba(0,0,0,1)";
+            //if (l.profileSmooth)
+            this.bsplineDrawer.drawSpline(canvasPoints, this.canvas);
+            //else
+            //    this.lineDrawer.drawLine(this.points, this.canvas);
+        };
+        profileExample.prototype.click = function () {
+            var o = this.editor.editorObjects[this.editor.selectedIndex];
+            var bounds = o.profileBounds;
+            var w = bounds[2] - bounds[0];
+            var h = bounds[3] - bounds[1];
+            var newPoints = [];
+            for (var j = 0; j < this.points.length; ++j) {
+                var rx = this.points[j][0];
+                var ry = this.points[j][1];
+                var x = (1 - rx) * bounds[0] + rx * bounds[2];
+                var y = (1 - ry) * bounds[1] + ry * bounds[3];
+                newPoints.push([x, y]);
+            }
+            o.setProfilePoints(newPoints);
+            this.profileView.refresh();
+            this.editor.renderer.updateFloatTextures(o.sd);
+            this.editor.setRenderFlag();
+        };
+        return profileExample;
+    }());
+    qec.profileExample = profileExample;
+    var profileExamples = (function () {
+        function profileExamples() {
+            this.examples = [];
+            this.createExample = qec.injectFunc(profileExample);
+            this.visible = ko.observable(true);
+        }
+        profileExamples.prototype.afterInject = function () {
+            this.push([[0, 0], [1, 0], [1, 1], [0, 1]]);
+            this.push([[0, 0], [1, 0], [1, 0.4], [0.5, 0.4], [0.5, 0.6], [1, 0.6], [1, 1], [0, 1]]);
+            this.push([[0, 0], [1, 0], [1, 0.5], [0.5, 0.5], [0.5, 1], [0, 1]]);
+            this.push([[0, 0], [1, 0], [1, 1], [0.5, 1], [0.5, 0.5], [0, 0.5]]);
+            this.push([[0.5, 0], [1, 0], [1, 1], [0.5, 1]]);
+        };
+        profileExamples.prototype.push = function (p) {
+            var ex = this.createExample();
+            ex.setPoints(p);
+            this.examples.push(ex);
+        };
+        profileExamples.prototype.toggleVisible = function () {
+            this.visible(!this.visible());
+        };
+        return profileExamples;
+    }());
+    qec.profileExamples = profileExamples;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -5308,6 +5406,7 @@ var qec;
             this.maxCanvasHeight = 390;
             this.offsetX = 20;
             this.offsetY = 20;
+            this.profileExamples = qec.inject(qec.profileExamples);
             this.container = ko.observable();
             this.container.subscribe(function () { return _this.init(_this.container()); });
         }
@@ -5340,6 +5439,9 @@ var qec;
                 this.draw();
                 this.updateEditor();
             }
+        };
+        profileView.prototype.refresh = function () {
+            this.setSelectedIndex(this.selectedIndex);
         };
         profileView.prototype.setSelectedIndex = function (i) {
             this.selectedIndex = i;

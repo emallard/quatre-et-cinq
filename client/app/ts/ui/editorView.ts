@@ -10,6 +10,7 @@ module qec
         heightController:heightController = inject(heightController);
         importView:importView = inject(importView);
         profileView:profileView = inject(profileView);
+        materialView:materialView = inject(materialView);
 
         afterInject()
         {
@@ -43,6 +44,7 @@ module qec
         {
             this.editor.setSelectedIndex(i);
             this.profileView.setSelectedIndex(i);
+            this.materialView.setSelectedIndex(i);
         }
 
         private updateLoop()

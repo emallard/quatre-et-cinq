@@ -198,7 +198,7 @@ module qec
             l.setTopImg2(this.helper.canvas2, vec4.fromValues(-0.5*size[0], -0.5*size[1], 0.5*size[0], 0.5*size[1]));
             l.setProfileHeight(autoHeight);
             
-            l.setColor(this.helper.getColor());
+            l.setDiffuseColor(this.helper.getColor());
             mat4.identity(l.inverseTransform);
             mat4.translate(l.inverseTransform, l.inverseTransform, vec3.fromValues(center[0], center[1], 0))
             mat4.invert(l.inverseTransform, l.inverseTransform);
@@ -256,13 +256,14 @@ module qec
             this.updateFlag = true;
         }
 
+        /*
         setDiffuse(i:number, r:number, g:number, b:number)
         {
             this.editorObjects[i].sd.getMaterial(null).setDiffuse(r, g, b);
             var sd = this.editorObjects[i].sd;
             if (this.renderer instanceof hardwareRenderer)
                 (<hardwareRenderer> this.renderer).updateDiffuse(sd);
-        }
+        }*/
 
         getAllSd() : signedDistance[]
         {

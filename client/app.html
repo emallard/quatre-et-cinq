@@ -43,14 +43,24 @@
                 <div data-bind="with: profileView">
                     <div data-bind="element: container">
                     </div>
+                    
                     <button data-bind="click: setAsLines">Lines</button><br/>
                     <button data-bind="click: setAsSmooth">Curves</button><br/>
-                
+                    <div data-bind="with: profileExamples">
+                        <button data-bind="click: toggleVisible">Examples</button><br/>
+                        <div data-bind="visible: visible">
+                            <div data-bind="foreach : examples">
+                                <button data-bind="setElement: setContainer, click:click" style="padding:5px;display:inline-block"></button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                
                 
 
-                <div class='materialView'>
-                    <input class="flatColorPicker" value="#B6BD79" />
+                <div class='materialView' data-bind="with: materialView">
+                    <input data-bind="setElement: setElement" value="#B6BD79" />
                 </div>
             </div>
             

@@ -20,6 +20,8 @@ module qec {
         offsetX = 20;
         offsetY = 20;
         
+        profileExamples:profileExamples = inject(profileExamples);
+        
         container = ko.observable<HTMLElement>();
         constructor()
         {
@@ -61,6 +63,11 @@ module qec {
                 l.profileSmooth = true;
                 this.draw(); this.updateEditor();
             }
+        }
+
+        refresh()
+        {
+            this.setSelectedIndex(this.selectedIndex);
         }
 
         setSelectedIndex(i:number)
@@ -225,7 +232,7 @@ module qec {
                 this.draw();
                 this.updateEditor();
             }
-        }
+        }        
     }
 
 }
