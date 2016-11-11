@@ -25,11 +25,12 @@ module qec
             
 
         helper = new svgHelper();
-        svgAutoHeightHelper = new svgAutoHeightHelper();
+        svgAutoHeightHelper:svgAutoHeightHelper = injectNew(svgAutoHeightHelper);
 
         renderFlag = false;
         updateFlag = false;
         
+        exportSTL:exportSTL = inject(exportSTL);
         
         container = ko.observable<HTMLElement>();
         constructor()
@@ -265,7 +266,7 @@ module qec
                 (<hardwareRenderer> this.renderer).updateDiffuse(sd);
         }*/
 
-        getAllSd() : signedDistance[]
+        getAllSd() : sdFields[]
         {
             return this.editorObjects.map( l => l.sd);
         }
@@ -274,6 +275,11 @@ module qec
         {
             this.renderSettings.shadows = !this.renderSettings.shadows;
             this.setRenderFlag();
+        }
+
+        computeSTL():string
+        {
+            return this.exportSTL.compute(this.getAllSd());
         }
 
         light1()

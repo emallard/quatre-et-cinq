@@ -21,7 +21,7 @@ module qec
             vec3FromArray(this.diffuse, dto.diffuse);
         }
 
-        getColor(pos: Float32Array, out:Float32Array)
+        getColor(out:Float32Array)
         {
             vec3.copy(out, this.diffuse);
         }

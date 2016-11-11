@@ -1,3 +1,5 @@
+declare var saveAs;
+
 module qec
 {
 
@@ -53,6 +55,13 @@ module qec
             this.editor.updateLoop();
             this.profileView.updateLoop()
             requestAnimationFrame(()=>this.updateLoop());
+        }
+
+        exportSTL()
+        {
+            var stl = this.editor.computeSTL();
+            var blob = new Blob([stl], {type: 'text/plain'});
+            saveAs(blob, 'download.stl');
         }
 
 

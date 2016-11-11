@@ -126,7 +126,7 @@ module qec {
 
                 this.getNormal(sd, this.pos2, outNormal);
 
-                this.sd.getMaterial(outPos).getColor(outPos, this.sdColor);
+                this.sd.getMaterial(outPos).getColor(this.sdColor);
 
                 var KD = 0.7;
                 var KS = 0.5;

@@ -11,6 +11,7 @@
     <script src="libs/spectrum.js"></script>
     <script src="libs/knockout-3.4.1.js"></script>
     <script src="libs/jszip.min.js"></script>
+    <script src="libs/FileSaver.js"></script>
     <script src="app/built/built.js"></script>
     <link rel="stylesheet" href="app.css">
     <link rel="stylesheet" href="libs/spectrum.css">
@@ -29,7 +30,10 @@
             <button data-bind="click: showImportToolbar">Import</button>
             <button data-bind="click: showModifyToolbar">Modify</button>
             <button data-bind="click: showEnvironmentToolbar">Environment</button>
-            <button data-bind="click: showPhotoToolbar">Share</button> 
+            <button data-bind="click: showPhotoToolbar">Share</button>
+
+            <button data-bind="click: exportSTL">ExportSTL</button>
+             
         </div>
 
         <div class="selectedTool">
