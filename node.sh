@@ -1,1 +1,1 @@
-node server/build/start.js
+nodemon --debug server/build/start.js

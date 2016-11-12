@@ -5,10 +5,10 @@ let router = express.Router();
 
 router.get("/", function (req: express.Request, res: express.Response, next: express.NextFunction) {
     //res.render("index", { title: "Typescript Base Express" });
-    res.send('coucou');
+    res.send('coucou4');
 });
 
-
+/*
 var assert = require('assert');
 var MongoClient = mongodb.MongoClient;
 
@@ -56,6 +56,4 @@ export interface User {
       somethingElse: string;
 }
 */
-router.get("/")
-
 export = router;
