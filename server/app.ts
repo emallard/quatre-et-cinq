@@ -22,7 +22,7 @@ if (app.get("env") === "development") {
     app.use(logger("dev"));
 }
 
-app.use('/client', express.static(path.join(__dirname, "..", "..", "client")));
+app.use('/studio45', express.static(path.join(__dirname, "..", "..", "client")));
 app.use(express.static(path.join(__dirname, "..", "public")));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
