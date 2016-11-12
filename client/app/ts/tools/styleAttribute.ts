@@ -9,11 +9,14 @@ module qec {
             var index = -1;
             for (var i=0;i < parts.length;i++) {
                 var subParts = parts[i].split(':');
-                parts2[i] = [subParts[0],subParts[1]];
-                if (subParts[0] == key)
+                if (subParts.length == 2)
                 {
-                    //console.log('style : key at ' + i);
-                    index = i;
+                    parts2[i] = [subParts[0],subParts[1]];
+                    if (subParts[0] == key)
+                    {
+                        //console.log('style : key at ' + i);
+                        index = i;
+                    }
                 }
             }
 

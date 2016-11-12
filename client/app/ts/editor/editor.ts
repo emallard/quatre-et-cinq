@@ -47,7 +47,8 @@ module qec
             this.simpleRenderer.canvas.style.display = 'none';
         
             this.hardwareRenderer = new hardwareRenderer();
-            this.hardwareRenderer.setContainerAndSize(containerElt, 800, 600);
+            
+            this.hardwareRenderer.setContainerAndSize(containerElt, window.innerWidth-402, window.innerHeight-102);
 
             this.setSimpleRenderer(simple);
             

@@ -5,7 +5,7 @@
 
     <script src="libs/three.js"></script>
     <script src="libs/jquery.3.1.1.min.js"></script>
-    <script src="libs/bootstrap/bootstrap.min.js"></script>
+    <!--<script src="libs/bootstrap/bootstrap.min.js"></script>-->
 
     <script src="libs/gl-matrix.js"></script>
     <script src="libs/spectrum.js"></script>
@@ -13,43 +13,64 @@
     <script src="libs/jszip.min.js"></script>
     <script src="libs/FileSaver.js"></script>
     <script src="app/built/built.js"></script>
-    <link rel="stylesheet" href="app.css">
     <link rel="stylesheet" href="libs/spectrum.css">
-    <link rel="stylesheet" href="libs/bootstrap/bootstrap.css">
+    <link rel="stylesheet" href="css/app.css">
+    <!--<link rel="stylesheet" href="libs/bootstrap/bootstrap.css">-->
 </head>
 
 
 <body>
-    <div class='screen'>
-        <div class="toolbar">
-            Onglets: 
-            <button class='btnUpdate hide'>Update</button>
-            <button class='btnSelect hide'>Selectionner</button>
-            <button class='btnCamera hide'>Camera</button>
-            
-            <button data-bind="click: showImportToolbar">Import</button>
-            <button data-bind="click: showModifyToolbar">Modify</button>
-            <button data-bind="click: showEnvironmentToolbar">Environment</button>
-            <button data-bind="click: showPhotoToolbar">Share</button>
+    <div id="header-wrapper">
+        
+        <div class="toolbar">                    
+            <a data-bind="click: showImportToolbar, css: {active: importToolbarVisible}" >2D</a>
+            <a data-bind="click: showModifyToolbar, css: {active: modifyToolbarVisible}">Edit</a>
+            <a data-bind="click: showEnvironmentToolbar, css: {active: environmentToolbarVisible}">Scene</a>
+            <a data-bind="click: showPhotoToolbar, css: {active: photoToolbarVisible}">Share</a>
+        </div>
 
-            <button data-bind="click: exportSTL">ExportSTL</button>
-             
+        <div id="banner">
+            <div class="container">
+            </div>
+        </div>
+    </div>
+                
+    <div class='screen'>
+
+        <div class='renderPanel'>
+                <div class='renderContainer' 
+                     data-bind="element: editor.container, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }"></div>
+            <div class="debug">
+            </div>
+        </div>
+
+        <div class="secondToolbar" data-bind="visible: modifyToolbarVisible">
+            <button data-bind="click: setSelectController" ><img src="css/images/mouse-cursor.svg" height="30"></button>
+            <button data-bind="click: setMoveController" ><img src="css/images/mouse-move.svg"  height="30"></button>
+            <button data-bind="click: setScaleController"><img src="css/images/mouse-scale.svg" height="30"></button>    
+        </div>
+
+        <div class="selectedToolWrapper">
         </div>
 
         <div class="selectedTool">
             
             <div data-bind="visible: modifyToolbarVisible">
-
-                <button data-bind="click: setMoveController" >Move Vertically</button><br/>
-                <button data-bind="click: setScaleController">Scale Vertically</button><br/>
-                <br/>
+                <h2>Edit</h2>
+                
+                <div class='materialView' data-bind="with: materialView">
+                    <input data-bind="setElement: setElement" value="#B6BD79" />
+                </div>
 
                 <div data-bind="with: profileView">
-                    <div data-bind="element: container">
+                    <div data-bind="setElement: init">
                     </div>
                     
-                    <button data-bind="click: setAsLines">Lines</button><br/>
-                    <button data-bind="click: setAsSmooth">Curves</button><br/>
+                    <input type="radio" data-bind="checked: isLines, event: {change: setAsLines}">Lines
+                    <input style="margin-left:20px" type="radio" data-bind="checked: isSmooth, event: {change: setAsSmooth}">Curves<br>
+                    
+                    <!--<button data-bind="click: setAsLines">Lines</button><br/>-->
+                    <!--<button data-bind="click: setAsSmooth">Curves</button><br/>-->
                     <div data-bind="with: profileExamples">
                         <button data-bind="click: toggleVisible">Examples</button><br/>
                         <div data-bind="visible: visible">
@@ -59,23 +80,17 @@
                         </div>
                     </div>
                 </div>
-
-                
-                
-
-                <div class='materialView' data-bind="with: materialView">
-                    <input data-bind="setElement: setElement" value="#B6BD79" />
-                </div>
             </div>
             
             <div data-bind="with: importView, visible:importToolbarVisible">
+                <h2>2D</h2>
                  Select an SVG file
                  <br/>
                  <input class="btnImport" type="file" name="importFile" 
                         data-bind="event: { change: function() { $data.readImage($element.files[0]) } }">
                  
                  <br/>Or Drop below :
-                 <div class="dropZone">
+                 <div class="dropZone" data-bind="setElement: setElement">
                      Drop Zone
                  </div>
                  <br/>
@@ -98,27 +113,13 @@
             </div>
 
             <div data-bind="visible: photoToolbarVisible">
-                <button class='btnPhoto'>Photo</button>
+                <button data-bind="click: savePhoto">Photo</button>
+                <button data-bind="click: exportSTL">ExportSTL</button>
             </div>        
 
         </div>
         
-        <div class='renderPanel'>
-            <div class="paper">
-                <div class='renderContainer' 
-                     data-bind="element: editor.container, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }"></div>
-            </div>
-            <div class="debug">
-            </div>
-        </div>
         
-            
-            <div class='tools'>
-                <!--Nouveau / Selection / Hauteur-Epaisseur / Deplacement / Rotation
-                -->
-                
-            </div>
-
 <!--
             Toolbar : Objets / Environnement / Share(Photo)
 
@@ -147,7 +148,7 @@
     </div>
 -->
 
-    <!-- Modal -->
+    <!-- Modal 
     <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -176,7 +177,7 @@
         </div>
     </div>
     </div>
-
+    -->
     <script>
         qec.resources.loadAll(onResourceLoaded);
 

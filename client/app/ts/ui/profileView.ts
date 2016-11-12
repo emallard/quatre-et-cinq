@@ -14,19 +14,16 @@ module qec {
         doUpdate = false;
         selectedIndex = -1;
 
-        maxCanvasWidth = 390;
-        maxCanvasHeight = 390;
+        maxCanvasWidth = 290;
+        maxCanvasHeight = 290;
 
         offsetX = 20;
         offsetY = 20;
         
         profileExamples:profileExamples = inject(profileExamples);
         
-        container = ko.observable<HTMLElement>();
-        constructor()
-        {
-            this.container.subscribe(()=>this.init(this.container()))
-        }
+        isLines = ko.observable<boolean>();
+        isSmooth = ko.observable<boolean>();
         init(elt:HTMLElement)
         {
 
@@ -47,16 +44,19 @@ module qec {
 
         setAsLines() 
         {
+            this.isSmooth(false);
             if (this.selectedIndex >= 0)
             {
                 var l = this.editor.editorObjects[this.selectedIndex];
                 l.profileSmooth = false;
                 this.draw(); this.updateEditor();
             }
+            
         };
 
         setAsSmooth()
         {
+            this.isLines(false);
             if (this.selectedIndex >= 0)
             {
                 var l = this.editor.editorObjects[this.selectedIndex];

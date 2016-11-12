@@ -11,13 +11,6 @@ module qec {
 
         setElement(elt:HTMLElement)
         {
-            var btnImport = <HTMLInputElement> document.getElementsByClassName('btnImport')[0];
-            btnImport.addEventListener('change', e => {
-                var files = btnImport.files;
-                this.readImage(files[0]); 
-            });
-
-
             var dropZone = document.getElementsByClassName('dropZone')[0];
 
             dropZone.addEventListener('dragover', (evt:DragEvent) => {

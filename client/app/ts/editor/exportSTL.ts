@@ -120,7 +120,7 @@ module qec
                     }
                 }
             }
-            stl += "endsolid";
+            stl += "endsolid blablabla";
             return stl;
         }
 

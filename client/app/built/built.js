@@ -65,7 +65,7 @@ var qec;
             this.simpleRenderer.setContainerAndSize(containerElt, 300, 300);
             this.simpleRenderer.canvas.style.display = 'none';
             this.hardwareRenderer = new qec.hardwareRenderer();
-            this.hardwareRenderer.setContainerAndSize(containerElt, 800, 600);
+            this.hardwareRenderer.setContainerAndSize(containerElt, window.innerWidth - 402, window.innerHeight - 102);
             this.setSimpleRenderer(simple);
             this.renderSettings.camera.setCam(vec3.fromValues(0, -1, 3), vec3.fromValues(0, 0, 0), vec3.fromValues(0, 0, 1));
             /*
@@ -458,7 +458,7 @@ var qec;
                     }
                 }
             }
-            stl += "endsolid";
+            stl += "endsolid blablabla";
             return stl;
         };
         exportSTL.prototype.getq = function (i, j, k) {
@@ -1044,6 +1044,7 @@ var qec;
         }
         svgHelper.prototype.setSvg = function (content, done) {
             var _this = this;
+            //document.body.appendChild(this.canvas);
             this.contentSvg = content;
             var parser = new DOMParser();
             var doc = parser.parseFromString(content, "image/svg+xml");
@@ -5059,10 +5060,12 @@ var qec;
             var index = -1;
             for (var i = 0; i < parts.length; i++) {
                 var subParts = parts[i].split(':');
-                parts2[i] = [subParts[0], subParts[1]];
-                if (subParts[0] == key) {
-                    //console.log('style : key at ' + i);
-                    index = i;
+                if (subParts.length == 2) {
+                    parts2[i] = [subParts[0], subParts[1]];
+                    if (subParts[0] == key) {
+                        //console.log('style : key at ' + i);
+                        index = i;
+                    }
                 }
             }
             if (index != -1) {
@@ -5532,6 +5535,9 @@ var qec;
             var blob = new Blob([stl], { type: 'text/plain' });
             saveAs(blob, 'download.stl');
         };
+        editorView.prototype.savePhoto = function () {
+            qec.saveAsImage(this.editor.renderer.getCanvas());
+        };
         editorView.prototype.showImportToolbar = function () { this.setToolbar(this.importToolbarVisible); };
         editorView.prototype.showModifyToolbar = function () { this.setToolbar(this.modifyToolbarVisible); };
         editorView.prototype.showEnvironmentToolbar = function () { this.setToolbar(this.environmentToolbarVisible); };
@@ -5655,11 +5661,6 @@ var qec;
         };
         importView.prototype.setElement = function (elt) {
             var _this = this;
-            var btnImport = document.getElementsByClassName('btnImport')[0];
-            btnImport.addEventListener('change', function (e) {
-                var files = btnImport.files;
-                _this.readImage(files[0]);
-            });
             var dropZone = document.getElementsByClassName('dropZone')[0];
             dropZone.addEventListener('dragover', function (evt) {
                 evt.stopPropagation();
@@ -5941,7 +5942,6 @@ var qec;
 (function (qec) {
     var profileView = (function () {
         function profileView() {
-            var _this = this;
             this.editor = qec.inject(qec.editor);
             this.bsplineDrawer = new qec.bsplineDrawer();
             this.lineDrawer = new qec.lineDrawer();
@@ -5949,13 +5949,13 @@ var qec;
             this.pointIndex = -1;
             this.doUpdate = false;
             this.selectedIndex = -1;
-            this.maxCanvasWidth = 390;
-            this.maxCanvasHeight = 390;
+            this.maxCanvasWidth = 290;
+            this.maxCanvasHeight = 290;
             this.offsetX = 20;
             this.offsetY = 20;
             this.profileExamples = qec.inject(qec.profileExamples);
-            this.container = ko.observable();
-            this.container.subscribe(function () { return _this.init(_this.container()); });
+            this.isLines = ko.observable();
+            this.isSmooth = ko.observable();
         }
         profileView.prototype.init = function (elt) {
             var _this = this;
@@ -5971,6 +5971,7 @@ var qec;
             this.draw();
         };
         profileView.prototype.setAsLines = function () {
+            this.isSmooth(false);
             if (this.selectedIndex >= 0) {
                 var l = this.editor.editorObjects[this.selectedIndex];
                 l.profileSmooth = false;
@@ -5980,6 +5981,7 @@ var qec;
         };
         ;
         profileView.prototype.setAsSmooth = function () {
+            this.isLines(false);
             if (this.selectedIndex >= 0) {
                 var l = this.editor.editorObjects[this.selectedIndex];
                 l.profileSmooth = true;

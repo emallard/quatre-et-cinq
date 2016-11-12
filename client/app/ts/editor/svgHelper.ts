@@ -14,6 +14,7 @@ module qec
         
         setSvg(content:string, done:()=>void)
         {
+            //document.body.appendChild(this.canvas);
             this.contentSvg = content;
 
             var parser = new DOMParser();
@@ -68,7 +69,6 @@ module qec
                 this.canvas2.height = h;
                 var ctx2 = this.canvas2.getContext('2d'); 
                 ctx2.drawImage(img, boundingInPx[0], boundingInPx[1], w, h, 0, 0, w, h);
-
                 done();
             }
             img.src = "data:image/svg+xml;base64," + btoa(svg_xml);

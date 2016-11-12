@@ -64,6 +64,11 @@ module qec
             saveAs(blob, 'download.stl');
         }
 
+        savePhoto()
+        {
+            saveAsImage(this.editor.renderer.getCanvas())
+        }
+
 
         // toolbars
         importToolbarVisible = ko.observable<boolean>(true);
