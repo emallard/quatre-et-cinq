@@ -43,7 +43,7 @@ module qec
 
         click()
         {
-            var o = this.editor.editorObjects[this.editor.selectedIndex];
+            var o = this.editor.workspace.editorObjects[this.editor.workspace.selectedIndex];
             var bounds = o.profileBounds;
             var w = bounds[2] - bounds[0];
             var h = bounds[3] - bounds[1];

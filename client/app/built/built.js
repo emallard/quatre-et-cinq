@@ -38,26 +38,19 @@ var qec;
 (function (qec) {
     var editor = (function () {
         function editor() {
-            var _this = this;
-            this.simpleRenderer = new qec.simpleRenderer();
-            this.hardwareRenderer = new qec.hardwareRenderer();
+            this.simpleRenderer = qec.injectNew(qec.simpleRenderer);
+            this.hardwareRenderer = qec.injectNew(qec.hardwareRenderer);
+            this.svgImporter = qec.inject(qec.svgImporter);
+            this.exportSTL = qec.inject(qec.exportSTL);
             this.renderSettings = new qec.renderSettings();
-            this.showBoundingBox = false;
+            this.workspace = qec.inject(qec.workspace);
             this.sdUnion = new qec.sdUnion();
-            this.sdGround = new qec.sdBox();
-            this.editorObjects = [];
-            this.selectedIndex = -1;
-            this.rimLight = new qec.spotLight();
-            this.keyLight = new qec.spotLight();
-            this.fillLight = new qec.spotLight();
-            this.helper = new qec.svgHelper();
-            this.svgAutoHeightHelper = qec.injectNew(qec.svgAutoHeightHelper);
             this.renderFlag = false;
             this.updateFlag = false;
-            this.exportSTL = qec.inject(qec.exportSTL);
-            this.container = ko.observable();
-            this.indexObject = 0;
-            this.container.subscribe(function () { return _this.init(_this.container()); });
+            this.showBoundingBox = false;
+            this.sdGround = new qec.sdBox();
+            this.groundVisible = false;
+            this.firstImport = true;
         }
         editor.prototype.init = function (containerElt) {
             var simple = false;
@@ -68,49 +61,33 @@ var qec;
             this.hardwareRenderer.setContainerAndSize(containerElt, window.innerWidth - 402, window.innerHeight - 102);
             this.setSimpleRenderer(simple);
             this.renderSettings.camera.setCam(vec3.fromValues(0, -1, 3), vec3.fromValues(0, 0, 0), vec3.fromValues(0, 0, 1));
-            /*
-            keyLight.createFrom({
-                type: 'directionalLightDTO',
-                position: [-2, -2, 0],
-                direction : [1, 1, -2],
-                intensity : 0.8
-            });
-
-            fillLight.createFrom({
-                type: 'directionalLightDTO',
-                position: [2, -2, 0],
-                direction : [-1, 1, -1],
-                intensity : 0.2
-            });
-            */
-            this.rimLight.createFrom({
+            this.workspace.rimLight.createFrom({
                 type: 'spotLightDTO',
                 position: [2, 2, 0.5],
                 direction: [-1, -1, 0.1],
                 intensity: 0.2
             });
-            this.keyLight.createFrom({
+            this.workspace.keyLight.createFrom({
                 type: 'spotLightDTO',
                 position: [-1, -1, 5],
                 direction: [0, 0, 0],
                 intensity: 0.8
             });
-            this.fillLight.createFrom({
+            this.workspace.fillLight.createFrom({
                 type: 'spotLightDTO',
                 position: [2, -2, 0.5],
                 direction: [-1, 1, -1],
                 intensity: 0.2
             });
-            //this.renderSettings.directionalLights.push(keyLight);//, fillLight);
-            this.renderSettings.spotLights.push(this.keyLight, this.fillLight, this.rimLight);
+            this.renderSettings.spotLights.push(this.workspace.keyLight, this.workspace.fillLight, this.workspace.rimLight);
             this.sdGround = new qec.sdBox();
             this.sdGround.getMaterial(null).setDiffuse(0.8, 0.8, 0.8);
             this.sdGround.setHalfSize(2, 2, 0.01);
         };
         editor.prototype.setSelectedIndex = function (index) {
             var _this = this;
-            this.selectedIndex = index;
-            this.editorObjects.forEach(function (o, i) {
+            this.workspace.selectedIndex = index;
+            this.workspace.editorObjects.forEach(function (o, i) {
                 o.setSelected(i == index);
                 _this.renderer.updateDiffuse(o.sd);
             });
@@ -118,6 +95,22 @@ var qec;
         };
         editor.prototype.getCamera = function () {
             return this.renderSettings.camera;
+        };
+        editor.prototype.importSvg = function (svgContent, done) {
+            var _this = this;
+            if (this.firstImport) {
+                this.firstImport = false;
+                this.svgImporter.importSvgInWorkspace(this.workspace, svgContent, function () {
+                    _this.setUpdateFlag();
+                    done();
+                });
+            }
+            else {
+                this.svgImporter.reimport(this.workspace, svgContent, function () {
+                    _this.setUpdateFlag();
+                    done();
+                });
+            }
         };
         editor.prototype.toggleSimpleRenderer = function () {
             this.setSimpleRenderer(this.renderer != this.simpleRenderer);
@@ -149,56 +142,13 @@ var qec;
                 this.sdGround.setHalfSize(0.01, 2, 2);
             this.setRenderFlag();
         };
-        editor.prototype.importSvg = function (content, done) {
-            var _this = this;
-            this.originalSvgContent = content;
-            this.svgAutoHeightHelper.setSvg(content, function () {
-                _this.helper.setSvg(content, function () { return _this.nextImport(done); });
-            });
-        };
-        editor.prototype.nextImport = function (done) {
-            var _this = this;
-            //var eltCount = 1; 
-            var eltCount = this.helper.getElementsId().length;
-            if (this.indexObject < eltCount) {
-                var id = this.helper.getElementsId()[this.indexObject];
-                console.log(id);
-                this.helper.drawOnly(id, function () {
-                    var autoHeight = _this.svgAutoHeightHelper.valueForIds[id];
-                    _this.afterDraw(autoHeight * 0.05);
-                    _this.nextImport(done);
-                });
-                this.indexObject++;
-            }
-            else {
-                this.setUpdateFlag();
-                done();
-            }
-        };
-        editor.prototype.afterDraw = function (autoHeight) {
-            //$('.debug').append(this.helper.canvas);
-            //$('.debug').append(this.helper.canvas2);
-            this.helper.setRealSizeToFit(vec2.fromValues(1, 1));
-            var size = this.helper.getBoundingRealSize();
-            var center = this.helper.getRealCenter();
-            //console.log('size :' , size, 'center', center, 'autoHeight', autoHeight);
-            var l = new qec.editorObject();
-            this.editorObjects.push(l);
-            l.setTopImg2(this.helper.canvas2, vec4.fromValues(-0.5 * size[0], -0.5 * size[1], 0.5 * size[0], 0.5 * size[1]));
-            l.setProfileHeight(autoHeight);
-            l.setDiffuseColor(this.helper.getColor());
-            mat4.identity(l.inverseTransform);
-            mat4.translate(l.inverseTransform, l.inverseTransform, vec3.fromValues(center[0], center[1], 0));
-            mat4.invert(l.inverseTransform, l.inverseTransform);
-            l.updateSignedDistance();
-            //l.top.debugInfoInCanvas();
-            //$('.debug').append(l.profile.canvas);
-        };
         editor.prototype.updateScene = function () {
             // update scene
-            this.sdUnion.array = [this.sdGround];
-            for (var i = 0; i < this.editorObjects.length; ++i) {
-                this.sdUnion.array.push(this.editorObjects[i].sd);
+            this.sdUnion.array = [];
+            if (this.groundVisible)
+                this.sdUnion.array.push(this.sdGround);
+            for (var i = 0; i < this.workspace.editorObjects.length; ++i) {
+                this.sdUnion.array.push(this.workspace.editorObjects[i].sd);
             }
             this.renderSettings.sd = this.sdUnion;
             this.renderer.updateShader(this.sdUnion, this.renderSettings.spotLights.length);
@@ -237,7 +187,7 @@ var qec;
                 (<hardwareRenderer> this.renderer).updateDiffuse(sd);
         }*/
         editor.prototype.getAllSd = function () {
-            return this.editorObjects.map(function (l) { return l.sd; });
+            return this.workspace.editorObjects.map(function (l) { return l.sd; });
         };
         editor.prototype.toggleShadows = function () {
             this.renderSettings.shadows = !this.renderSettings.shadows;
@@ -245,18 +195,6 @@ var qec;
         };
         editor.prototype.computeSTL = function () {
             return this.exportSTL.compute(this.getAllSd());
-        };
-        editor.prototype.light1 = function () {
-            this.keyLight.intensity = 0.8;
-            this.fillLight.intensity = 0.2;
-            this.rimLight.intensity = 0.2;
-            this.setRenderFlag();
-        };
-        editor.prototype.light2 = function () {
-            this.keyLight.intensity = 0;
-            this.fillLight.intensity = 0.5;
-            this.rimLight.intensity = 0.5;
-            this.setRenderFlag();
         };
         return editor;
     }());
@@ -278,6 +216,9 @@ var qec;
             this.profileBounds = vec4.create();
             this.tmpProfileCanvas = document.createElement('canvas');
             this.profileSmooth = true;
+            this.needsTextureUpdate = true;
+            this.needsTransformUpdate = true;
+            this.needsMaterialUpdate = true;
             // default profile
             vec4.set(this.profileBounds, -0.2, 0, 0, 0.5);
             this.profilePoints = [[-0.2, 0], [-0.1, 0], [0, 0], [0, 0.1], [0, 0.2], [0, 0.3], [0, 0.4], [0, 0.5], [-0.1, 0.5], [-0.2, 0.5]];
@@ -365,6 +306,9 @@ var qec;
             //this.profile.debugInfoInCanvas();
             //$(".debug")[0].appendChild(this.profile.canvas);
         };
+        editorObject.prototype.updateInverseTransform = function () {
+            mat4.copy(this.sd.inverseTransform, this.inverseTransform);
+        };
         editorObject.prototype.updateSignedDistance = function () {
             this.sd.init(this.top.floatTexture, this.top.totalBounds, this.profile.floatTexture, this.profile.totalBounds);
             mat4.copy(this.sd.inverseTransform, this.inverseTransform);
@@ -381,6 +325,10 @@ var qec;
             this.icount = 70;
             this.jcount = 70;
             this.kcount = 70;
+            this.tmpVec1 = vec3.create();
+            this.tmpVec2 = vec3.create();
+            this.tmpVec3 = vec3.create();
+            this.tmpVecCross = vec3.create();
         }
         exportSTL.prototype.compute = function (sds) {
             this.densities = new Float32Array(this.icount * this.jcount * this.kcount);
@@ -447,13 +395,22 @@ var qec;
                         var q8 = this.getq(i + 1, j + 1, k + 1);
                         mc.polygonize(this.densities[q1], this.densities[q2], this.densities[q3], this.densities[q4], this.densities[q5], this.densities[q6], this.densities[q7], this.densities[q8], nn, nn, nn, nn, nn, nn, nn, nn, 0);
                         for (var pi = 0; pi < mc.posArrayLength;) {
-                            stl += ("facet normal 0 0 0\n");
-                            stl += ("outer loop \n");
-                            stl += "vertex " + bsx * (i + mc.posArray[pi++]) + " " + bsy * (j + mc.posArray[pi++]) + " " + bsz * (k + mc.posArray[pi++]) + '\n';
-                            stl += "vertex " + bsx * (i + mc.posArray[pi++]) + " " + bsy * (j + mc.posArray[pi++]) + " " + bsz * (k + mc.posArray[pi++]) + '\n';
-                            stl += "vertex " + bsx * (i + mc.posArray[pi++]) + " " + bsy * (j + mc.posArray[pi++]) + " " + bsz * (k + mc.posArray[pi++]) + '\n';
-                            stl += ("endloop \n");
-                            stl += ("endfacet \n");
+                            vec3.set(this.tmpVec1, bsx * (i + mc.posArray[pi++]), bsy * (j + mc.posArray[pi++]), bsz * (k + mc.posArray[pi++]));
+                            vec3.set(this.tmpVec2, bsx * (i + mc.posArray[pi++]), bsy * (j + mc.posArray[pi++]), bsz * (k + mc.posArray[pi++]));
+                            vec3.set(this.tmpVec3, bsx * (i + mc.posArray[pi++]), bsy * (j + mc.posArray[pi++]), bsz * (k + mc.posArray[pi++]));
+                            var vertices = '';
+                            vertices += "vertex " + this.tmpVec1[0] + ' ' + this.tmpVec1[1] + ' ' + this.tmpVec1[2] + '\n';
+                            vertices += "vertex " + this.tmpVec2[0] + ' ' + this.tmpVec2[1] + ' ' + this.tmpVec2[2] + '\n';
+                            vertices += "vertex " + this.tmpVec3[0] + ' ' + this.tmpVec3[1] + ' ' + this.tmpVec3[2] + '\n';
+                            vec3.subtract(this.tmpVec2, this.tmpVec2, this.tmpVec1);
+                            vec3.subtract(this.tmpVec3, this.tmpVec3, this.tmpVec1);
+                            vec3.cross(this.tmpVecCross, this.tmpVec2, this.tmpVec3);
+                            vec3.normalize(this.tmpVecCross, this.tmpVecCross);
+                            stl += 'facet normal ' + this.tmpVecCross[0] + ' ' + this.tmpVecCross[1] + ' ' + this.tmpVecCross[2] + '\n';
+                            stl += 'outer loop \n';
+                            stl += vertices;
+                            stl += 'endloop \n';
+                            stl += 'endfacet \n';
                         }
                     }
                 }
@@ -941,11 +898,12 @@ var qec;
         function saveWork() {
         }
         saveWork.prototype.generateContent = function (editor) {
-            var svg = editor.originalSvgContent;
+            var workspace = editor.workspace;
+            var svg = workspace.svgContent;
             var zip = new JSZip();
             zip.file("svg.svg", svg);
             // 3d
-            editor.editorObjects.forEach(function (o) {
+            workspace.editorObjects.forEach(function (o) {
                 var data = {
                     // o.profilePoints;
                     // o.profileBounds;
@@ -1194,6 +1152,100 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var svgImporter = (function () {
+        function svgImporter() {
+            this.svgAutoHeightHelper = qec.injectNew(qec.svgAutoHeightHelper);
+            this.helper = qec.injectNew(qec.svgHelper);
+            this.indexObject = 0;
+            this.indexReimport = 0;
+            this.tmpTranslation = vec3.create();
+        }
+        svgImporter.prototype.importSvgInWorkspace = function (workspace, content, done) {
+            var _this = this;
+            this.workspace = workspace;
+            this.originalSvgContent = content;
+            this.svgAutoHeightHelper.setSvg(content, function () {
+                _this.helper.setSvg(content, function () { return _this.nextImport(done); });
+            });
+        };
+        svgImporter.prototype.nextImport = function (done) {
+            var _this = this;
+            //var eltCount = 1; 
+            var eltCount = this.helper.getElementsId().length;
+            if (this.indexObject < eltCount) {
+                var id = this.helper.getElementsId()[this.indexObject];
+                console.log(id);
+                this.helper.drawOnly(id, function () {
+                    var autoHeight = _this.svgAutoHeightHelper.valueForIds[id];
+                    _this.afterDraw(autoHeight * 0.05);
+                    _this.nextImport(done);
+                });
+                this.indexObject++;
+            }
+            else {
+                done();
+            }
+        };
+        svgImporter.prototype.afterDraw = function (autoHeight) {
+            //$('.debug').append(this.helper.canvas);
+            //$('.debug').append(this.helper.canvas2);
+            this.helper.setRealSizeToFit(vec2.fromValues(1, 1));
+            var size = this.helper.getBoundingRealSize();
+            var center = this.helper.getRealCenter();
+            //console.log('size :' , size, 'center', center, 'autoHeight', autoHeight);
+            var l = new qec.editorObject();
+            this.workspace.pushObject(l);
+            l.setTopImg2(this.helper.canvas2, vec4.fromValues(-0.5 * size[0], -0.5 * size[1], 0.5 * size[0], 0.5 * size[1]));
+            l.setProfileHeight(autoHeight);
+            l.setDiffuseColor(this.helper.getColor());
+            mat4.identity(l.inverseTransform);
+            mat4.translate(l.inverseTransform, l.inverseTransform, vec3.fromValues(center[0], center[1], 0));
+            mat4.invert(l.inverseTransform, l.inverseTransform);
+            l.updateSignedDistance();
+            //l.top.debugInfoInCanvas();
+            //$('.debug').append(l.profile.canvas);              
+        };
+        svgImporter.prototype.reimport = function (workspace, content, done) {
+            var _this = this;
+            this.helper.setSvg(content, function () {
+                _this.indexReimport = 0;
+                _this.helper.setSvg(content, function () { return _this.nextReimport(done); });
+            });
+        };
+        svgImporter.prototype.nextReimport = function (done) {
+            var _this = this;
+            //var eltCount = 1; 
+            var eltCount = this.helper.getElementsId().length;
+            if (this.indexReimport < eltCount) {
+                var id = this.helper.getElementsId()[this.indexReimport];
+                console.log('reimport ' + id);
+                this.helper.drawOnly(id, function () {
+                    var size = _this.helper.getBoundingRealSize();
+                    var center = _this.helper.getRealCenter();
+                    var l = _this.workspace.editorObjects[_this.indexReimport];
+                    l.setTopImg2(_this.helper.canvas2, vec4.fromValues(-0.5 * size[0], -0.5 * size[1], 0.5 * size[0], 0.5 * size[1]));
+                    l.setDiffuseColor(_this.helper.getColor());
+                    // reset only xy-translate (careful we modify inverse transform)
+                    mat4.getTranslation(_this.tmpTranslation, l.inverseTransform);
+                    _this.tmpTranslation[2] = 0;
+                    _this.tmpTranslation[0] = -_this.tmpTranslation[0] - center[0];
+                    _this.tmpTranslation[1] = -_this.tmpTranslation[1] - center[1];
+                    mat4.translate(l.inverseTransform, l.inverseTransform, _this.tmpTranslation);
+                    l.updateSignedDistance();
+                    _this.indexReimport++;
+                    _this.nextReimport(done);
+                });
+            }
+            else {
+                done();
+            }
+        };
+        return svgImporter;
+    }());
+    qec.svgImporter = svgImporter;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var updateLoop = (function () {
         function updateLoop() {
             this.controllerManager = qec.inject(qec.controllerManager);
@@ -1211,6 +1263,36 @@ var qec;
         return updateLoop;
     }());
     qec.updateLoop = updateLoop;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var workspace = (function () {
+        function workspace() {
+            this.editorObjects = [];
+            this.selectedIndex = -1;
+            this.rimLight = new qec.spotLight();
+            this.keyLight = new qec.spotLight();
+            this.fillLight = new qec.spotLight();
+        }
+        workspace.prototype.pushObject = function (o) {
+            this.editorObjects.push(o);
+            o.needsTextureUpdate = true;
+            o.needsTransformUpdate = true;
+            o.needsMaterialUpdate = true;
+        };
+        return workspace;
+    }());
+    qec.workspace = workspace;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var workspaceDto = (function () {
+        function workspaceDto() {
+            this.objects = [];
+        }
+        return workspaceDto;
+    }());
+    qec.workspaceDto = workspaceDto;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -5233,7 +5315,7 @@ var qec;
             this.isMouseDown = false;
             this.updateFlag = false;
             this.button = 1;
-            this.spherical.radius = 2;
+            this.spherical.radius = 3;
             this.spherical.theta = -Math.PI / 2;
             this.spherical.phi = Math.PI * 2 / 5;
         }
@@ -5488,6 +5570,9 @@ var qec;
             this.importView = qec.inject(qec.importView);
             this.profileView = qec.inject(qec.profileView);
             this.materialView = qec.inject(qec.materialView);
+            this.isSelectControllerActive = ko.observable(true);
+            this.isMoveControllerActive = ko.observable(false);
+            this.isScaleControllerActive = ko.observable(false);
             // toolbars
             this.importToolbarVisible = ko.observable(true);
             this.modifyToolbarVisible = ko.observable(false);
@@ -5503,6 +5588,9 @@ var qec;
             this.editor.setRenderFlag();
             this.updateLoop();
         };
+        editorView.prototype.initEditor = function (elt) {
+            this.editor.init(elt);
+        };
         editorView.prototype.onMouseMove = function (data, e) { this.controllerManager.onMouseMove(e); };
         editorView.prototype.onMouseDown = function (data, e) { this.controllerManager.onMouseDown(e); };
         editorView.prototype.onMouseUp = function (data, e) { this.controllerManager.onMouseUp(e); };
@@ -5510,13 +5598,22 @@ var qec;
         editorView.prototype.setMoveController = function () {
             this.heightController.isScaleMode = false;
             this.controllerManager.setController(this.heightController);
+            this.setActiveController(this.isMoveControllerActive);
         };
         editorView.prototype.setScaleController = function () {
             this.heightController.isScaleMode = true;
             this.controllerManager.setController(this.heightController);
+            this.setActiveController(this.isScaleControllerActive);
         };
         editorView.prototype.setSelectController = function () {
             this.controllerManager.setController(this.selectController);
+            this.setActiveController(this.isSelectControllerActive);
+        };
+        editorView.prototype.setActiveController = function (c) {
+            this.isSelectControllerActive(false);
+            this.isMoveControllerActive(false);
+            this.isScaleControllerActive(false);
+            c(true);
         };
         editorView.prototype.setSelectedIndex = function (i) {
             this.editor.setSelectedIndex(i);
@@ -5545,6 +5642,20 @@ var qec;
         editorView.prototype.setToolbar = function (selected) {
             this.toolbarsVisible.forEach(function (t) { return t(false); });
             selected(true);
+        };
+        editorView.prototype.light1 = function () {
+            var w = this.editor.workspace;
+            w.keyLight.intensity = 0.8;
+            w.fillLight.intensity = 0.2;
+            w.rimLight.intensity = 0.2;
+            this.editor.setRenderFlag();
+        };
+        editorView.prototype.light2 = function () {
+            var w = this.editor.workspace;
+            w.keyLight.intensity = 0;
+            w.fillLight.intensity = 0.5;
+            w.rimLight.intensity = 0.5;
+            this.editor.setRenderFlag();
         };
         return editorView;
     }());
@@ -5596,8 +5707,9 @@ var qec;
                 this.distLines.getClosestPoint0(this.mousePos);
                 vec3.subtract(this.deltaPos, this.mousePos, this.startPos);
                 if (!this.isScaleMode) {
-                    mat4.translate(this.selected.sd.inverseTransform, this.startTransform, this.deltaPos);
-                    mat4.invert(this.selected.sd.inverseTransform, this.selected.sd.inverseTransform);
+                    mat4.translate(this.selected.inverseTransform, this.startTransform, this.deltaPos);
+                    mat4.invert(this.selected.inverseTransform, this.selected.inverseTransform);
+                    this.selected.updateInverseTransform();
                     this.editor.renderer.updateTransform(this.selected.sd);
                     this.editor.setRenderFlag();
                 }
@@ -5636,7 +5748,7 @@ var qec;
                 this.startX = e.offsetX;
                 this.startY = e.offsetY;
                 vec3.copy(this.startPos, this.collide.pos);
-                this.selected = this.editor.editorObjects[this.collide.sdIndex];
+                this.selected = this.editor.workspace.editorObjects[this.collide.sdIndex];
                 mat4.invert(this.startTransform, this.selected.sd.inverseTransform);
                 vec4.copy(this.startBounds, this.selected.profileBounds);
                 this.editorView.setSelectedIndex(this.collide.sdIndex);
@@ -5841,7 +5953,7 @@ var qec;
             var fakePos = vec3.create();
             this.selectedIndex = i;
             if (i >= 0) {
-                var m = this.editor.editorObjects[this.selectedIndex].diffuseColor;
+                var m = this.editor.workspace.editorObjects[this.selectedIndex].diffuseColor;
                 this.spectrumElt.spectrum("set", "rgb(" +
                     m[0] * 255 + "," +
                     m[1] * 255 + "," +
@@ -5851,7 +5963,7 @@ var qec;
         materialView.prototype.onColorChange = function (color) {
             var fakePos = vec3.create();
             if (this.selectedIndex >= 0) {
-                var o = this.editor.editorObjects[this.selectedIndex];
+                var o = this.editor.workspace.editorObjects[this.selectedIndex];
                 o.setDiffuseColor([color._r / 255, color._g / 255, color._b / 255]);
                 this.editor.renderer.updateDiffuse(o.sd);
                 this.editor.setRenderFlag();
@@ -5893,7 +6005,7 @@ var qec;
             //    this.lineDrawer.drawLine(this.points, this.canvas);
         };
         profileExample.prototype.click = function () {
-            var o = this.editor.editorObjects[this.editor.selectedIndex];
+            var o = this.editor.workspace.editorObjects[this.editor.workspace.selectedIndex];
             var bounds = o.profileBounds;
             var w = bounds[2] - bounds[0];
             var h = bounds[3] - bounds[1];
@@ -5973,7 +6085,7 @@ var qec;
         profileView.prototype.setAsLines = function () {
             this.isSmooth(false);
             if (this.selectedIndex >= 0) {
-                var l = this.editor.editorObjects[this.selectedIndex];
+                var l = this.editor.workspace.editorObjects[this.selectedIndex];
                 l.profileSmooth = false;
                 this.draw();
                 this.updateEditor();
@@ -5983,7 +6095,7 @@ var qec;
         profileView.prototype.setAsSmooth = function () {
             this.isLines(false);
             if (this.selectedIndex >= 0) {
-                var l = this.editor.editorObjects[this.selectedIndex];
+                var l = this.editor.workspace.editorObjects[this.selectedIndex];
                 l.profileSmooth = true;
                 this.draw();
                 this.updateEditor();
@@ -5997,7 +6109,7 @@ var qec;
             if (i < 0)
                 return;
             //console.log('profileView.setSelectedIndex');
-            var l = this.editor.editorObjects[i];
+            var l = this.editor.workspace.editorObjects[i];
             var profileBounds = l.profileBounds;
             var boundW = profileBounds[2] - profileBounds[0];
             var boundH = profileBounds[3] - profileBounds[1];
@@ -6029,7 +6141,7 @@ var qec;
         profileView.prototype.updateEditor = function () {
             if (this.selectedIndex < 0)
                 return;
-            var l = this.editor.editorObjects[this.selectedIndex];
+            var l = this.editor.workspace.editorObjects[this.selectedIndex];
             var profileBounds = l.profileBounds;
             // convert points to real coordinates
             var profilePoints = [];
@@ -6052,7 +6164,7 @@ var qec;
         profileView.prototype.draw = function () {
             if (this.selectedIndex < 0)
                 return;
-            var l = this.editor.editorObjects[this.selectedIndex];
+            var l = this.editor.workspace.editorObjects[this.selectedIndex];
             var ctx = this.canvas.getContext('2d');
             ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             ctx.strokeStyle = "rgba(0,0,0,1)";
@@ -6152,8 +6264,8 @@ var qec;
             var iMin = -1;
             this.isMouseDown = false;
             this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
-            for (var i = 0; i < this.editor.editorObjects.length; ++i) {
-                this.collide.collide(this.editor.editorObjects[i].sd, this.ro, this.rd);
+            for (var i = 0; i < this.editor.workspace.editorObjects.length; ++i) {
+                this.collide.collide(this.editor.workspace.editorObjects[i].sd, this.ro, this.rd);
                 //console.log(this.collide.pos);
                 //console.log(this.collide.minDist);
                 //this.vm.layers[i].sd.material.setDiffuse(0,1,0);

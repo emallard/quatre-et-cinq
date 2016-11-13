@@ -59,9 +59,9 @@ module qec {
             this.isMouseDown = false;
             this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
 
-            for (var i=0; i < this.editor.editorObjects.length; ++i)
+            for (var i=0; i < this.editor.workspace.editorObjects.length; ++i)
             {
-                this.collide.collide(this.editor.editorObjects[i].sd, this.ro, this.rd);
+                this.collide.collide(this.editor.workspace.editorObjects[i].sd, this.ro, this.rd);
                 //console.log(this.collide.pos);
                 //console.log(this.collide.minDist);
 

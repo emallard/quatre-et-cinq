@@ -30,7 +30,7 @@ module qec {
 
         constructor()
         {
-            this.spherical.radius = 2;
+            this.spherical.radius = 3;
             this.spherical.theta = -Math.PI/2;
             this.spherical.phi = Math.PI*2/5;
         }

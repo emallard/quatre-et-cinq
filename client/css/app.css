@@ -103,6 +103,20 @@ body {
 	line-height:0px;
 }
 
+.secondToolbar a
+{
+	border:solid 1px black;
+	border-radius: 4px;
+	/*height:50px;*/
+	display:inline-block;
+	padding:4px;
+	margin: 0px 2px 0 2px;
+}
+.secondToolbar a.active
+{
+	border-color: #f00;
+}
+
 .renderPanel
 {
 	position:absolute;

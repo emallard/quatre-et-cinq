@@ -25,7 +25,7 @@ module qec {
             this.selectedIndex = i;
             if (i >= 0)
             {
-                var m = this.editor.editorObjects[this.selectedIndex].diffuseColor;
+                var m = this.editor.workspace.editorObjects[this.selectedIndex].diffuseColor;
                 this.spectrumElt.spectrum("set", "rgb("+
                     m[0]*255+","+
                     m[1]*255+","+
@@ -40,7 +40,7 @@ module qec {
 
             if (this.selectedIndex >= 0)
             {
-                var o = this.editor.editorObjects[this.selectedIndex];
+                var o = this.editor.workspace.editorObjects[this.selectedIndex];
                 o.setDiffuseColor([color._r/255, color._g/255, color._b/255]);
                 this.editor.renderer.updateDiffuse(o.sd);
                 this.editor.setRenderFlag();

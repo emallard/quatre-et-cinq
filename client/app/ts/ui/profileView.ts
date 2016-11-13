@@ -47,7 +47,7 @@ module qec {
             this.isSmooth(false);
             if (this.selectedIndex >= 0)
             {
-                var l = this.editor.editorObjects[this.selectedIndex];
+                var l = this.editor.workspace.editorObjects[this.selectedIndex];
                 l.profileSmooth = false;
                 this.draw(); this.updateEditor();
             }
@@ -59,7 +59,7 @@ module qec {
             this.isLines(false);
             if (this.selectedIndex >= 0)
             {
-                var l = this.editor.editorObjects[this.selectedIndex];
+                var l = this.editor.workspace.editorObjects[this.selectedIndex];
                 l.profileSmooth = true;
                 this.draw(); this.updateEditor();
             }
@@ -78,7 +78,7 @@ module qec {
 
             //console.log('profileView.setSelectedIndex');
 
-            var l = this.editor.editorObjects[i];
+            var l = this.editor.workspace.editorObjects[i];
             var profileBounds = l.profileBounds;
             var boundW = profileBounds[2] - profileBounds[0];
             var boundH = profileBounds[3] - profileBounds[1];
@@ -120,7 +120,7 @@ module qec {
             if (this.selectedIndex < 0)
                 return;
 
-            var l = this.editor.editorObjects[this.selectedIndex];
+            var l = this.editor.workspace.editorObjects[this.selectedIndex];
             var profileBounds = l.profileBounds;
             
             // convert points to real coordinates
@@ -151,7 +151,7 @@ module qec {
             if (this.selectedIndex < 0)
                 return;
 
-            var l = this.editor.editorObjects[this.selectedIndex];
+            var l = this.editor.workspace.editorObjects[this.selectedIndex];
 
             var ctx = this.canvas.getContext('2d');
             ctx.clearRect(0,0,this.canvas.width,this.canvas.height);

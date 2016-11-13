@@ -22,6 +22,10 @@ module qec {
 
         profileSmooth = true;
 
+        needsTextureUpdate = true;
+        needsTransformUpdate = true;
+        needsMaterialUpdate = true;
+
         constructor()
         {
             // default profile
@@ -138,6 +142,11 @@ module qec {
             //$('.debug').append(this.top.canvas);
             //this.profile.debugInfoInCanvas();
             //$(".debug")[0].appendChild(this.profile.canvas);
+        }
+
+        updateInverseTransform()
+        {
+            mat4.copy(this.sd.inverseTransform, this.inverseTransform);
         }
 
         updateSignedDistance()

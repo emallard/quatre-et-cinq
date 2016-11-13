@@ -9,6 +9,11 @@ module qec
         jcount = 70;
         kcount = 70;        
 
+        tmpVec1 = vec3.create();
+        tmpVec2 = vec3.create();
+        tmpVec3 = vec3.create();
+        tmpVecCross = vec3.create();
+
         compute(sds:sdFields[]):string
         {
             this.densities = new Float32Array(this.icount*this.jcount*this.kcount);
@@ -106,16 +111,25 @@ module qec
 
                         for (var pi=0 ; pi < mc.posArrayLength ; )
                         {
-                            stl += ("facet normal 0 0 0\n");
-                            stl += ("outer loop \n");
-                            
+                            vec3.set(this.tmpVec1, bsx*(i+mc.posArray[pi++]), bsy*(j+mc.posArray[pi++]), bsz*(k+mc.posArray[pi++]));
+                            vec3.set(this.tmpVec2, bsx*(i+mc.posArray[pi++]), bsy*(j+mc.posArray[pi++]), bsz*(k+mc.posArray[pi++]));
+                            vec3.set(this.tmpVec3, bsx*(i+mc.posArray[pi++]), bsy*(j+mc.posArray[pi++]), bsz*(k+mc.posArray[pi++]));
 
-                            stl += "vertex " + bsx*(i+mc.posArray[pi++]) + " " + bsy*(j+mc.posArray[pi++]) + " " + bsz*(k+mc.posArray[pi++]) + '\n';
-                            stl += "vertex " + bsx*(i+mc.posArray[pi++]) + " " + bsy*(j+mc.posArray[pi++]) + " " + bsz*(k+mc.posArray[pi++]) + '\n';
-                            stl += "vertex " + bsx*(i+mc.posArray[pi++]) + " " + bsy*(j+mc.posArray[pi++]) + " " + bsz*(k+mc.posArray[pi++]) + '\n';
-                            
-                            stl += ("endloop \n");
-                            stl += ("endfacet \n");   
+                            var vertices = '';
+                            vertices += "vertex " + this.tmpVec1[0] + ' ' + this.tmpVec1[1] + ' ' + this.tmpVec1[2] + '\n';
+                            vertices += "vertex " + this.tmpVec2[0] + ' ' + this.tmpVec2[1] + ' ' + this.tmpVec2[2] + '\n';
+                            vertices += "vertex " + this.tmpVec3[0] + ' ' + this.tmpVec3[1] + ' ' + this.tmpVec3[2] + '\n';
+
+                            vec3.subtract(this.tmpVec2, this.tmpVec2, this.tmpVec1);
+                            vec3.subtract(this.tmpVec3, this.tmpVec3, this.tmpVec1);
+                            vec3.cross(this.tmpVecCross, this.tmpVec2, this.tmpVec3);
+                            vec3.normalize(this.tmpVecCross, this.tmpVecCross);
+                            stl += 'facet normal ' + this.tmpVecCross[0] + ' ' + this.tmpVecCross[1] + ' ' +this.tmpVecCross[2] + '\n';
+                            stl += 'outer loop \n';
+                            stl += vertices;
+
+                            stl += 'endloop \n';
+                            stl += 'endfacet \n';   
                         }
                     }
                 }

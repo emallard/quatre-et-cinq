@@ -27,6 +27,8 @@
             <a data-bind="click: showModifyToolbar, css: {active: modifyToolbarVisible}">Edit</a>
             <a data-bind="click: showEnvironmentToolbar, css: {active: environmentToolbarVisible}">Scene</a>
             <a data-bind="click: showPhotoToolbar, css: {active: photoToolbarVisible}">Share</a>
+
+            <img src="css/images/logo.svg" height="60" style='float:right; margin-top:-10px; margin-right:40px;'>
         </div>
 
         <div id="banner">
@@ -39,15 +41,15 @@
 
         <div class='renderPanel'>
                 <div class='renderContainer' 
-                     data-bind="element: editor.container, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }"></div>
+                     data-bind="setElement: initEditor, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }"></div>
             <div class="debug">
             </div>
         </div>
 
-        <div class="secondToolbar" data-bind="visible: modifyToolbarVisible">
-            <button data-bind="click: setSelectController" ><img src="css/images/mouse-cursor.svg" height="30"></button>
-            <button data-bind="click: setMoveController" ><img src="css/images/mouse-move.svg"  height="30"></button>
-            <button data-bind="click: setScaleController"><img src="css/images/mouse-scale.svg" height="30"></button>    
+        <div class="secondToolbar"> <!--data-bind="visible: modifyToolbarVisible"-->
+            <a data-bind="click: setSelectController, css : {active : isSelectControllerActive}" ><img src="css/images/mouse-cursor.svg"></a>
+            <a data-bind="click: setMoveController, css : {active : isMoveControllerActive}" ><img src="css/images/mouse-move.svg"></a>
+            <a data-bind="click: setScaleController, css : {active : isScaleControllerActive}"><img src="css/images/mouse-scale.svg"></a>    
         </div>
 
         <div class="selectedToolWrapper">
@@ -103,7 +105,9 @@
 
             <div data-bind="visible: environmentToolbarVisible">
                 <div data-bind="with: editor">
-                    <button data-bind="click: toggleShadows">Shadows</button><br/>
+                    <button data-bind="click: toggleShadows">Shadows</button>
+                </div>
+                <div>
                     <button data-bind="click: light1">Light1</button><br/>
                     <button data-bind="click: light2">Light2</button><br/>
                 </div>

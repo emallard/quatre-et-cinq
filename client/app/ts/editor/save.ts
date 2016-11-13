@@ -6,12 +6,13 @@ module qec
     {
         generateContent(editor:editor)
         {
-            var svg = editor.originalSvgContent;
+            var workspace = editor.workspace;
+            var svg = workspace.svgContent;
             var zip = new JSZip();
             zip.file("svg.svg", svg);
             
             // 3d
-            editor.editorObjects.forEach(o => 
+            workspace.editorObjects.forEach(o => 
             {
                 var data = {
                     // o.profilePoints;

@@ -20,6 +20,11 @@ module qec
             this.updateLoop();
         }
 
+        initEditor(elt:HTMLElement)
+        {
+            this.editor.init(elt);
+        }
+
         onMouseMove(data:any, e:Event) { this.controllerManager.onMouseMove(e); }
         onMouseDown(data:any, e:Event) { this.controllerManager.onMouseDown(e); }
         onMouseUp(data:any, e:Event) { this.controllerManager.onMouseUp(e); }
@@ -29,17 +34,31 @@ module qec
         {
             this.heightController.isScaleMode = false;
             this.controllerManager.setController(this.heightController);
+            this.setActiveController(this.isMoveControllerActive);
         }
 
         setScaleController()
         {
             this.heightController.isScaleMode = true;
             this.controllerManager.setController(this.heightController);
+            this.setActiveController(this.isScaleControllerActive);
         }
 
         setSelectController()
         {
             this.controllerManager.setController(this.selectController);
+            this.setActiveController(this.isSelectControllerActive);
+        }
+
+        isSelectControllerActive = ko.observable(true);
+        isMoveControllerActive = ko.observable(false);
+        isScaleControllerActive = ko.observable(false);
+        setActiveController(c:KnockoutObservable<boolean>)
+        {
+            this.isSelectControllerActive(false);
+            this.isMoveControllerActive(false);
+            this.isScaleControllerActive(false);
+            c(true);
         }
 
         setSelectedIndex(i: number)
@@ -91,6 +110,24 @@ module qec
         {
             this.toolbarsVisible.forEach(t => t(false));
             selected(true);
+        }
+
+        light1()
+        {
+            var w = this.editor.workspace;
+            w.keyLight.intensity = 0.8;
+            w.fillLight.intensity = 0.2;
+            w.rimLight.intensity = 0.2;
+            this.editor.setRenderFlag();
+        }
+
+        light2()
+        {
+            var w = this.editor.workspace;
+            w.keyLight.intensity = 0;
+            w.fillLight.intensity = 0.5;
+            w.rimLight.intensity = 0.5;
+            this.editor.setRenderFlag();
         }
     }
 }

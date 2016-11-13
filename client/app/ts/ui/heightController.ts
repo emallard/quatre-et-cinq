@@ -69,9 +69,9 @@ module qec {
 
                 if (!this.isScaleMode)
                 {
-                    mat4.translate(this.selected.sd.inverseTransform, this.startTransform, this.deltaPos);
-                    mat4.invert(this.selected.sd.inverseTransform, this.selected.sd.inverseTransform);
-                    
+                    mat4.translate(this.selected.inverseTransform, this.startTransform, this.deltaPos);
+                    mat4.invert(this.selected.inverseTransform, this.selected.inverseTransform);
+                    this.selected.updateInverseTransform();
                     this.editor.renderer.updateTransform(this.selected.sd);
                     this.editor.setRenderFlag();
                 }
@@ -125,7 +125,7 @@ module qec {
                 this.startY =  (<MouseEvent> e).offsetY;
                 
                 vec3.copy(this.startPos, this.collide.pos);
-                this.selected = this.editor.editorObjects[this.collide.sdIndex];
+                this.selected = this.editor.workspace.editorObjects[this.collide.sdIndex];
                 mat4.invert(this.startTransform, this.selected.sd.inverseTransform);
 
                 vec4.copy(this.startBounds, this.selected.profileBounds); 
