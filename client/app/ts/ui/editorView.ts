@@ -78,16 +78,21 @@ module qec
 
         exportSTL()
         {
-            var stl = this.editor.computeSTL();
+            
+            //var stl = this.editor.computeTextSTL();
+            var stl = this.editor.computeOBJ();
             var blob = new Blob([stl], {type: 'text/plain'});
-            saveAs(blob, 'download.stl');
+            
+            //var stl = this.editor.computeBinarySTL();
+            //var blob = new Blob([stl], {type: 'application//octet-binary'});
+            
+            saveAs(blob, 'download.obj');
         }
 
         savePhoto()
         {
             saveAsImage(this.editor.renderer.getCanvas())
         }
-
 
         // toolbars
         importToolbarVisible = ko.observable<boolean>(true);
@@ -128,6 +133,79 @@ module qec
             w.fillLight.intensity = 0.5;
             w.rimLight.intensity = 0.5;
             this.editor.setRenderFlag();
+        }
+
+        sendToSculpteo()
+        {
+            $('.printPanel').show();
+
+            var req = new XMLHttpRequest();
+            req.open('POST', '/sculpteo?filename=coucou', true);
+            req.onreadystatechange = (aEvt) => {
+                if (req.readyState == 4) {
+                    if(req.status == 200)
+                    {
+                        alert(req.response);
+                        alert("OK !");
+                        var uuid = req.response.uuid;
+                        $('#sculpteoFrame').attr('src', '//www.sculpteo.com/en/embed/redirect/' + uuid + '?click=details');
+                    }
+                    else
+                    {
+                        alert("Erreur pendant le chargement de la page.\n");
+                    }
+                }
+            };
+
+            var stl = 
+ "solid a\n"
++"facet normal 0 0 1\n"
++"outer loop\n"
++"vertex 0 0 0\n"
++"vertex 1 0 0\n"
++"vertex 1 1 0\n"
++"endloop"
++"endfacet"
++"endsolid a";
+            
+            var myArray = new ArrayBuffer(512);
+            var longInt8View = new Uint8Array(myArray);
+
+            for (var i=0; i < longInt8View.length; i++) {
+                longInt8View[i] = i % 255;
+            }
+
+            var blob = new Blob([longInt8View], {type: 'application/octet-binary'});
+
+            req.send(blob);
+        }
+
+        uploadedUrl = ko.observable<string>();
+        uploadPhoto()
+        {
+            var elt = this.editor.renderer.getCanvas();
+            var imgData = elt.toDataURL("image/jpeg");
+            var req = new XMLHttpRequest();
+            req.open('POST', '/uploadString', true);
+            req.responseType = 'json';
+            req.onreadystatechange = (aEvt) => {
+                if (req.readyState == 4) {
+                    if(req.status == 200)
+                    {
+                        var id = req.response.id;
+                        console.log(req.response);
+                        console.log(req.response.id);
+                        this.uploadedUrl(window.location.protocol + '//' + window.location.host + '/downloadDataUri?id=' + id);
+                    }
+                    else
+                    {
+                        alert("Erreur pendant le chargement de la page.\n");
+                    }
+                }
+            };
+            
+            console.log(imgData);
+            req.send(imgData);
         }
     }
 }

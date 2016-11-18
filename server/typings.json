@@ -6,10 +6,12 @@
     "express": "registry:dt/express#4.0.0+20160708185218",
     "express-handlebars": "registry:dt/express-handlebars#0.0.0+20160316155526",
     "express-serve-static-core": "registry:dt/express-serve-static-core#4.0.0+20161012061536",
+    "form-data": "registry:dt/form-data#0.0.0+20160724024111",
     "mime": "registry:dt/mime#0.0.0+20160316155526",
     "mongodb": "registry:dt/mongodb#2.1.0+20160602142941",
     "morgan": "registry:dt/morgan#1.7.0+20160524142355",
     "node": "registry:dt/node#6.0.0+20161019125345",
+    "request": "registry:dt/request#0.0.0+20160726020908",
     "serve-favicon": "registry:dt/serve-favicon#0.0.0+20160316155526",
     "serve-static": "registry:dt/serve-static#0.0.0+20160606155157"
   }

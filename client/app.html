@@ -40,11 +40,15 @@
     <div class='screen'>
 
         <div class='renderPanel'>
-                <div class='renderContainer' 
-                     data-bind="setElement: initEditor, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }"></div>
-            <div class="debug">
-            </div>
+            <div class='renderContainer' 
+                 data-bind="setElement: initEditor, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }"></div>
         </div>
+
+        <div class="printPanel" style="display:none">
+            <iframe id="sculpteoFrame" type="text/html" width="800" height="700" frameborder="0"></iframe>
+        </div>
+
+        <div class="debug"></div>
 
         <div class="secondToolbar"> <!--data-bind="visible: modifyToolbarVisible"-->
             <a data-bind="click: setSelectController, css : {active : isSelectControllerActive}" ><img src="css/images/mouse-cursor.svg"></a>
@@ -119,6 +123,10 @@
             <div data-bind="visible: photoToolbarVisible">
                 <button data-bind="click: savePhoto">Photo</button>
                 <button data-bind="click: exportSTL">ExportSTL</button>
+                <button data-bind="click: sendToSculpteo">Vers Sculpteo</button>
+                <button data-bind="click: uploadPhoto">Upload Photo</button>
+                <br/>
+                <span data-bind="text: uploadedUrl"></span>
             </div>        
 
         </div>

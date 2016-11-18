@@ -5,6 +5,8 @@ typings install dt~node --global --save
 typings install dt~express dt~serve-static dt~express-serve-static-core --global --save
 typings install dt~serve-favicon dt~morgan dt~body-parser dt~cookie-parser dt~mime dt~debug --global --save
 
+typings install dt~request --global --save
+
 
 https://github.com/jonatan-alama/typescript_base_express/blob/master/app.ts
 

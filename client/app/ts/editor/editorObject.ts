@@ -5,8 +5,9 @@ module qec {
     {
         //canvas = document.createElement('canvas');
 
+        topSvgId:string;
+
         sd = new sdFields();
-       
         top = new distanceFieldCanvas();
         profile = new distanceFieldCanvas();
         
@@ -34,6 +35,18 @@ module qec {
         
             //this.profile.canvas.style.border = 'solid 1px red';
             //$('.debug').append(this.profile.canvas);    
+        }
+
+        toDto():editorObjectDto
+        {
+            var dto = new editorObjectDto();
+            dto.diffuseColor = float32ArrayToArray(this.diffuseColor);
+            dto.zTranslate = this.inverseTransform[14];
+            dto.profilePoints = this.profilePoints;
+            dto.profileBounds = float32ArrayToArray(this.profileBounds);
+            dto.profileSmooth = this.profileSmooth;
+            dto.topSvgId = this.topSvgId;
+            return dto;
         }
 
         setDiffuseColor(rgb:number[])

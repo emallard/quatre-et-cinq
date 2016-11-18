@@ -124,6 +124,12 @@ body {
 	left:401px;
 }
 
+.printPanel
+{
+	position:absolute;
+	top:1px;
+	left:401px;
+}
 
 .materialView
 {

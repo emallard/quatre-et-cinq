@@ -1,1 +1,1 @@
-mongod --dbpath=../../mongo-data --port=27018
+mongod --dbpath=./mongo-data --port=27018

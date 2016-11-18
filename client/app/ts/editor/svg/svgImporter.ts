@@ -3,7 +3,6 @@ module qec {
     export class svgImporter
     {
         svgAutoHeightHelper:svgAutoHeightHelper = injectNew(svgAutoHeightHelper);
-        originalSvgContent:string;
         helper:svgHelper = injectNew(svgHelper);
         workspace:workspace ;
         
@@ -14,7 +13,7 @@ module qec {
         importSvgInWorkspace(workspace:workspace, content:string, done:() => void)
         {
             this.workspace = workspace;
-            this.originalSvgContent = content;
+            this.workspace.svgContent = content;
             this.svgAutoHeightHelper.setSvg(content, ()=>
             {
                 this.helper.setSvg(content, ()=> this.nextImport(done));
@@ -32,7 +31,7 @@ module qec {
                 this.helper.drawOnly(id, 
                 ()=>{
                     var autoHeight = this.svgAutoHeightHelper.valueForIds[id];
-                    this.afterDraw(autoHeight*0.05);
+                    this.afterDraw(id, autoHeight*0.05);
                     this.nextImport(done);
                 });
                 this.indexObject++;
@@ -44,7 +43,7 @@ module qec {
         }
 
         
-        afterDraw(autoHeight:number)
+        afterDraw(id:string, autoHeight:number)
         {
             //$('.debug').append(this.helper.canvas);
             //$('.debug').append(this.helper.canvas2);
@@ -57,6 +56,7 @@ module qec {
 
             var l = new editorObject();
             this.workspace.pushObject(l);
+            l.topSvgId = id;
             l.setTopImg2(this.helper.canvas2, vec4.fromValues(-0.5*size[0], -0.5*size[1], 0.5*size[0], 0.5*size[1]));
             l.setProfileHeight(autoHeight);
             

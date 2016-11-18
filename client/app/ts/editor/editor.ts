@@ -6,8 +6,11 @@ module qec
         simpleRenderer:simpleRenderer = injectNew(simpleRenderer);
         hardwareRenderer:hardwareRenderer = injectNew(hardwareRenderer);
         svgImporter: svgImporter = inject(svgImporter);
-        exportSTL:exportSTL = inject(exportSTL);
         
+        exportSTL:exportSTL = inject(exportSTL);
+        exportOBJ:exportOBJ = inject(exportOBJ);
+        signedDistanceToTriangles:signedDistanceToTriangles = inject(signedDistanceToTriangles);
+
         renderSettings = new renderSettings();        
         workspace:workspace = inject(workspace);
         sdUnion = new sdUnion();
@@ -95,6 +98,15 @@ module qec
                     done();
                 });
             }
+        }
+
+        reimportSvg(svgContent:string, done:()=>void)
+        {
+            this.svgImporter.reimport(this.workspace, svgContent,
+                () => {
+                    this.setUpdateFlag();
+                    done();
+                });
         }
 
         toggleSimpleRenderer()
@@ -208,12 +220,24 @@ module qec
             this.setRenderFlag();
         }
 
-        computeSTL():string
+        computeOBJ():string
         {
-            return this.exportSTL.compute(this.getAllSd());
+            this.signedDistanceToTriangles.compute(this.getAllSd());
+            return this.exportOBJ.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals, this.signedDistanceToTriangles.colors);
         }
 
+        computeTextSTL():string
+        {
+            this.signedDistanceToTriangles.compute(this.getAllSd());
+            return this.exportSTL.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals);
+        }
 
+        computeBinarySTL():DataView
+        {
+            this.signedDistanceToTriangles.compute(this.getAllSd());
+            console.log("check tris, normals", this.signedDistanceToTriangles.triangles.length, 3*this.signedDistanceToTriangles.normals.length)
+            return this.exportSTL.getBinary(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals);
+        }
 
     }
 }

@@ -42,6 +42,8 @@ var qec;
             this.hardwareRenderer = qec.injectNew(qec.hardwareRenderer);
             this.svgImporter = qec.inject(qec.svgImporter);
             this.exportSTL = qec.inject(qec.exportSTL);
+            this.exportOBJ = qec.inject(qec.exportOBJ);
+            this.signedDistanceToTriangles = qec.inject(qec.signedDistanceToTriangles);
             this.renderSettings = new qec.renderSettings();
             this.workspace = qec.inject(qec.workspace);
             this.sdUnion = new qec.sdUnion();
@@ -111,6 +113,13 @@ var qec;
                     done();
                 });
             }
+        };
+        editor.prototype.reimportSvg = function (svgContent, done) {
+            var _this = this;
+            this.svgImporter.reimport(this.workspace, svgContent, function () {
+                _this.setUpdateFlag();
+                done();
+            });
         };
         editor.prototype.toggleSimpleRenderer = function () {
             this.setSimpleRenderer(this.renderer != this.simpleRenderer);
@@ -193,8 +202,18 @@ var qec;
             this.renderSettings.shadows = !this.renderSettings.shadows;
             this.setRenderFlag();
         };
-        editor.prototype.computeSTL = function () {
-            return this.exportSTL.compute(this.getAllSd());
+        editor.prototype.computeOBJ = function () {
+            this.signedDistanceToTriangles.compute(this.getAllSd());
+            return this.exportOBJ.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals, this.signedDistanceToTriangles.colors);
+        };
+        editor.prototype.computeTextSTL = function () {
+            this.signedDistanceToTriangles.compute(this.getAllSd());
+            return this.exportSTL.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals);
+        };
+        editor.prototype.computeBinarySTL = function () {
+            this.signedDistanceToTriangles.compute(this.getAllSd());
+            console.log("check tris, normals", this.signedDistanceToTriangles.triangles.length, 3 * this.signedDistanceToTriangles.normals.length);
+            return this.exportSTL.getBinary(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals);
         };
         return editor;
     }());
@@ -204,7 +223,6 @@ var qec;
 (function (qec) {
     var editorObject = (function () {
         function editorObject() {
-            //canvas = document.createElement('canvas');
             this.sd = new qec.sdFields();
             this.top = new qec.distanceFieldCanvas();
             this.profile = new qec.distanceFieldCanvas();
@@ -225,6 +243,16 @@ var qec;
             //this.profile.canvas.style.border = 'solid 1px red';
             //$('.debug').append(this.profile.canvas);    
         }
+        editorObject.prototype.toDto = function () {
+            var dto = new qec.editorObjectDto();
+            dto.diffuseColor = float32ArrayToArray(this.diffuseColor);
+            dto.zTranslate = this.inverseTransform[14];
+            dto.profilePoints = this.profilePoints;
+            dto.profileBounds = float32ArrayToArray(this.profileBounds);
+            dto.profileSmooth = this.profileSmooth;
+            dto.topSvgId = this.topSvgId;
+            return dto;
+        };
         editorObject.prototype.setDiffuseColor = function (rgb) {
             vec3.set(this.diffuseColor, rgb[0], rgb[1], rgb[2]);
             this.sd.material.setDiffuse(rgb[0], rgb[1], rgb[2]);
@@ -320,110 +348,96 @@ var qec;
 var qec;
 (function (qec) {
     // https://gist.githubusercontent.com/paulkaplan/6d5f0ab2c7e8fdc68a61/raw/6bde174e27ae21905d871af3ef9fa3143919079f/binary_stl_writer.js
+    var exportOBJ = (function () {
+        function exportOBJ() {
+        }
+        exportOBJ.prototype.getText = function (triangles, normals, colors) {
+            var obj = '';
+            var faces = '';
+            for (var i = 0; i < triangles.length / 9; ++i) {
+                obj += "v " + triangles[9 * i + 0] + ' ' + triangles[9 * i + 1] + ' ' + triangles[9 * i + 2]
+                    + ' ' + colors[3 * i + 0] + ' ' + colors[3 * i + 1] + ' ' + colors[3 * i + 2] + '\n';
+                obj += "v " + triangles[9 * i + 3] + ' ' + triangles[9 * i + 4] + ' ' + triangles[9 * i + 5]
+                    + ' ' + colors[3 * i + 0] + ' ' + colors[3 * i + 1] + ' ' + colors[3 * i + 2] + '\n';
+                obj += "v " + triangles[9 * i + 6] + ' ' + triangles[9 * i + 7] + ' ' + triangles[9 * i + 8]
+                    + ' ' + colors[3 * i + 0] + ' ' + colors[3 * i + 1] + ' ' + colors[3 * i + 2] + '\n';
+                faces += 'f ' + (3 * i + 1) + ' ' + (3 * i + 2) + ' ' + (3 * i + 3) + '\n';
+            }
+            return obj + faces;
+        };
+        return exportOBJ;
+    }());
+    qec.exportOBJ = exportOBJ;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    // https://gist.githubusercontent.com/paulkaplan/6d5f0ab2c7e8fdc68a61/raw/6bde174e27ae21905d871af3ef9fa3143919079f/binary_stl_writer.js
     var exportSTL = (function () {
         function exportSTL() {
-            this.icount = 70;
-            this.jcount = 70;
-            this.kcount = 70;
-            this.tmpVec1 = vec3.create();
-            this.tmpVec2 = vec3.create();
-            this.tmpVec3 = vec3.create();
-            this.tmpVecCross = vec3.create();
         }
-        exportSTL.prototype.compute = function (sds) {
-            this.densities = new Float32Array(this.icount * this.jcount * this.kcount);
-            //var diffuses = new Float32Array(3*100*100*50);
-            var sdUni = new qec.sdUnion();
-            sds.forEach(function (x) { return sdUni.array.push(x); });
-            var pos = vec3.create();
-            var bounds = new Float32Array(6);
-            var diffuse = vec3.create();
-            var tmpMat = mat4.create();
-            var min = vec3.create();
-            var max = vec3.create();
-            for (var s = 0; s < sds.length; ++s) {
-                var sd = sds[s];
-                var bchs = sd.boundingCenterAndHalfSize;
-                sd.getInverseTransform(tmpMat);
-                mat4.invert(tmpMat, tmpMat);
-                vec3.set(min, bchs[0] - bchs[4], bchs[1] - bchs[4], bchs[2] - bchs[5]);
-                vec3.set(max, bchs[0] + bchs[4], bchs[1] + bchs[4], bchs[2] + bchs[5]);
-                vec3.transformMat4(min, min, tmpMat);
-                vec3.transformMat4(max, max, tmpMat);
-                for (var b = 0; b < 3; ++b) {
-                    bounds[b] = Math.min(min[b], bounds[b]);
-                    bounds[3 + b] = Math.max(max[b], bounds[3 + b]);
-                }
-            }
-            console.log('export bounding box : ' + float32ArrayToString(bounds));
-            //return "";
-            for (var i = 0; i < this.icount; ++i) {
-                console.log('' + i + '/' + (this.icount - 1));
-                var ri = i / (this.icount - 1);
-                for (var j = 0; j < this.jcount; ++j) {
-                    var rj = j / (this.jcount - 1);
-                    for (var k = 0; k < this.kcount; ++k) {
-                        var rk = k / (this.kcount - 1);
-                        pos[0] = (1 - ri) * bounds[0] + ri * bounds[3];
-                        pos[1] = (1 - rj) * bounds[1] + rj * bounds[4];
-                        pos[2] = (1 - rk) * bounds[2] + rk * bounds[5];
-                        var d = sdUni.getDist(pos, false, false);
-                        //sd.getMaterial(pos).getColor(diffuse);
-                        var q = this.getq(i, j, k);
-                        this.densities[q] = d;
-                    }
-                }
-            }
-            //console.log(densities[this.getq(5,5,5)] + '=' + d.toFixed(3));
+        exportSTL.prototype.getText = function (triangles, normals) {
             var stl = "solid blablabla\n";
-            var mc = new marchingCubes();
-            var nn = vec3.fromValues(1, 0, 0);
-            var bsx = (bounds[3] - bounds[0]) / (this.icount - 1);
-            var bsy = (bounds[4] - bounds[1]) / (this.jcount - 1);
-            var bsz = (bounds[5] - bounds[2]) / (this.kcount - 1);
-            for (var i = 0; i < this.icount - 1; ++i) {
-                console.log('' + i + '/' + (this.icount - 1));
-                for (var j = 0; j < this.jcount - 1; ++j) {
-                    for (var k = 0; k < this.kcount - 1; ++k) {
-                        var q1 = this.getq(i, j, k);
-                        var q2 = this.getq(i + 1, j, k);
-                        var q3 = this.getq(i, j + 1, k);
-                        var q4 = this.getq(i + 1, j + 1, k);
-                        var q5 = this.getq(i, j, k + 1);
-                        var q6 = this.getq(i + 1, j, k + 1);
-                        var q7 = this.getq(i, j + 1, k + 1);
-                        var q8 = this.getq(i + 1, j + 1, k + 1);
-                        mc.polygonize(this.densities[q1], this.densities[q2], this.densities[q3], this.densities[q4], this.densities[q5], this.densities[q6], this.densities[q7], this.densities[q8], nn, nn, nn, nn, nn, nn, nn, nn, 0);
-                        for (var pi = 0; pi < mc.posArrayLength;) {
-                            vec3.set(this.tmpVec1, bsx * (i + mc.posArray[pi++]), bsy * (j + mc.posArray[pi++]), bsz * (k + mc.posArray[pi++]));
-                            vec3.set(this.tmpVec2, bsx * (i + mc.posArray[pi++]), bsy * (j + mc.posArray[pi++]), bsz * (k + mc.posArray[pi++]));
-                            vec3.set(this.tmpVec3, bsx * (i + mc.posArray[pi++]), bsy * (j + mc.posArray[pi++]), bsz * (k + mc.posArray[pi++]));
-                            var vertices = '';
-                            vertices += "vertex " + this.tmpVec1[0] + ' ' + this.tmpVec1[1] + ' ' + this.tmpVec1[2] + '\n';
-                            vertices += "vertex " + this.tmpVec2[0] + ' ' + this.tmpVec2[1] + ' ' + this.tmpVec2[2] + '\n';
-                            vertices += "vertex " + this.tmpVec3[0] + ' ' + this.tmpVec3[1] + ' ' + this.tmpVec3[2] + '\n';
-                            vec3.subtract(this.tmpVec2, this.tmpVec2, this.tmpVec1);
-                            vec3.subtract(this.tmpVec3, this.tmpVec3, this.tmpVec1);
-                            vec3.cross(this.tmpVecCross, this.tmpVec2, this.tmpVec3);
-                            vec3.normalize(this.tmpVecCross, this.tmpVecCross);
-                            stl += 'facet normal ' + this.tmpVecCross[0] + ' ' + this.tmpVecCross[1] + ' ' + this.tmpVecCross[2] + '\n';
-                            stl += 'outer loop \n';
-                            stl += vertices;
-                            stl += 'endloop \n';
-                            stl += 'endfacet \n';
-                        }
-                    }
-                }
+            for (var i = 0; i < triangles.length / 9; ++i) {
+                stl += 'facet normal 0 0 0\n'; // + normals[3*i+0] + ' ' + normals[3*i+1] + ' ' + normals[3*i+2] + '\n';
+                stl += 'outer loop \n';
+                stl += "vertex " + triangles[9 * i + 0] + ' ' + triangles[9 * i + 1] + ' ' + triangles[9 * i + 2] + '\n';
+                stl += "vertex " + triangles[9 * i + 3] + ' ' + triangles[9 * i + 4] + ' ' + triangles[9 * i + 5] + '\n';
+                stl += "vertex " + triangles[9 * i + 6] + ' ' + triangles[9 * i + 7] + ' ' + triangles[9 * i + 8] + '\n';
+                stl += 'endloop \n';
+                stl += 'endfacet \n';
             }
-            stl += "endsolid blablabla";
+            stl += "endsolid blablabla\n";
             return stl;
         };
-        exportSTL.prototype.getq = function (i, j, k) {
-            return i + j * this.icount + k * this.icount * this.jcount;
+        exportSTL.prototype.getBinary = function (triangles, normals) {
+            // http://buildaweso.me/project/2014/10/26/writing-binary-stl-files-from-threejs-objects
+            var isLittleEndian = true; // STL files assume little endian, see wikipedia page
+            var bufferSize = 84 + (50 * (triangles.length / 9));
+            console.log('buffer size : ' + bufferSize);
+            var buffer = new ArrayBuffer(bufferSize);
+            var dv = new DataView(buffer);
+            var offset = 0;
+            offset += 80; // Header is empty
+            dv.setUint32(offset, triangles.length / 9, isLittleEndian);
+            offset += 4;
+            for (var n = 0; n < triangles.length / 9; n++) {
+                for (var ni = 0; ni < 3; ++ni)
+                    offset = this.writeFloat(dv, offset, normals[3 * n + ni], isLittleEndian);
+                for (var nj = 0; nj < 9; ++nj)
+                    offset = this.writeFloat(dv, offset, triangles[9 * n + nj], isLittleEndian);
+                var r = 31;
+                var g = 0;
+                var b = 0;
+                if (n < 1000) {
+                    r = 0;
+                    g = 31;
+                }
+                var packedColor = 1 + r * 2 + g * Math.pow(2, 6) + b * Math.pow(2, 11);
+                if (n < 1000)
+                    dv.setUint16(offset, 64512, isLittleEndian);
+                else
+                    dv.setUint16(offset, 64512, false);
+                offset += 2; // unused 'attribute byte count' is a Uint16
+            }
+            return dv;
         };
+        exportSTL.prototype.writeVector = function (dataview, offset, vector, isLittleEndian) {
+            offset = this.writeFloat(dataview, offset, vector.x, isLittleEndian);
+            offset = this.writeFloat(dataview, offset, vector.y, isLittleEndian);
+            return this.writeFloat(dataview, offset, vector.z, isLittleEndian);
+        };
+        ;
+        exportSTL.prototype.writeFloat = function (dataview, offset, float, isLittleEndian) {
+            dataview.setFloat32(offset, float, isLittleEndian);
+            return offset + 4;
+        };
+        ;
         return exportSTL;
     }());
     qec.exportSTL = exportSTL;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     function lerp(a, b, t) {
         return a + (b - a) * t;
     }
@@ -870,6 +884,118 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var signedDistanceToTriangles = (function () {
+        function signedDistanceToTriangles() {
+            this.icount = 100;
+            this.jcount = 100;
+            this.kcount = 50;
+            this.tmpVec1 = vec3.create();
+            this.tmpVec2 = vec3.create();
+            this.tmpVec3 = vec3.create();
+            this.tmpVecBary = vec3.create();
+            this.tmpVecCross = vec3.create();
+        }
+        signedDistanceToTriangles.prototype.compute = function (sds) {
+            this.triangles = [];
+            this.colors = [];
+            this.normals = [];
+            this.densities = new Float32Array(this.icount * this.jcount * this.kcount);
+            //var diffuses = new Float32Array(3*100*100*50);
+            var sdUni = new qec.sdUnion();
+            sds.forEach(function (x) { return sdUni.array.push(x); });
+            var pos = vec3.create();
+            var bounds = new Float32Array(6);
+            var diffuse = vec3.create();
+            var tmpMat = mat4.create();
+            var min = vec3.create();
+            var max = vec3.create();
+            for (var s = 0; s < sds.length; ++s) {
+                var sd = sds[s];
+                var bchs = sd.boundingCenterAndHalfSize;
+                sd.getInverseTransform(tmpMat);
+                mat4.invert(tmpMat, tmpMat);
+                vec3.set(min, bchs[0] - bchs[4], bchs[1] - bchs[4], bchs[2] - bchs[5]);
+                vec3.set(max, bchs[0] + bchs[4], bchs[1] + bchs[4], bchs[2] + bchs[5]);
+                vec3.transformMat4(min, min, tmpMat);
+                vec3.transformMat4(max, max, tmpMat);
+                for (var b = 0; b < 3; ++b) {
+                    bounds[b] = Math.min(min[b], bounds[b]);
+                    bounds[3 + b] = Math.max(max[b], bounds[3 + b]);
+                }
+            }
+            console.log('export bounding box : ' + float32ArrayToString(bounds));
+            for (var i = 0; i < this.icount; ++i) {
+                console.log('' + i + '/' + (this.icount - 1));
+                var ri = i / (this.icount - 1);
+                for (var j = 0; j < this.jcount; ++j) {
+                    var rj = j / (this.jcount - 1);
+                    for (var k = 0; k < this.kcount; ++k) {
+                        var rk = k / (this.kcount - 1);
+                        pos[0] = (1 - ri) * bounds[0] + ri * bounds[3];
+                        pos[1] = (1 - rj) * bounds[1] + rj * bounds[4];
+                        pos[2] = (1 - rk) * bounds[2] + rk * bounds[5];
+                        var d = sdUni.getDist(pos, false, false);
+                        var q = this.getq(i, j, k);
+                        this.densities[q] = d;
+                    }
+                }
+            }
+            //console.log(densities[this.getq(5,5,5)] + '=' + d.toFixed(3));
+            var mc = new qec.marchingCubes();
+            var nn = vec3.fromValues(1, 0, 0);
+            var bsx = (bounds[3] - bounds[0]) / (this.icount - 1);
+            var bsy = (bounds[4] - bounds[1]) / (this.jcount - 1);
+            var bsz = (bounds[5] - bounds[2]) / (this.kcount - 1);
+            for (var i = 0; i < this.icount - 1; ++i) {
+                console.log('' + i + '/' + (this.icount - 1));
+                for (var j = 0; j < this.jcount - 1; ++j) {
+                    for (var k = 0; k < this.kcount - 1; ++k) {
+                        var q1 = this.getq(i, j, k);
+                        var q2 = this.getq(i + 1, j, k);
+                        var q3 = this.getq(i, j + 1, k);
+                        var q4 = this.getq(i + 1, j + 1, k);
+                        var q5 = this.getq(i, j, k + 1);
+                        var q6 = this.getq(i + 1, j, k + 1);
+                        var q7 = this.getq(i, j + 1, k + 1);
+                        var q8 = this.getq(i + 1, j + 1, k + 1);
+                        mc.polygonize(this.densities[q1], this.densities[q2], this.densities[q3], this.densities[q4], this.densities[q5], this.densities[q6], this.densities[q7], this.densities[q8], nn, nn, nn, nn, nn, nn, nn, nn, 0);
+                        for (var pi = 0; pi < mc.posArrayLength;) {
+                            vec3.set(this.tmpVec1, bsx * (i + mc.posArray[pi++]), bsy * (j + mc.posArray[pi++]), bsz * (k + mc.posArray[pi++]));
+                            vec3.set(this.tmpVec2, bsx * (i + mc.posArray[pi++]), bsy * (j + mc.posArray[pi++]), bsz * (k + mc.posArray[pi++]));
+                            vec3.set(this.tmpVec3, bsx * (i + mc.posArray[pi++]), bsy * (j + mc.posArray[pi++]), bsz * (k + mc.posArray[pi++]));
+                            // get material at barycentre
+                            vec3.add(this.tmpVecBary, this.tmpVec2, this.tmpVec3);
+                            vec3.add(this.tmpVecBary, this.tmpVecBary, this.tmpVec1);
+                            vec3.scale(this.tmpVecBary, this.tmpVecBary, 1 / 3);
+                            this.tmpVecBary[0] += bounds[0];
+                            this.tmpVecBary[1] += bounds[1];
+                            this.tmpVecBary[2] += bounds[2];
+                            var diffuse = sdUni.getMaterial(this.tmpVecBary).diffuse;
+                            this.colors.push(diffuse[0], diffuse[1], diffuse[2]);
+                            this.triangles.push(this.tmpVec1[0], this.tmpVec1[1], this.tmpVec1[2]);
+                            this.triangles.push(this.tmpVec3[0], this.tmpVec3[1], this.tmpVec3[2]);
+                            this.triangles.push(this.tmpVec2[0], this.tmpVec2[1], this.tmpVec2[2]);
+                            vec3.subtract(this.tmpVec3, this.tmpVec3, this.tmpVec1);
+                            vec3.subtract(this.tmpVec2, this.tmpVec2, this.tmpVec1);
+                            vec3.normalize(this.tmpVec3, this.tmpVec3);
+                            vec3.normalize(this.tmpVec2, this.tmpVec2);
+                            vec3.cross(this.tmpVecCross, this.tmpVec3, this.tmpVec2);
+                            //vec3.normalize(this.tmpVecCross, this.tmpVecCross);
+                            this.normals.push(this.tmpVecCross[0], this.tmpVecCross[1], this.tmpVecCross[2]);
+                        }
+                    }
+                }
+            }
+        };
+        signedDistanceToTriangles.prototype.getq = function (i, j, k) {
+            return i + j * this.icount + k * this.icount * this.jcount;
+        };
+        return signedDistanceToTriangles;
+    }());
+    qec.signedDistanceToTriangles = signedDistanceToTriangles;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var lineDrawer = (function () {
         function lineDrawer() {
         }
@@ -894,35 +1020,85 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var saveWork = (function () {
-        function saveWork() {
+    var editorObjectDto = (function () {
+        function editorObjectDto() {
+            this.profilePoints = [];
         }
-        saveWork.prototype.generateContent = function (editor) {
+        return editorObjectDto;
+    }());
+    qec.editorObjectDto = editorObjectDto;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var loadWorkspace = (function () {
+        function loadWorkspace() {
+            this.svgHelper = qec.injectNew(qec.svgHelper);
+        }
+        loadWorkspace.prototype.loadFromLocalStorage = function () {
+            var json = JSON.parse(localStorage.getItem('workspace.json'));
+        };
+        loadWorkspace.prototype.load = function (editor, dto) {
+            var _this = this;
             var workspace = editor.workspace;
-            var svg = workspace.svgContent;
-            var zip = new JSZip();
-            zip.file("svg.svg", svg);
-            // 3d
-            workspace.editorObjects.forEach(function (o) {
-                var data = {
-                    // o.profilePoints;
-                    // o.profileBounds;
-                    // o.profileSmooth;
-                    inverseTransform: o.sd.inverseTransform,
-                    diffuseColor: o.diffuseColor,
-                };
-                JSON.stringify(data);
+            workspace.svgContent = dto.svgContent;
+            vec2FromArray(workspace.svgRealSize, dto.svgRealSize);
+            this.svgHelper.setRealSizeToFit(workspace.svgRealSize);
+            this.svgHelper.setSvg(dto.svgContent, function () {
+                dto.editorObjects.forEach(function (oDto) {
+                    var o = new qec.editorObject();
+                    o.topSvgId = oDto.topSvgId;
+                    _this.svgHelper.drawOnly(oDto.topSvgId, function () {
+                        var size = _this.svgHelper.getBoundingRealSize();
+                        var center = _this.svgHelper.getRealCenter();
+                        o.setTopImg2(_this.svgHelper.canvas2, vec4.fromValues(-0.5 * size[0], -0.5 * size[1], 0.5 * size[0], 0.5 * size[1]));
+                        mat4.identity(o.inverseTransform);
+                        mat4.translate(o.inverseTransform, o.inverseTransform, vec3.fromValues(center[0], center[1], oDto.zTranslate));
+                        mat4.invert(o.inverseTransform, o.inverseTransform);
+                        o.setProfilePoints(oDto.profilePoints);
+                        vec4FromArray(o.profileBounds, oDto.profileBounds);
+                        o.profileSmooth = oDto.profileSmooth;
+                        o.setDiffuseColor(_this.svgHelper.getColor());
+                    });
+                });
             });
-            // camera and lights position
+        };
+        return loadWorkspace;
+    }());
+    qec.loadWorkspace = loadWorkspace;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var saveWorkspace = (function () {
+        function saveWorkspace() {
+        }
+        saveWorkspace.prototype.saveJson = function (editor) {
+            saveAs(JSON.stringify(editor.workspace.toDto()), "workspace.json");
+        };
+        saveWorkspace.prototype.saveJsonInLocalStorage = function (editor) {
+            localStorage.setItem("workspace.json", JSON.stringify(editor.workspace.toDto()));
+        };
+        saveWorkspace.prototype.saveZip = function (editor) {
+            var zip = new JSZip();
+            zip.file("workspace.json", JSON.stringify(editor.workspace.toDto()));
             zip.generateAsync({ type: "blob" })
                 .then(function (content) {
                 // see FileSaver.js
-                //saveAs(content, "example.zip");
+                saveAs(content, "example.zip");
             });
         };
-        return saveWork;
+        return saveWorkspace;
     }());
-    qec.saveWork = saveWork;
+    qec.saveWorkspace = saveWorkspace;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var workspaceDto = (function () {
+        function workspaceDto() {
+            this.editorObjects = [];
+        }
+        return workspaceDto;
+    }());
+    qec.workspaceDto = workspaceDto;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -1163,7 +1339,7 @@ var qec;
         svgImporter.prototype.importSvgInWorkspace = function (workspace, content, done) {
             var _this = this;
             this.workspace = workspace;
-            this.originalSvgContent = content;
+            this.workspace.svgContent = content;
             this.svgAutoHeightHelper.setSvg(content, function () {
                 _this.helper.setSvg(content, function () { return _this.nextImport(done); });
             });
@@ -1177,7 +1353,7 @@ var qec;
                 console.log(id);
                 this.helper.drawOnly(id, function () {
                     var autoHeight = _this.svgAutoHeightHelper.valueForIds[id];
-                    _this.afterDraw(autoHeight * 0.05);
+                    _this.afterDraw(id, autoHeight * 0.05);
                     _this.nextImport(done);
                 });
                 this.indexObject++;
@@ -1186,7 +1362,7 @@ var qec;
                 done();
             }
         };
-        svgImporter.prototype.afterDraw = function (autoHeight) {
+        svgImporter.prototype.afterDraw = function (id, autoHeight) {
             //$('.debug').append(this.helper.canvas);
             //$('.debug').append(this.helper.canvas2);
             this.helper.setRealSizeToFit(vec2.fromValues(1, 1));
@@ -1195,6 +1371,7 @@ var qec;
             //console.log('size :' , size, 'center', center, 'autoHeight', autoHeight);
             var l = new qec.editorObject();
             this.workspace.pushObject(l);
+            l.topSvgId = id;
             l.setTopImg2(this.helper.canvas2, vec4.fromValues(-0.5 * size[0], -0.5 * size[1], 0.5 * size[0], 0.5 * size[1]));
             l.setProfileHeight(autoHeight);
             l.setDiffuseColor(this.helper.getColor());
@@ -1268,12 +1445,19 @@ var qec;
 (function (qec) {
     var workspace = (function () {
         function workspace() {
+            this.svgRealSize = vec2.fromValues(1, 1);
             this.editorObjects = [];
             this.selectedIndex = -1;
             this.rimLight = new qec.spotLight();
             this.keyLight = new qec.spotLight();
             this.fillLight = new qec.spotLight();
         }
+        workspace.prototype.toDto = function () {
+            var dto = new qec.workspaceDto();
+            dto.svgContent = this.svgContent;
+            dto.editorObjects = this.editorObjects.map(function (o) { return o.toDto(); });
+            return dto;
+        };
         workspace.prototype.pushObject = function (o) {
             this.editorObjects.push(o);
             o.needsTextureUpdate = true;
@@ -1283,16 +1467,6 @@ var qec;
         return workspace;
     }());
     qec.workspace = workspace;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    var workspaceDto = (function () {
-        function workspaceDto() {
-            this.objects = [];
-        }
-        return workspaceDto;
-    }());
-    qec.workspaceDto = workspaceDto;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -4802,13 +4976,27 @@ var qec;
     }());
     qec.createdDTO = createdDTO;
 })(qec || (qec = {}));
+function vec2FromArray(out, a) {
+    for (var i = 0; i < 2; ++i)
+        out[i] = a[i];
+}
 function vec3FromArray(out, a) {
-    for (var i = 0; i < a.length; ++i)
+    for (var i = 0; i < 3; ++i)
+        out[i] = a[i];
+}
+function vec4FromArray(out, a) {
+    for (var i = 0; i < 4; ++i)
         out[i] = a[i];
 }
 function mat4FromArray(out, a) {
-    for (var i = 0; i < a.length; ++i)
+    for (var i = 0; i < 16; ++i)
         out[i] = a[i];
+}
+function float32ArrayToArray(fta) {
+    var out = [];
+    for (var i = 0; i < fta.length; ++i)
+        out[i] = fta[i];
+    return out;
 }
 var qec;
 (function (qec) {
@@ -5583,6 +5771,7 @@ var qec;
                 this.modifyToolbarVisible,
                 this.environmentToolbarVisible,
                 this.photoToolbarVisible];
+            this.uploadedUrl = ko.observable();
         }
         editorView.prototype.afterInject = function () {
             this.editor.setRenderFlag();
@@ -5628,9 +5817,12 @@ var qec;
             requestAnimationFrame(function () { return _this.updateLoop(); });
         };
         editorView.prototype.exportSTL = function () {
-            var stl = this.editor.computeSTL();
+            //var stl = this.editor.computeTextSTL();
+            var stl = this.editor.computeOBJ();
             var blob = new Blob([stl], { type: 'text/plain' });
-            saveAs(blob, 'download.stl');
+            //var stl = this.editor.computeBinarySTL();
+            //var blob = new Blob([stl], {type: 'application//octet-binary'});
+            saveAs(blob, 'download.obj');
         };
         editorView.prototype.savePhoto = function () {
             qec.saveAsImage(this.editor.renderer.getCanvas());
@@ -5656,6 +5848,63 @@ var qec;
             w.fillLight.intensity = 0.5;
             w.rimLight.intensity = 0.5;
             this.editor.setRenderFlag();
+        };
+        editorView.prototype.sendToSculpteo = function () {
+            $('.printPanel').show();
+            var req = new XMLHttpRequest();
+            req.open('POST', '/sculpteo?filename=coucou', true);
+            req.onreadystatechange = function (aEvt) {
+                if (req.readyState == 4) {
+                    if (req.status == 200) {
+                        alert(req.response);
+                        alert("OK !");
+                        var uuid = req.response.uuid;
+                        $('#sculpteoFrame').attr('src', '//www.sculpteo.com/en/embed/redirect/' + uuid + '?click=details');
+                    }
+                    else {
+                        alert("Erreur pendant le chargement de la page.\n");
+                    }
+                }
+            };
+            var stl = "solid a\n"
+                + "facet normal 0 0 1\n"
+                + "outer loop\n"
+                + "vertex 0 0 0\n"
+                + "vertex 1 0 0\n"
+                + "vertex 1 1 0\n"
+                + "endloop"
+                + "endfacet"
+                + "endsolid a";
+            var myArray = new ArrayBuffer(512);
+            var longInt8View = new Uint8Array(myArray);
+            for (var i = 0; i < longInt8View.length; i++) {
+                longInt8View[i] = i % 255;
+            }
+            var blob = new Blob([longInt8View], { type: 'application/octet-binary' });
+            req.send(blob);
+        };
+        editorView.prototype.uploadPhoto = function () {
+            var _this = this;
+            var elt = this.editor.renderer.getCanvas();
+            var imgData = elt.toDataURL("image/jpeg");
+            var req = new XMLHttpRequest();
+            req.open('POST', '/uploadString', true);
+            req.responseType = 'json';
+            req.onreadystatechange = function (aEvt) {
+                if (req.readyState == 4) {
+                    if (req.status == 200) {
+                        var id = req.response.id;
+                        console.log(req.response);
+                        console.log(req.response.id);
+                        _this.uploadedUrl(window.location.protocol + '//' + window.location.host + '/downloadDataUri?id=' + id);
+                    }
+                    else {
+                        alert("Erreur pendant le chargement de la page.\n");
+                    }
+                }
+            };
+            console.log(imgData);
+            req.send(imgData);
         };
         return editorView;
     }());

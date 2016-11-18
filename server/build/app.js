@@ -2,7 +2,6 @@
 const express = require("express");
 const path = require("path");
 const logger = require("morgan");
-const bodyParser = require("body-parser");
 const cookieParser = require('cookie-parser');
 const exphbs = require('express-handlebars');
 let app = express();
@@ -18,14 +17,15 @@ if (app.get("env") === "development") {
 }
 app.use('/studio45', express.static(path.join(__dirname, "..", "..", "client")));
 app.use(express.static(path.join(__dirname, "..", "public")));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+//app.use(bodyParser.json());
+//app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 // Routes
 app.get('/', function (req, res) {
     res.render('home.hbs');
 });
-app.use("/test", require("./routes/index"));
+app.use("/", require("./routes/uploads"));
+app.use("/sculpteo", require("./routes/sculpteo"));
 // error handlers
 app.use(function (req, res, next) {
     let err = new Error("Not Found");

@@ -9,22 +9,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 const express = require("express");
 const mongodb = require("mongodb");
+const bodyParser = require("body-parser");
+const config = require('../config');
 let router = express.Router();
 var MongoClient = mongodb.MongoClient;
-var url = 'mongodb://localhost:27018/test';
+var url = config.mongo_url;
 var db;
 MongoClient.connect(url).then(result => { db = result; console.log('connected to mongodb ' + url); });
-router.post("/upload", function (req, res, next) {
-    return __awaiter(this, void 0, void 0, function* () {
-        var id = yield upload(req.body);
-        res.send(id);
-    });
-});
 router.get("/uploadString", function (req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         var id = yield uploadString(req.param('content'));
-        //console.log('uploadString ' + JSON.stringify(req.query));
-        res.send(id);
+        res.send({ id: id });
+    });
+});
+router.post("/uploadString", bodyParser.text(), function (req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var id = yield uploadString(req.body);
+        res.send({ id: id });
     });
 });
 router.get("/downloadString", function (req, res, next) {
@@ -32,19 +33,22 @@ router.get("/downloadString", function (req, res, next) {
         yield downloadString(req.query.id, res);
     });
 });
-router.get("/download", function (req, res, next) {
+router.get("/downloadDataUri", function (req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
-        var collection = db.collection('uploads');
-        var found = yield collection.find({ _id: req.params.id });
-        res.writeHead(200, { 'Content-Type': 'application/octet-stream' });
-        var stream = found.stream();
-        stream.pipe(res);
-        //stream.on('end', function() { res.end(); });
-        /*
-        response.writeHead(200, { "Content-Type": mimeType });
-        response.write(file, "binary");
-        response.end();
-        */
+        yield downloadDataUri(req.query.id, res);
+    });
+});
+router.post("/uploadBufferWithMime", function (req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var strBase64 = bufferToBase64(req.body);
+        var mime = req.query.mime;
+        var content = 'data:' + mime + ';base64,' + strBase64;
+        var id = yield uploadString(content);
+        res.send(id);
+    });
+});
+router.get("/downloadBuffer", function (req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
     });
 });
 function uploadString(_content) {
@@ -65,24 +69,30 @@ function downloadString(_id, res) {
         stream.on('end', function () { res.end(); });
     });
 }
-function upload(content) {
+function downloadDataUri(id, res) {
     return __awaiter(this, void 0, void 0, function* () {
-        //var grid  = mongodb.
         var collection = db.collection('uploads');
-        var uarr = new Uint8Array(content);
-        var strings = [], chunksize = 0xffff;
-        var len = uarr.length;
-        // There is a maximum stack size. We cannot call String.fromCharCode with as many arguments as we want
-        for (var i = 0; i * chunksize < len; i++) {
-            strings.push(String.fromCharCode.apply(null, uarr.subarray(i * chunksize, (i + 1) * chunksize)));
-        }
-        var ins = yield collection.insert({
-            "content": btoa(strings.join('')),
-            "encoding": "base64"
-        });
-        db.close();
-        return ins.insertedId;
+        var found = yield collection.find({ _id: new mongodb.ObjectID(id) }).limit(1);
+        var arr = yield found.toArray();
+        var str = arr[0].content;
+        var regex = /^data:(.+);base64,(.*)$/;
+        var matches = str.match(regex);
+        var mime = matches[1];
+        var data = matches[2];
+        res.writeHead(200, { 'Content-Type': mime });
+        res.write(new Buffer(data, 'base64'), 'binary');
+        res.end();
     });
 }
+function bufferToBase64(content) {
+    var uarr = new Uint8Array(content);
+    var strings = [], chunksize = 0xffff;
+    var len = uarr.length;
+    // There is a maximum stack size. We cannot call String.fromCharCode with as many arguments as we want
+    for (var i = 0; i * chunksize < len; i++) {
+        strings.push(String.fromCharCode.apply(null, uarr.subarray(i * chunksize, (i + 1) * chunksize)));
+    }
+    return btoa(strings.join(''));
+}
 module.exports = router;
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=uploads.js.map
