@@ -1,2 +1,1 @@
-cd server/
-nodemon --debug build/start.js
+nodemon --debug ./server/build/start.js
