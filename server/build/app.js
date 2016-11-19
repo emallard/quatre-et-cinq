@@ -8,8 +8,8 @@ let app = express();
 // view engine setup
 app.engine('handlebars', exphbs({})); //defaultLayout: 'main'
 app.set('view engine', 'handlebars');
+app.set("views", path.join(__dirname, "..", "views"));
 /*
-app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "hbs");
 */
 if (app.get("env") === "development") {
