@@ -78,15 +78,26 @@ module qec
 
         exportSTL()
         {
+            var isStl = false;
+            //var blob:Blob;
+            if (!isStl)
+            {
+                /*
+                var obj = this.editor.computeOBJ();
+                var blob = new Blob([obj], {type: 'text/plain'});
+                saveAs(blob, 'download.obj');
+                */
+
+                this.editor.getOBJAsZip( content => saveAs(content, 'a.obj.zip'));
+            }
+            else
+            {
+                //var stl = this.editor.computeTextSTL();
+                var stl = this.editor.computeBinarySTL();
+                var blob = new Blob([stl], {type: 'application//octet-binary'});
+                saveAs(blob, 'download.stl');
+            }
             
-            //var stl = this.editor.computeTextSTL();
-            var stl = this.editor.computeOBJ();
-            var blob = new Blob([stl], {type: 'text/plain'});
-            
-            //var stl = this.editor.computeBinarySTL();
-            //var blob = new Blob([stl], {type: 'application//octet-binary'});
-            
-            saveAs(blob, 'download.obj');
         }
 
         savePhoto()
@@ -206,6 +217,10 @@ module qec
             
             console.log(imgData);
             req.send(imgData);
+        }
+
+        toggleSoftwareHardware() {
+            this.editor.toggleSimpleRenderer();
         }
     }
 }

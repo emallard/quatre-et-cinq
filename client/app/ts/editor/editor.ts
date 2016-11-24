@@ -226,6 +226,12 @@ module qec
             return this.exportOBJ.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals, this.signedDistanceToTriangles.colors);
         }
 
+        getOBJAsZip(done:(content:any)=>void)
+        {
+            this.signedDistanceToTriangles.compute(this.getAllSd());
+            return this.exportOBJ.getZip(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals, this.signedDistanceToTriangles.colors, done);    
+        }
+
         computeTextSTL():string
         {
             this.signedDistanceToTriangles.compute(this.getAllSd());

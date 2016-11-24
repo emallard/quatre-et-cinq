@@ -5,7 +5,7 @@ module qec {
         densities:Float32Array;
         icount = 100;
         jcount = 100;
-        kcount = 50;        
+        kcount = 100;        
 
         tmpVec1 = vec3.create();
         tmpVec2 = vec3.create();

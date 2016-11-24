@@ -206,6 +206,10 @@ var qec;
             this.signedDistanceToTriangles.compute(this.getAllSd());
             return this.exportOBJ.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals, this.signedDistanceToTriangles.colors);
         };
+        editor.prototype.getOBJAsZip = function (done) {
+            this.signedDistanceToTriangles.compute(this.getAllSd());
+            return this.exportOBJ.getZip(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals, this.signedDistanceToTriangles.colors, done);
+        };
         editor.prototype.computeTextSTL = function () {
             this.signedDistanceToTriangles.compute(this.getAllSd());
             return this.exportSTL.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals);
@@ -347,11 +351,57 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    // https://gist.githubusercontent.com/paulkaplan/6d5f0ab2c7e8fdc68a61/raw/6bde174e27ae21905d871af3ef9fa3143919079f/binary_stl_writer.js
     var exportOBJ = (function () {
         function exportOBJ() {
         }
         exportOBJ.prototype.getText = function (triangles, normals, colors) {
+            var d = 5;
+            var obj = '';
+            var materials = {};
+            var numMaterials = 0;
+            for (var i = 0; i < triangles.length / 9; ++i) {
+                var color = colors[3 * i + 0] + ' ' + colors[3 * i + 1] + ' ' + colors[3 * i + 2];
+                if (materials[color] == undefined) {
+                    materials[color] = {
+                        name: "mat" + numMaterials,
+                        diffuse: color,
+                        faces: ""
+                    };
+                    numMaterials++;
+                }
+                obj += "v " + triangles[9 * i + 0].toFixed(d) + ' ' + triangles[9 * i + 1].toFixed(d) + ' ' + triangles[9 * i + 2].toFixed(d) + '\n';
+                obj += "v " + triangles[9 * i + 3].toFixed(d) + ' ' + triangles[9 * i + 4].toFixed(d) + ' ' + triangles[9 * i + 5].toFixed(d) + '\n';
+                obj += "v " + triangles[9 * i + 6].toFixed(d) + ' ' + triangles[9 * i + 7].toFixed(d) + ' ' + triangles[9 * i + 8].toFixed(d) + '\n';
+                materials[color].faces += 'f ' + (3 * i + 1) + ' ' + (3 * i + 2) + ' ' + (3 * i + 3) + '\n';
+            }
+            var mtl = '';
+            var faces = '';
+            for (var key in materials) {
+                var mat = materials[key];
+                mtl += 'newmtl ' + mat.name + '\n    Ka ' + mat.diffuse + '\n    Kd ' + mat.diffuse + '\n';
+                faces += 'g g' + mat.name + '\nusemtl ' + mat.name + '\n';
+                faces += mat.faces + '\n';
+            }
+            this.mtlFile = mtl;
+            this.objFile = 'mtllib a.mtl\n' + obj + faces;
+            return this.objFile;
+        };
+        exportOBJ.prototype.getZip = function (triangles, normals, colors, done) {
+            var _this = this;
+            this.getText(triangles, normals, colors);
+            // http://gildas-lormeau.github.io/zip.js/core-api.html
+            // use a zip.BlobWriter object to write zipped data into a Blob object
+            zip.createWriter(new zip.BlobWriter("application/zip"), function (zipWriter) {
+                // use a BlobReader object to read the data stored into blob variable
+                zipWriter.add("a.obj", new zip.TextReader(_this.objFile), function () {
+                    zipWriter.add("a.mtl", new zip.TextReader(_this.mtlFile), function () {
+                        console.log('a.mtl');
+                        zipWriter.close(done);
+                    });
+                });
+            }, function (msg) { return console.error(msg); });
+        };
+        exportOBJ.prototype.getText_colorPerVertex = function (triangles, normals, colors) {
             var obj = '';
             var faces = '';
             for (var i = 0; i < triangles.length / 9; ++i) {
@@ -435,6 +485,15 @@ var qec;
         return exportSTL;
     }());
     qec.exportSTL = exportSTL;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var indexedMesh = (function () {
+        function indexedMesh() {
+        }
+        return indexedMesh;
+    }());
+    qec.indexedMesh = indexedMesh;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -888,7 +947,7 @@ var qec;
         function signedDistanceToTriangles() {
             this.icount = 100;
             this.jcount = 100;
-            this.kcount = 50;
+            this.kcount = 100;
             this.tmpVec1 = vec3.create();
             this.tmpVec2 = vec3.create();
             this.tmpVec3 = vec3.create();
@@ -5817,12 +5876,22 @@ var qec;
             requestAnimationFrame(function () { return _this.updateLoop(); });
         };
         editorView.prototype.exportSTL = function () {
-            //var stl = this.editor.computeTextSTL();
-            var stl = this.editor.computeOBJ();
-            var blob = new Blob([stl], { type: 'text/plain' });
-            //var stl = this.editor.computeBinarySTL();
-            //var blob = new Blob([stl], {type: 'application//octet-binary'});
-            saveAs(blob, 'download.obj');
+            var isStl = false;
+            //var blob:Blob;
+            if (!isStl) {
+                /*
+                var obj = this.editor.computeOBJ();
+                var blob = new Blob([obj], {type: 'text/plain'});
+                saveAs(blob, 'download.obj');
+                */
+                this.editor.getOBJAsZip(function (content) { return saveAs(content, 'a.obj.zip'); });
+            }
+            else {
+                //var stl = this.editor.computeTextSTL();
+                var stl = this.editor.computeBinarySTL();
+                var blob = new Blob([stl], { type: 'application//octet-binary' });
+                saveAs(blob, 'download.stl');
+            }
         };
         editorView.prototype.savePhoto = function () {
             qec.saveAsImage(this.editor.renderer.getCanvas());
@@ -5905,6 +5974,9 @@ var qec;
             };
             console.log(imgData);
             req.send(imgData);
+        };
+        editorView.prototype.toggleSoftwareHardware = function () {
+            this.editor.toggleSimpleRenderer();
         };
         return editorView;
     }());
