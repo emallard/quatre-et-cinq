@@ -5,19 +5,21 @@ import config = require('../config');
 import bodyParser = require("body-parser");
 let router = express.Router();
 
-router.post("/", bodyParser.raw(), function (req: express.Request, res: express.Response, next: express.NextFunction) {
+router.post("/", bodyParser.raw({limit: 1000000, type:(req)=>true}), function (req: express.Request, res: express.Response, next: express.NextFunction) {
+    
+    console.log('designName: ' + req.query.designName);
     console.log(req.body);
-    PostCode(req.body, req.params.filename, res);
-    res.send('ok');
+    
+    PostCode(req.body, req.query.designName, res);
+    //res.send({errors: "mock"});
 });
 
 router.get("/test", function (req: express.Request, res: express.Response, next: express.NextFunction) {
     console.log('test');
-    //PostCode(null, res);
-    res.send('test');
+    //res.send('test');
 });
 
-function PostCode(body:Buffer, filename:string, res: express.Response) {
+function PostCode(body:Buffer, designName:string, res: express.Response) {
 
     //https://github.com/request/request
 
@@ -32,7 +34,7 @@ function PostCode(body:Buffer, filename:string, res: express.Response) {
         file : {
             value:  body,
             options: {
-                filename: 'thefilename',
+                filename: 'thefilename.zip',
                 contentType: 'application/octet-stream'
             }
         },
@@ -48,8 +50,8 @@ function PostCode(body:Buffer, filename:string, res: express.Response) {
             }
         }*/
         /*filename: 'a.stl',*/
-        name: 'test design',
-        unit: 'mm',
+        name: designName,
+        unit: 'cm',
         designer: config.sculpteo_username,
         password: config.sculpteo_password,
         print_authorization: '1'
@@ -78,8 +80,9 @@ function PostCode(body:Buffer, filename:string, res: express.Response) {
         }
         else
         {
-            console.log('Upload successful!  Server responded with:', body);
-            res.send(body);
+            var bodyJson = JSON.parse(body);
+            console.log('Upload successful!  Server responded with:', bodyJson.uuid);
+            res.send({uuid: bodyJson.uuid});
         }
     });
 /*

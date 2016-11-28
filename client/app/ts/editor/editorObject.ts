@@ -40,7 +40,6 @@ module qec {
         toDto():editorObjectDto
         {
             var dto = new editorObjectDto();
-            dto.diffuseColor = float32ArrayToArray(this.diffuseColor);
             dto.zTranslate = this.inverseTransform[14];
             dto.profilePoints = this.profilePoints;
             dto.profileBounds = float32ArrayToArray(this.profileBounds);

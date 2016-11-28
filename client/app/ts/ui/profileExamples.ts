@@ -20,8 +20,8 @@ module qec
         {
             this.points = points;
 
-            this.canvas.width = 50;
-            this.canvas.height = 100;
+            this.canvas.width = 30;
+            this.canvas.height = 60;
 
             var canvasPoints = [];
             for (var i=0 ; i < points.length; ++i)

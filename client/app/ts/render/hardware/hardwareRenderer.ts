@@ -69,12 +69,15 @@ module qec {
             var generatedLight = this.text.generateLight(lightCount);
 
             this.fragmentShader = ''
-                + resources.all['app/sd.glsl']
+                + resources.all['app/ts/render/hardware/10_sd.glsl']
                 + generatedPart
-                + resources.all['app/light.glsl']
+                + resources.all['app/ts/render/hardware/20_light.glsl']
                 + generatedLight
-                + resources.all['app/renderPixel.glsl'];
+                + resources.all['app/ts/render/hardware/30_renderPixel.glsl'];
             
+            //console.log(generatedPart);
+            //console.log(generatedLight);
+
             this.gViewQuad.material.fragmentShader = this.fragmentShader;
             this.gViewQuad.material.needsUpdate = true;
 

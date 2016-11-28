@@ -8,9 +8,9 @@ module qec {
         static loadAll(done:()=>void)
         {
             var run = new runAll();
-            run.push((_done) => resources.doReq('app/sd.glsl', _done));
-            run.push((_done) => resources.doReq('app/light.glsl', _done));
-            run.push((_done) => resources.doReq('app/renderPixel.glsl', _done));
+            run.push((_done) => resources.doReq('app/ts/render/hardware/10_sd.glsl', _done));
+            run.push((_done) => resources.doReq('app/ts/render/hardware/20_light.glsl', _done));
+            run.push((_done) => resources.doReq('app/ts/render/hardware/30_renderPixel.glsl', _done));
             run.run(() => {resources.loaded = true; done();});
         }
 

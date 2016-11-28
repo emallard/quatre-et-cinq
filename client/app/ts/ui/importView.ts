@@ -5,6 +5,9 @@ module qec {
         importedContent:string;
         editor:editor = inject(qec.editor);
         
+        importedSvgs = ko.observableArray<importedSvg>();
+        createImportedSvg:()=>importedSvg = injectFunc(importedSvg);
+        
         set()
         {
         }
@@ -37,13 +40,21 @@ module qec {
             
             reader.onload = (event) => {
                 
+                /*
                 this.importedContent = reader.result;
                 this.editor.importSvg(this.importedContent,    
                     ()=>{}//this.editor.setSelectedIndex(0)
                 );
+                */
+                var newSvg = this.createImportedSvg();
+                newSvg.importView = this;
+                newSvg.src("data:image/svg+xml;base64," + btoa(reader.result));
+                newSvg.content = reader.result;
+                this.importedSvgs.push(newSvg);
 
-                // show in UI
-                $('.imgImportedImage').attr("src", "data:image/svg+xml;base64," + btoa(reader.result));
+                this.editor.addSvg(reader.result);
+                //if (this.importedSvgs.length == 1)
+                this.select(newSvg);
             }
             
             // when the file is read it triggers the onload event above.
@@ -51,6 +62,22 @@ module qec {
             {
                 reader.readAsText(file);
             }
+        }
+
+        select(importedSvg:importedSvg)
+        {
+            this.importedSvgs().forEach(x => x.isActive(false));
+            importedSvg.isActive(true);
+
+            var index = this.importedSvgs().indexOf(importedSvg);
+            console.log('index ' + index);
+            this.editor.setSelectedSvgIndex(index, ()=>{});
+            //this.editor.importSvg(importedSvg.content,()=>{});
+        }
+
+        remove(importedSvg:importedSvg)
+        {
+            this.importedSvgs.remove(importedSvg);
         }
     }
 }

@@ -2,7 +2,6 @@ module qec {
 
     export class workspace
     {
-        svgContent:string;
         svgRealSize = vec2.fromValues(1, 1);
         editorObjects:editorObject[] = [];
         selectedIndex = -1;
@@ -10,11 +9,17 @@ module qec {
         keyLight = new spotLight();
         fillLight = new spotLight();
         
+        importedSvgs:string[] = []
+        selectedSvgIndex:number = -1;
+        sculpteoUuids:string[] = [];
+
         toDto():workspaceDto
         {
             var dto = new workspaceDto();
-            dto.svgContent = this.svgContent;
             dto.editorObjects = this.editorObjects.map(o => o.toDto());
+            dto.importedSvgs = this.importedSvgs;
+            dto.selectedSvgIndex = this.selectedSvgIndex;
+            dto.sculpteoUuids = this.sculpteoUuids;
             return dto;
         }
 

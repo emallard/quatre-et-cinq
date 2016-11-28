@@ -18,8 +18,12 @@ module qec {
         colors:number[];
         normals:number[];
 
-        compute(sds:sdFields[]):void
+        compute(sds:sdFields[], icount:number, jcount:number, kcount:number, multiplier:number):void
         {
+            this.icount = icount;
+            this.jcount = jcount;
+            this.kcount = kcount;
+            
             this.triangles = [];
             this.colors = [];
             this.normals = [];
@@ -131,9 +135,9 @@ module qec {
                             var diffuse = sdUni.getMaterial(this.tmpVecBary).diffuse;
                             this.colors.push(diffuse[0], diffuse[1], diffuse[2]);
 
-                            this.triangles.push(this.tmpVec1[0], this.tmpVec1[1], this.tmpVec1[2]);
-                            this.triangles.push(this.tmpVec3[0], this.tmpVec3[1], this.tmpVec3[2]);
-                            this.triangles.push(this.tmpVec2[0], this.tmpVec2[1], this.tmpVec2[2]);
+                            this.triangles.push(multiplier*this.tmpVec1[0], multiplier*this.tmpVec1[1], multiplier*this.tmpVec1[2]);
+                            this.triangles.push(multiplier*this.tmpVec3[0], multiplier*this.tmpVec3[1], multiplier*this.tmpVec3[2]);
+                            this.triangles.push(multiplier*this.tmpVec2[0], multiplier*this.tmpVec2[1], multiplier*this.tmpVec2[2]);
                             
                             vec3.subtract(this.tmpVec3, this.tmpVec3, this.tmpVec1);
                             vec3.subtract(this.tmpVec2, this.tmpVec2, this.tmpVec1);

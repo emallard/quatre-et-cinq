@@ -4,9 +4,7 @@ module qec {
     {
         topSvgId:string;
         
-        diffuseColor:number[];
         zTranslate:number;
-
         profilePoints:number[][] = [];
         profileBounds:number[];
         profileSmooth:boolean;

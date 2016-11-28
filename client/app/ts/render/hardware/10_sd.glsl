@@ -1,4 +1,17 @@
 
+vec3 GetSkyGradient( const in vec3 vDir )
+{
+    //const vec3 cColourTop = vec3(0.7, 0.8, 1.0);
+    //const vec3 cColourHorizon = cColourTop * 0.5;
+
+    const vec3 cColourTop = vec3(0.3, 0.3, 0.3);
+    const vec3 cColourHorizon = cColourTop * 0.5;
+
+    float fBlend = clamp(vDir.z, 0.0, 1.0);
+    return mix(cColourHorizon, cColourTop, fBlend);
+}
+
+
 float maxcomp( in vec3 p ) {
     return max(p.x,max(p.y,p.z));
 }
@@ -67,13 +80,5 @@ float sdFields_(vec3 p1, sampler2D u_topTexture, sampler2D u_profileTexture, vec
     float d2 = getFieldDistance(u_profileTexture, vec2(u2, v2));
     
     return d2;
-
-    /*
-    vec2 uv = 0.5 + p.xy * (1.0/(2.0*u_halfSizeTop));
-    float d = getFieldDistance(u_topTexture, uv);   
-    float d2 = getFieldDistance(u_profileTexture,
-      0.5 + vec2(d, p.z) * (1.0/(2.0*u_halfSizeProfile))); 
-    return d2;
-    */
 }
 

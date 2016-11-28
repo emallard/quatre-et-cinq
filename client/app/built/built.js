@@ -98,8 +98,17 @@ var qec;
         editor.prototype.getCamera = function () {
             return this.renderSettings.camera;
         };
+        editor.prototype.addSvg = function (svgContent) {
+            this.workspace.importedSvgs.push(svgContent);
+        };
+        editor.prototype.setSelectedSvgIndex = function (index, done) {
+            this.workspace.selectedSvgIndex = index;
+            var svgContent = this.workspace.importedSvgs[this.workspace.selectedSvgIndex];
+            this.importSvg(svgContent, done);
+        };
         editor.prototype.importSvg = function (svgContent, done) {
             var _this = this;
+            console.log('importSvg');
             if (this.firstImport) {
                 this.firstImport = false;
                 this.svgImporter.importSvgInWorkspace(this.workspace, svgContent, function () {
@@ -113,13 +122,6 @@ var qec;
                     done();
                 });
             }
-        };
-        editor.prototype.reimportSvg = function (svgContent, done) {
-            var _this = this;
-            this.svgImporter.reimport(this.workspace, svgContent, function () {
-                _this.setUpdateFlag();
-                done();
-            });
         };
         editor.prototype.toggleSimpleRenderer = function () {
             this.setSimpleRenderer(this.renderer != this.simpleRenderer);
@@ -203,21 +205,32 @@ var qec;
             this.setRenderFlag();
         };
         editor.prototype.computeOBJ = function () {
-            this.signedDistanceToTriangles.compute(this.getAllSd());
+            this.signedDistanceToTriangles.compute(this.getAllSd(), 50, 50, 50, 1);
             return this.exportOBJ.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals, this.signedDistanceToTriangles.colors);
         };
-        editor.prototype.getOBJAsZip = function (done) {
-            this.signedDistanceToTriangles.compute(this.getAllSd());
+        editor.prototype.computeOBJAsZip = function (icount, jcount, kcount, multiplier, done) {
+            this.signedDistanceToTriangles.compute(this.getAllSd(), icount, jcount, kcount, multiplier);
             return this.exportOBJ.getZip(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals, this.signedDistanceToTriangles.colors, done);
         };
         editor.prototype.computeTextSTL = function () {
-            this.signedDistanceToTriangles.compute(this.getAllSd());
+            this.signedDistanceToTriangles.compute(this.getAllSd(), 50, 50, 50, 1);
             return this.exportSTL.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals);
         };
-        editor.prototype.computeBinarySTL = function () {
-            this.signedDistanceToTriangles.compute(this.getAllSd());
+        editor.prototype.computeBinarySTL = function (icount, jcount, kcount, multiplier) {
+            this.signedDistanceToTriangles.compute(this.getAllSd(), icount, jcount, kcount, multiplier);
             console.log("check tris, normals", this.signedDistanceToTriangles.triangles.length, 3 * this.signedDistanceToTriangles.normals.length);
             return this.exportSTL.getBinary(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals);
+        };
+        editor.prototype.computeBinarySTLAsZip = function (icount, jcount, kcount, multiplier, done) {
+            console.log('computeBinarySTLAsZip');
+            var stl = this.computeBinarySTL(icount, jcount, kcount, multiplier);
+            var blob = new Blob([stl], { type: 'application/octet-stream' });
+            zip.createWriter(new zip.BlobWriter("application/zip"), function (zipWriter) {
+                zipWriter.add("a.stl", new zip.BlobReader(blob), function () {
+                    console.log('zipwriter close');
+                    zipWriter.close(done);
+                });
+            }, function (msg) { return console.error(msg); });
         };
         return editor;
     }());
@@ -249,7 +262,6 @@ var qec;
         }
         editorObject.prototype.toDto = function () {
             var dto = new qec.editorObjectDto();
-            dto.diffuseColor = float32ArrayToArray(this.diffuseColor);
             dto.zTranslate = this.inverseTransform[14];
             dto.profilePoints = this.profilePoints;
             dto.profileBounds = float32ArrayToArray(this.profileBounds);
@@ -954,7 +966,10 @@ var qec;
             this.tmpVecBary = vec3.create();
             this.tmpVecCross = vec3.create();
         }
-        signedDistanceToTriangles.prototype.compute = function (sds) {
+        signedDistanceToTriangles.prototype.compute = function (sds, icount, jcount, kcount, multiplier) {
+            this.icount = icount;
+            this.jcount = jcount;
+            this.kcount = kcount;
             this.triangles = [];
             this.colors = [];
             this.normals = [];
@@ -1031,9 +1046,9 @@ var qec;
                             this.tmpVecBary[2] += bounds[2];
                             var diffuse = sdUni.getMaterial(this.tmpVecBary).diffuse;
                             this.colors.push(diffuse[0], diffuse[1], diffuse[2]);
-                            this.triangles.push(this.tmpVec1[0], this.tmpVec1[1], this.tmpVec1[2]);
-                            this.triangles.push(this.tmpVec3[0], this.tmpVec3[1], this.tmpVec3[2]);
-                            this.triangles.push(this.tmpVec2[0], this.tmpVec2[1], this.tmpVec2[2]);
+                            this.triangles.push(multiplier * this.tmpVec1[0], multiplier * this.tmpVec1[1], multiplier * this.tmpVec1[2]);
+                            this.triangles.push(multiplier * this.tmpVec3[0], multiplier * this.tmpVec3[1], multiplier * this.tmpVec3[2]);
+                            this.triangles.push(multiplier * this.tmpVec2[0], multiplier * this.tmpVec2[1], multiplier * this.tmpVec2[2]);
                             vec3.subtract(this.tmpVec3, this.tmpVec3, this.tmpVec1);
                             vec3.subtract(this.tmpVec2, this.tmpVec2, this.tmpVec1);
                             vec3.normalize(this.tmpVec3, this.tmpVec3);
@@ -1093,33 +1108,48 @@ var qec;
         function loadWorkspace() {
             this.svgHelper = qec.injectNew(qec.svgHelper);
         }
-        loadWorkspace.prototype.loadFromLocalStorage = function () {
-            var json = JSON.parse(localStorage.getItem('workspace.json'));
+        loadWorkspace.prototype.loadFromLocalStorage = function (editor) {
+            var dto = JSON.parse(localStorage.getItem('workspace.json'));
+            this.load(editor, dto, function () {
+                editor.setSelectedSvgIndex(dto.selectedSvgIndex, function () { });
+            });
         };
-        loadWorkspace.prototype.load = function (editor, dto) {
+        loadWorkspace.prototype.load = function (editor, dto, done) {
             var _this = this;
             var workspace = editor.workspace;
-            workspace.svgContent = dto.svgContent;
             vec2FromArray(workspace.svgRealSize, dto.svgRealSize);
             this.svgHelper.setRealSizeToFit(workspace.svgRealSize);
-            this.svgHelper.setSvg(dto.svgContent, function () {
+            dto.importedSvgs.forEach(function (x) { return workspace.importedSvgs.push(x); });
+            //editor.setSelectedSvgIndex(dto.selectedSvgIndex)
+            workspace.selectedSvgIndex = dto.selectedSvgIndex;
+            var svgContent = workspace.importedSvgs[workspace.selectedSvgIndex];
+            var run = new qec.runAll();
+            this.svgHelper.setSvg(svgContent, function () {
                 dto.editorObjects.forEach(function (oDto) {
                     var o = new qec.editorObject();
                     o.topSvgId = oDto.topSvgId;
-                    _this.svgHelper.drawOnly(oDto.topSvgId, function () {
-                        var size = _this.svgHelper.getBoundingRealSize();
-                        var center = _this.svgHelper.getRealCenter();
-                        o.setTopImg2(_this.svgHelper.canvas2, vec4.fromValues(-0.5 * size[0], -0.5 * size[1], 0.5 * size[0], 0.5 * size[1]));
-                        mat4.identity(o.inverseTransform);
-                        mat4.translate(o.inverseTransform, o.inverseTransform, vec3.fromValues(center[0], center[1], oDto.zTranslate));
-                        mat4.invert(o.inverseTransform, o.inverseTransform);
-                        o.setProfilePoints(oDto.profilePoints);
-                        vec4FromArray(o.profileBounds, oDto.profileBounds);
-                        o.profileSmooth = oDto.profileSmooth;
-                        o.setDiffuseColor(_this.svgHelper.getColor());
-                    });
+                    run.push(_this.getDrawOnly(o, oDto));
                 });
             });
+            run.run(done);
+        };
+        loadWorkspace.prototype.getDrawOnly = function (o, oDto) {
+            var _this = this;
+            return function (done) {
+                return _this.svgHelper.drawOnly(o.topSvgId, function () {
+                    //var size = this.svgHelper.getBoundingRealSize();
+                    //var center = this.svgHelper.getRealCenter();
+                    //o.setTopImg2(this.svgHelper.canvas2, vec4.fromValues(-0.5*size[0], -0.5*size[1], 0.5*size[0], 0.5*size[1]));
+                    mat4.identity(o.inverseTransform);
+                    mat4.translate(o.inverseTransform, o.inverseTransform, vec3.fromValues(/*center[0], center[1]*/ 0, 0, oDto.zTranslate));
+                    mat4.invert(o.inverseTransform, o.inverseTransform);
+                    o.setProfilePoints(oDto.profilePoints);
+                    vec4FromArray(o.profileBounds, oDto.profileBounds);
+                    o.profileSmooth = oDto.profileSmooth;
+                    o.setDiffuseColor(_this.svgHelper.getColor());
+                    done();
+                });
+            };
         };
         return loadWorkspace;
     }());
@@ -1134,7 +1164,9 @@ var qec;
             saveAs(JSON.stringify(editor.workspace.toDto()), "workspace.json");
         };
         saveWorkspace.prototype.saveJsonInLocalStorage = function (editor) {
-            localStorage.setItem("workspace.json", JSON.stringify(editor.workspace.toDto()));
+            var content = JSON.stringify(editor.workspace.toDto());
+            console.log(content);
+            localStorage.setItem("workspace.json", content);
         };
         saveWorkspace.prototype.saveZip = function (editor) {
             var zip = new JSZip();
@@ -1398,7 +1430,6 @@ var qec;
         svgImporter.prototype.importSvgInWorkspace = function (workspace, content, done) {
             var _this = this;
             this.workspace = workspace;
-            this.workspace.svgContent = content;
             this.svgAutoHeightHelper.setSvg(content, function () {
                 _this.helper.setSvg(content, function () { return _this.nextImport(done); });
             });
@@ -1510,11 +1541,16 @@ var qec;
             this.rimLight = new qec.spotLight();
             this.keyLight = new qec.spotLight();
             this.fillLight = new qec.spotLight();
+            this.importedSvgs = [];
+            this.selectedSvgIndex = -1;
+            this.sculpteoUuids = [];
         }
         workspace.prototype.toDto = function () {
             var dto = new qec.workspaceDto();
-            dto.svgContent = this.svgContent;
             dto.editorObjects = this.editorObjects.map(function (o) { return o.toDto(); });
+            dto.importedSvgs = this.importedSvgs;
+            dto.selectedSvgIndex = this.selectedSvgIndex;
+            dto.sculpteoUuids = this.sculpteoUuids;
             return dto;
         };
         workspace.prototype.pushObject = function (o) {
@@ -2090,11 +2126,13 @@ var qec;
                 + this.text.generateColor();
             var generatedLight = this.text.generateLight(lightCount);
             this.fragmentShader = ''
-                + qec.resources.all['app/sd.glsl']
+                + qec.resources.all['app/ts/render/hardware/10_sd.glsl']
                 + generatedPart
-                + qec.resources.all['app/light.glsl']
+                + qec.resources.all['app/ts/render/hardware/20_light.glsl']
                 + generatedLight
-                + qec.resources.all['app/renderPixel.glsl'];
+                + qec.resources.all['app/ts/render/hardware/30_renderPixel.glsl'];
+            //console.log(generatedPart);
+            //console.log(generatedLight);
             this.gViewQuad.material.fragmentShader = this.fragmentShader;
             this.gViewQuad.material.needsUpdate = true;
             this.updateAllUniformsForAll();
@@ -5294,9 +5332,9 @@ var qec;
         }
         resources.loadAll = function (done) {
             var run = new qec.runAll();
-            run.push(function (_done) { return resources.doReq('app/sd.glsl', _done); });
-            run.push(function (_done) { return resources.doReq('app/light.glsl', _done); });
-            run.push(function (_done) { return resources.doReq('app/renderPixel.glsl', _done); });
+            run.push(function (_done) { return resources.doReq('app/ts/render/hardware/10_sd.glsl', _done); });
+            run.push(function (_done) { return resources.doReq('app/ts/render/hardware/20_light.glsl', _done); });
+            run.push(function (_done) { return resources.doReq('app/ts/render/hardware/30_renderPixel.glsl', _done); });
             run.run(function () { resources.loaded = true; done(); });
         };
         resources.doReq = function (url, done) {
@@ -5540,6 +5578,225 @@ var qec;
         return wm5Line3;
     }());
     qec.wm5Line3 = wm5Line3;
+})(qec || (qec = {}));
+// adapted from http://nehe.gamedev.net/tutorial/arcball_rotation/19003/
+var qec;
+(function (qec) {
+    var arcball = (function () {
+        function arcball() {
+            this.StVec = vec3.create();
+            this.EnVec = vec3.create();
+            this.TempPt = vec2.create();
+            this.sphereFactor = 0.777;
+        }
+        arcball.prototype.setBounds = function (NewWidth, NewHeight) {
+            //Set adjustment factor for width/height
+            this.AdjustWidth = 1.0 / ((NewWidth - 1.0) * 0.5);
+            this.AdjustHeight = 1.0 / ((NewHeight - 1.0) * 0.5);
+        };
+        arcball.prototype._mapToSphere = function (NewPt, NewVec) {
+            var TempPt = this.TempPt;
+            //Copy paramter into temp point
+            vec2.copy(TempPt, NewPt);
+            //Adjust point coords and scale down to range of [-1 ... 1]
+            TempPt[0] = (TempPt[0] * this.AdjustWidth) - 1.0;
+            TempPt[1] = 1.0 - (TempPt[1] * this.AdjustHeight);
+            //Compute the square of the length of the vector to the point from the center
+            var length = (TempPt[0] * TempPt[0]) + (TempPt[1] * TempPt[1]);
+            //If the point is mapped outside of the sphere... (length > radius squared)
+            if (length > this.sphereFactor * this.sphereFactor) {
+                //Compute a normalizing factor (radius / sqrt(length))
+                var norm = 1.0 / Math.sqrt(length);
+                //Return the "normalized" vector, a point on the sphere
+                NewVec[0] = TempPt[0] * norm;
+                NewVec[1] = TempPt[1] * norm;
+                NewVec[2] = 0.0;
+            }
+            else {
+                //Return a vector to a point mapped inside the sphere sqrt(radius squared - length)
+                NewVec[0] = TempPt[0];
+                NewVec[1] = TempPt[1];
+                NewVec[2] = Math.sqrt(this.sphereFactor * this.sphereFactor - length);
+            }
+        };
+        //Mouse down
+        arcball.prototype.click = function (NewPt) {
+            //Map the point to the sphere
+            this._mapToSphere(NewPt, this.StVec);
+        };
+        //Mouse drag, calculate rotation
+        arcball.prototype.drag = function (NewPt, NewRot) {
+            //Map the point to the sphere
+            this._mapToSphere(NewPt, this.EnVec);
+            //Return the quaternion equivalent to the rotation
+            if (NewRot) {
+                var Perp = vec3.create();
+                //Compute the vector perpendicular to the begin and end vectors
+                vec3.cross(Perp, this.StVec, this.EnVec);
+                //Compute the length of the perpendicular vector
+                if (vec3.length(Perp) > 0.00001) {
+                    //We're ok, so return the perpendicular vector as the transform after all
+                    NewRot[0] = Perp[0];
+                    NewRot[1] = Perp[1];
+                    NewRot[2] = Perp[2];
+                    //In the quaternion values, w is cosine (theta / 2), where theta is rotation angle
+                    //NewRot[3] = vec3.dot(this.StVec, this.EnVec);
+                    // '1 +' comes from :
+                    // http://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
+                    NewRot[3] = this.sphereFactor * this.sphereFactor + vec3.dot(this.StVec, this.EnVec);
+                }
+                else {
+                    //The begin and end vectors coincide, so return an identity transform
+                    NewRot[0] = 0;
+                    NewRot[1] = 0;
+                    NewRot[2] = 0;
+                    NewRot[3] = 1;
+                }
+            }
+        };
+        return arcball;
+    }());
+    qec.arcball = arcball;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var cameraArcballController = (function () {
+        function cameraArcballController() {
+            this.projectionMatrix = mat4.create();
+            this.transformMatrix = mat4.create();
+            this.rotation = quat.normalize(null, quat.fromValues(0, 0, 0, -1));
+            this.rotationMat = mat4.create();
+            this.panTranslation = mat4.identity(mat4.create());
+            this.zTranslation = mat4.create();
+            this.zcam = -0.06;
+            this.arcball = new qec.arcball();
+            this.tmpVec3 = vec3.create();
+            this.isPanEnabled = true;
+            this.isRotateEnabled = true;
+            this.isZoomEnabled = true;
+            this.currentMouseXY = vec2.create();
+            this.hasMouseMoved = false;
+            this.startXY = vec2.create();
+            this.startQuat = quat.create();
+            this.startPan = mat4.create();
+            this.up = vec3.create();
+            this.right = vec3.create();
+        }
+        cameraArcballController.prototype.afterInject = function () {
+            this.reset();
+        };
+        // called by view
+        cameraArcballController.prototype.initFromView = function (viewportWidth, viewportHeight) {
+            this.setCanvasSize(viewportWidth, viewportHeight);
+        };
+        cameraArcballController.prototype.setCanvasSize = function (viewportWidth, viewportHeight) {
+            this.viewportWidth = viewportWidth;
+            this.viewportHeight = viewportHeight;
+            this.arcball.setBounds(viewportWidth, viewportHeight);
+            mat4.perspective(this.projectionMatrix, 30, viewportWidth / viewportHeight, 0.001, 10.0);
+            this.updateTransformMatrix();
+        };
+        // compute transform matrix from rotation, zTranslation and panTranslation
+        cameraArcballController.prototype.updateTransformMatrix = function () {
+            mat4.fromQuat(this.rotationMat, this.rotation);
+            mat4.multiply(this.transformMatrix, this.rotationMat, this.panTranslation);
+            mat4.identity(this.zTranslation);
+            mat4.translate(this.zTranslation, this.zTranslation, vec3.fromValues(0, 0, this.zcam));
+            mat4.multiply(this.zTranslation, this.transformMatrix, this.transformMatrix);
+        };
+        cameraArcballController.prototype.initUI = function () {
+            this.reset();
+        };
+        cameraArcballController.prototype.reset = function () {
+            //var angleFromVertical = 3.14/8;
+            var angleFromVertical = 0;
+            quat.setAxisAngle(this.rotation, vec3.fromValues(1, 0, 0), angleFromVertical);
+            mat4.identity(this.panTranslation);
+            this.zcam = -0.06;
+            this.updateTransformMatrix();
+        };
+        cameraArcballController.prototype.getCenter = function (dest) {
+            mat4.getTranslation(dest, this.panTranslation);
+            vec3.scale(dest, dest, -1);
+        };
+        cameraArcballController.prototype.setCenter = function (center) {
+            mat4.identity(this.panTranslation);
+            vec3.scale(this.tmpVec3, center, -1);
+            mat4.translate(this.panTranslation, this.panTranslation, this.tmpVec3);
+            this.updateTransformMatrix();
+        };
+        cameraArcballController.prototype.getRotation = function (dest) {
+            quat.copy(dest, this.rotation);
+        };
+        cameraArcballController.prototype.setRotation = function (rot) {
+            quat.copy(this.rotation, rot);
+            this.updateTransformMatrix();
+        };
+        cameraArcballController.prototype.setZcam = function (z) {
+            this.zcam = z;
+            this.updateTransformMatrix();
+        };
+        cameraArcballController.prototype.cameraTop = function (n, x, y) {
+            /*
+            var n = vec3.create();
+            var x = vec3.create();
+            var y = vec3.create();
+            this.workingPlaneService.getNormal(n);
+            this.workingPlaneService.getX(x);
+            this.workingPlaneService.getY(y);
+            */
+            /*
+            var mat = mat3.createFrom(
+                x[0], x[1], x[2],
+                y[0], y[1], y[2],
+                n[0], n[1], n[2]
+            );
+            */
+            var mat = mat3.fromValues(x[0], y[0], n[0], x[1], y[1], n[1], x[2], y[2], n[2]);
+            quat.fromMat3(this.rotation, mat);
+            this.updateTransformMatrix();
+        };
+        cameraArcballController.prototype.zoom = function (delta) {
+            if (delta < 0) {
+                this.zcam *= 1.1;
+            }
+            else {
+                this.zcam *= 0.9;
+            }
+            this.updateTransformMatrix();
+        };
+        cameraArcballController.prototype.pan = function (dx, dy) {
+            var xFactor = -this.zcam / this.viewportWidth;
+            var yFactor = this.zcam / this.viewportHeight;
+            this.up[0] = this.rotationMat[1];
+            this.up[1] = this.rotationMat[5];
+            this.up[2] = this.rotationMat[9];
+            vec3.scale(this.up, this.up, yFactor * dy);
+            this.right[0] = this.rotationMat[0];
+            this.right[1] = this.rotationMat[4];
+            this.right[2] = this.rotationMat[8];
+            vec3.scale(this.right, this.right, xFactor * dx);
+            mat4.translate(this.panTranslation, this.up, this.panTranslation);
+            mat4.translate(this.panTranslation, this.right, this.panTranslation);
+            this.updateTransformMatrix();
+        };
+        //
+        //  Mouse Interactions
+        //
+        cameraArcballController.prototype.onMouseWheel = function (sender, event, delta) {
+            if (this.isZoomEnabled) {
+                this.zoom(delta);
+            }
+            this.updateTransformMatrix();
+        };
+        cameraArcballController.prototype.setDisabledAll = function (b) {
+            this.isPanEnabled = !b;
+            this.isRotateEnabled = !b;
+            this.isZoomEnabled = !b;
+        };
+        return cameraArcballController;
+    }());
+    qec.cameraArcballController = cameraArcballController;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -5810,6 +6067,8 @@ var qec;
     var editorView = (function () {
         function editorView() {
             this.editor = qec.inject(qec.editor);
+            this.saveWorkspace = qec.inject(qec.saveWorkspace);
+            this.loadWorkspace = qec.inject(qec.loadWorkspace);
             //updateLoop:updateLoop = inject(updateLoop);
             this.controllerManager = qec.inject(qec.controllerManager);
             this.selectController = qec.inject(qec.selectController);
@@ -5817,20 +6076,24 @@ var qec;
             this.importView = qec.inject(qec.importView);
             this.profileView = qec.inject(qec.profileView);
             this.materialView = qec.inject(qec.materialView);
+            this.shareView = qec.inject(qec.shareView);
+            this.printView = qec.inject(qec.printView);
             this.isSelectControllerActive = ko.observable(true);
             this.isMoveControllerActive = ko.observable(false);
             this.isScaleControllerActive = ko.observable(false);
+            this.isScaleBottomControllerActive = ko.observable(false);
             // toolbars
             this.importToolbarVisible = ko.observable(true);
             this.modifyToolbarVisible = ko.observable(false);
             this.environmentToolbarVisible = ko.observable(false);
             this.photoToolbarVisible = ko.observable(false);
+            this.printToolbarVisible = ko.observable(false);
             this.toolbarsVisible = [
                 this.importToolbarVisible,
                 this.modifyToolbarVisible,
                 this.environmentToolbarVisible,
-                this.photoToolbarVisible];
-            this.uploadedUrl = ko.observable();
+                this.photoToolbarVisible,
+                this.printToolbarVisible];
         }
         editorView.prototype.afterInject = function () {
             this.editor.setRenderFlag();
@@ -5838,6 +6101,14 @@ var qec;
         };
         editorView.prototype.initEditor = function (elt) {
             this.editor.init(elt);
+        };
+        editorView.prototype.menuNew = function () {
+        };
+        editorView.prototype.menuSave = function () {
+            this.saveWorkspace.saveJsonInLocalStorage(this.editor);
+        };
+        editorView.prototype.menuOpen = function () {
+            this.loadWorkspace.loadFromLocalStorage(this.editor);
         };
         editorView.prototype.onMouseMove = function (data, e) { this.controllerManager.onMouseMove(e); };
         editorView.prototype.onMouseDown = function (data, e) { this.controllerManager.onMouseDown(e); };
@@ -5850,8 +6121,15 @@ var qec;
         };
         editorView.prototype.setScaleController = function () {
             this.heightController.isScaleMode = true;
+            this.heightController.isScaleModeBottom = false;
             this.controllerManager.setController(this.heightController);
             this.setActiveController(this.isScaleControllerActive);
+        };
+        editorView.prototype.setScaleBottomController = function () {
+            this.heightController.isScaleMode = true;
+            this.heightController.isScaleModeBottom = true;
+            this.controllerManager.setController(this.heightController);
+            this.setActiveController(this.isScaleBottomControllerActive);
         };
         editorView.prototype.setSelectController = function () {
             this.controllerManager.setController(this.selectController);
@@ -5861,6 +6139,7 @@ var qec;
             this.isSelectControllerActive(false);
             this.isMoveControllerActive(false);
             this.isScaleControllerActive(false);
+            this.isScaleBottomControllerActive(false);
             c(true);
         };
         editorView.prototype.setSelectedIndex = function (i) {
@@ -5875,31 +6154,11 @@ var qec;
             this.profileView.updateLoop();
             requestAnimationFrame(function () { return _this.updateLoop(); });
         };
-        editorView.prototype.exportSTL = function () {
-            var isStl = false;
-            //var blob:Blob;
-            if (!isStl) {
-                /*
-                var obj = this.editor.computeOBJ();
-                var blob = new Blob([obj], {type: 'text/plain'});
-                saveAs(blob, 'download.obj');
-                */
-                this.editor.getOBJAsZip(function (content) { return saveAs(content, 'a.obj.zip'); });
-            }
-            else {
-                //var stl = this.editor.computeTextSTL();
-                var stl = this.editor.computeBinarySTL();
-                var blob = new Blob([stl], { type: 'application//octet-binary' });
-                saveAs(blob, 'download.stl');
-            }
-        };
-        editorView.prototype.savePhoto = function () {
-            qec.saveAsImage(this.editor.renderer.getCanvas());
-        };
         editorView.prototype.showImportToolbar = function () { this.setToolbar(this.importToolbarVisible); };
         editorView.prototype.showModifyToolbar = function () { this.setToolbar(this.modifyToolbarVisible); };
         editorView.prototype.showEnvironmentToolbar = function () { this.setToolbar(this.environmentToolbarVisible); };
         editorView.prototype.showPhotoToolbar = function () { this.setToolbar(this.photoToolbarVisible); };
+        editorView.prototype.showPrintToolbar = function () { this.setToolbar(this.printToolbarVisible); };
         editorView.prototype.setToolbar = function (selected) {
             this.toolbarsVisible.forEach(function (t) { return t(false); });
             selected(true);
@@ -5917,63 +6176,6 @@ var qec;
             w.fillLight.intensity = 0.5;
             w.rimLight.intensity = 0.5;
             this.editor.setRenderFlag();
-        };
-        editorView.prototype.sendToSculpteo = function () {
-            $('.printPanel').show();
-            var req = new XMLHttpRequest();
-            req.open('POST', '/sculpteo?filename=coucou', true);
-            req.onreadystatechange = function (aEvt) {
-                if (req.readyState == 4) {
-                    if (req.status == 200) {
-                        alert(req.response);
-                        alert("OK !");
-                        var uuid = req.response.uuid;
-                        $('#sculpteoFrame').attr('src', '//www.sculpteo.com/en/embed/redirect/' + uuid + '?click=details');
-                    }
-                    else {
-                        alert("Erreur pendant le chargement de la page.\n");
-                    }
-                }
-            };
-            var stl = "solid a\n"
-                + "facet normal 0 0 1\n"
-                + "outer loop\n"
-                + "vertex 0 0 0\n"
-                + "vertex 1 0 0\n"
-                + "vertex 1 1 0\n"
-                + "endloop"
-                + "endfacet"
-                + "endsolid a";
-            var myArray = new ArrayBuffer(512);
-            var longInt8View = new Uint8Array(myArray);
-            for (var i = 0; i < longInt8View.length; i++) {
-                longInt8View[i] = i % 255;
-            }
-            var blob = new Blob([longInt8View], { type: 'application/octet-binary' });
-            req.send(blob);
-        };
-        editorView.prototype.uploadPhoto = function () {
-            var _this = this;
-            var elt = this.editor.renderer.getCanvas();
-            var imgData = elt.toDataURL("image/jpeg");
-            var req = new XMLHttpRequest();
-            req.open('POST', '/uploadString', true);
-            req.responseType = 'json';
-            req.onreadystatechange = function (aEvt) {
-                if (req.readyState == 4) {
-                    if (req.status == 200) {
-                        var id = req.response.id;
-                        console.log(req.response);
-                        console.log(req.response.id);
-                        _this.uploadedUrl(window.location.protocol + '//' + window.location.host + '/downloadDataUri?id=' + id);
-                    }
-                    else {
-                        alert("Erreur pendant le chargement de la page.\n");
-                    }
-                }
-            };
-            console.log(imgData);
-            req.send(imgData);
         };
         editorView.prototype.toggleSoftwareHardware = function () {
             this.editor.toggleSimpleRenderer();
@@ -6008,6 +6210,7 @@ var qec;
             this.distLines = new qec.wm5DistLine3Line3();
             this.collide = new qec.renderCollide();
             this.isScaleMode = false;
+            this.isScaleModeBottom = false;
         }
         heightController.prototype.set = function () {
             //console.log('heightController');
@@ -6034,9 +6237,21 @@ var qec;
                     this.editor.renderer.updateTransform(this.selected.sd);
                     this.editor.setRenderFlag();
                 }
-                else {
+                else if (!this.isScaleModeBottom) {
                     vec4.copy(this.newBounds, this.startBounds);
                     this.newBounds[3] += this.deltaPos[2];
+                    this.selected.scaleProfilePoints(this.newBounds);
+                    this.selected.updateSignedDistance();
+                    this.editor.renderer.updateFloatTextures(this.selected.sd);
+                    this.editor.setRenderFlag();
+                }
+                else {
+                    mat4.translate(this.selected.inverseTransform, this.startTransform, this.deltaPos);
+                    mat4.invert(this.selected.inverseTransform, this.selected.inverseTransform);
+                    this.selected.updateInverseTransform();
+                    this.editor.renderer.updateTransform(this.selected.sd);
+                    vec4.copy(this.newBounds, this.startBounds);
+                    this.newBounds[3] += (-this.deltaPos[2]);
                     this.selected.scaleProfilePoints(this.newBounds);
                     this.selected.updateSignedDistance();
                     this.editor.renderer.updateFloatTextures(this.selected.sd);
@@ -6089,6 +6304,8 @@ var qec;
     var importView = (function () {
         function importView() {
             this.editor = qec.inject(qec.editor);
+            this.importedSvgs = ko.observableArray();
+            this.createImportedSvg = qec.injectFunc(qec.importedSvg);
         }
         importView.prototype.set = function () {
         };
@@ -6114,20 +6331,59 @@ var qec;
             console.log('readImage');
             var reader = new FileReader();
             reader.onload = function (event) {
-                _this.importedContent = reader.result;
-                _this.editor.importSvg(_this.importedContent, function () { } //this.editor.setSelectedIndex(0)
+                /*
+                this.importedContent = reader.result;
+                this.editor.importSvg(this.importedContent,
+                    ()=>{}//this.editor.setSelectedIndex(0)
                 );
-                // show in UI
-                $('.imgImportedImage').attr("src", "data:image/svg+xml;base64," + btoa(reader.result));
+                */
+                var newSvg = _this.createImportedSvg();
+                newSvg.importView = _this;
+                newSvg.src("data:image/svg+xml;base64," + btoa(reader.result));
+                newSvg.content = reader.result;
+                _this.importedSvgs.push(newSvg);
+                _this.editor.addSvg(reader.result);
+                //if (this.importedSvgs.length == 1)
+                _this.select(newSvg);
             };
             // when the file is read it triggers the onload event above.
             if (file) {
                 reader.readAsText(file);
             }
         };
+        importView.prototype.select = function (importedSvg) {
+            this.importedSvgs().forEach(function (x) { return x.isActive(false); });
+            importedSvg.isActive(true);
+            var index = this.importedSvgs().indexOf(importedSvg);
+            console.log('index ' + index);
+            this.editor.setSelectedSvgIndex(index, function () { });
+            //this.editor.importSvg(importedSvg.content,()=>{});
+        };
+        importView.prototype.remove = function (importedSvg) {
+            this.importedSvgs.remove(importedSvg);
+        };
         return importView;
     }());
     qec.importView = importView;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var importedSvg = (function () {
+        function importedSvg() {
+            this.src = ko.observable('');
+            this.content = '';
+            this.isActive = ko.observable(false);
+        }
+        importedSvg.prototype.onClick = function () {
+            this.importView.select(this);
+            //this.isActive(true);
+        };
+        importedSvg.prototype.remove = function () {
+            this.importView.remove(this);
+        };
+        return importedSvg;
+    }());
+    qec.importedSvg = importedSvg;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -6259,6 +6515,7 @@ var qec;
         function materialView() {
             this.editor = qec.inject(qec.editor);
             this.selectedIndex = -1;
+            this.isHole = ko.observable(false);
         }
         materialView.prototype.setElement = function (elt) {
             var _this = this;
@@ -6290,9 +6547,88 @@ var qec;
                 this.editor.setRenderFlag();
             }
         };
+        materialView.prototype.setAsHole = function () {
+            if (this.selectedIndex >= 0) {
+                if (this.isHole()) {
+                    var l = this.editor.workspace.editorObjects[this.selectedIndex];
+                    //l.profileSmooth = false;
+                    this.editor.setUpdateFlag();
+                }
+            }
+        };
         return materialView;
     }());
     qec.materialView = materialView;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var printView = (function () {
+        function printView() {
+            /*
+            allDesignsUrl = ko.observableArray<string>();
+    
+            designName = ko.observable('mydesign');
+            designUrl = ko.observable('');
+            state = ko.observable('');
+            frameVisible = ko.observable(false);
+            frameSrc = ko.observable('');
+            */
+            this.editor = qec.inject(qec.editor);
+            this.sculpteoDesignName = ko.observable('mydesign');
+            this.sculpteoState = ko.observable('');
+            this.sculpteoFrameVisible = ko.observable(false);
+            this.sculpteoFrameSrc = ko.observable('');
+            this.sculpteoDesignUrl = ko.observable('');
+            this.allPrintUrl = ko.observableArray();
+        }
+        printView.prototype.sendToSculpteo = function () {
+            var _this = this;
+            var req = new XMLHttpRequest();
+            req.open('POST', '/sculpteo?designName=' + this.sculpteoDesignName(), true);
+            req.onreadystatechange = function (aEvt) {
+                if (req.readyState == 4) {
+                    if (req.status == 200) {
+                        var response = JSON.parse(req.responseText);
+                        if (response.errors) {
+                            alert(JSON.stringify(response.errors));
+                        }
+                        else {
+                            var uuid = response.uuid;
+                            var url = 'http://www.sculpteo.com/en/embed/redirect/' + uuid + '?click=details';
+                            _this.sculpteoFrameVisible(true);
+                            _this.sculpteoFrameSrc(url);
+                            _this.sculpteoDesignUrl('https://www.sculpteo.com/gallery/design/ext/' + uuid);
+                            _this.allPrintUrl.push(_this.sculpteoDesignUrl());
+                            $('#modalSculpteo').modal('show');
+                        }
+                    }
+                    else {
+                        alert("Erreur pendant le chargement de la page.\n");
+                    }
+                }
+            };
+            req.onprogress = function (bEvt) {
+                _this.sculpteoState('' + bEvt.loaded + '/' + bEvt.total);
+            };
+            this.sculpteoState = ko.observable('Sending');
+            //var stl = this.editor.computeBinarySTL(10, 10, 10);
+            //var blob = new Blob([stl], {type: 'application/octet-stream'});
+            // req.send(blob);
+            //this.editor.computeBinarySTLAsZip(30, 30, 30, 10, (content) => req.send(content));
+            this.editor.computeOBJAsZip(150, 150, 100, 10, function (content) { console.log('contentSize: ' + content.size); req.send(content); });
+            /*
+            var myArray = new ArrayBuffer(512);
+            var longInt8View = new Uint8Array(myArray);
+
+            for (var i=0; i < longInt8View.length; i++) {
+                longInt8View[i] = i % 255;
+            }
+            var blob = new Blob([longInt8View], {type: 'application/octet-stream'});
+            */
+        };
+        return printView;
+    }());
+    qec.printView = printView;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -6309,8 +6645,8 @@ var qec;
         };
         profileExample.prototype.setPoints = function (points) {
             this.points = points;
-            this.canvas.width = 50;
-            this.canvas.height = 100;
+            this.canvas.width = 30;
+            this.canvas.height = 60;
             var canvasPoints = [];
             for (var i = 0; i < points.length; ++i) {
                 var px = this.points[i][0];
@@ -6605,6 +6941,66 @@ var qec;
         return selectController;
     }());
     qec.selectController = selectController;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var shareView = (function () {
+        function shareView() {
+            this.editor = qec.inject(qec.editor);
+            this.uploadedUrl = ko.observable('');
+            this.uploadedSrc = ko.observable('');
+            this.allPhotoUrl = ko.observableArray();
+        }
+        shareView.prototype.exportSTL = function () {
+            var isStl = false;
+            //var blob:Blob;
+            if (!isStl) {
+                /*
+                var obj = this.editor.computeOBJ();
+                var blob = new Blob([obj], {type: 'text/plain'});
+                saveAs(blob, 'download.obj');
+                */
+                this.editor.computeOBJAsZip(50, 50, 50, 1, function (content) { return saveAs(content, 'a.obj.zip'); });
+            }
+            else {
+                //var stl = this.editor.computeTextSTL();
+                var stl = this.editor.computeBinarySTL(50, 50, 50, 1);
+                var blob = new Blob([stl], { type: 'application//octet-binary' });
+                saveAs(blob, 'download.stl');
+            }
+        };
+        shareView.prototype.savePhoto = function () {
+            qec.saveAsImage(this.editor.renderer.getCanvas());
+        };
+        shareView.prototype.uploadPhoto = function () {
+            var _this = this;
+            var elt = this.editor.renderer.getCanvas();
+            var imgData = elt.toDataURL("image/jpeg");
+            this.uploadedSrc(imgData);
+            var req = new XMLHttpRequest();
+            req.open('POST', '/uploadString', true);
+            req.responseType = 'json';
+            req.onreadystatechange = function (aEvt) {
+                if (req.readyState == 4) {
+                    if (req.status == 200) {
+                        var id = req.response.id;
+                        console.log(req.response);
+                        console.log(req.response.id);
+                        _this.uploadedUrl(window.location.protocol + '//' + window.location.host + '/downloadDataUri?id=' + id);
+                        _this.allPhotoUrl.push(window.location.protocol + '//' + window.location.host + '/downloadDataUri?id=' + id);
+                        $('#modalPhoto').modal('show');
+                    }
+                    else {
+                        alert("Erreur pendant le chargement de la page.\n");
+                    }
+                }
+            };
+            console.log(imgData);
+            req.send(imgData);
+        };
+        return shareView;
+    }());
+    qec.shareView = shareView;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {

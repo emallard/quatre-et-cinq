@@ -4,17 +4,17 @@ const request = require('request');
 const config = require('../config');
 const bodyParser = require("body-parser");
 let router = express.Router();
-router.post("/", bodyParser.raw(), function (req, res, next) {
+router.post("/", bodyParser.raw({ limit: 1000000, type: (req) => true }), function (req, res, next) {
+    console.log('designName: ' + req.query.designName);
     console.log(req.body);
-    PostCode(req.body, req.params.filename, res);
-    res.send('ok');
+    PostCode(req.body, req.query.designName, res);
+    //res.send({errors: "mock"});
 });
 router.get("/test", function (req, res, next) {
     console.log('test');
-    //PostCode(null, res);
-    res.send('test');
+    //res.send('test');
 });
-function PostCode(body, filename, res) {
+function PostCode(body, designName, res) {
     //https://github.com/request/request
     var formData = {
         // Pass a simple key-value pair
@@ -26,7 +26,7 @@ function PostCode(body, filename, res) {
         file: {
             value: body,
             options: {
-                filename: 'thefilename',
+                filename: 'thefilename.zip',
                 contentType: 'application/octet-stream'
             }
         },
@@ -42,8 +42,8 @@ function PostCode(body, filename, res) {
             }
         }*/
         /*filename: 'a.stl',*/
-        name: 'test design',
-        unit: 'mm',
+        name: designName,
+        unit: 'cm',
         designer: config.sculpteo_username,
         password: config.sculpteo_password,
         print_authorization: '1'
@@ -66,8 +66,9 @@ function PostCode(body, filename, res) {
             res.send(err);
         }
         else {
-            console.log('Upload successful!  Server responded with:', body);
-            res.send(body);
+            var bodyJson = JSON.parse(body);
+            console.log('Upload successful!  Server responded with:', bodyJson.uuid);
+            res.send({ uuid: bodyJson.uuid });
         }
     });
     /*

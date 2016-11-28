@@ -78,9 +78,22 @@ module qec
             return this.renderSettings.camera;
         }
 
+        addSvg(svgContent:string)
+        {
+            this.workspace.importedSvgs.push(svgContent);
+        }
+
+        setSelectedSvgIndex(index:number, done:()=>void)
+        {
+            this.workspace.selectedSvgIndex = index;
+            var svgContent = this.workspace.importedSvgs[this.workspace.selectedSvgIndex];
+            this.importSvg(svgContent, done);
+        }
+
         firstImport = true;
         importSvg(svgContent:string, done:()=>void)
         {
+            console.log('importSvg');
             if (this.firstImport)
             {
                 this.firstImport = false;
@@ -98,15 +111,6 @@ module qec
                     done();
                 });
             }
-        }
-
-        reimportSvg(svgContent:string, done:()=>void)
-        {
-            this.svgImporter.reimport(this.workspace, svgContent,
-                () => {
-                    this.setUpdateFlag();
-                    done();
-                });
         }
 
         toggleSimpleRenderer()
@@ -222,28 +226,41 @@ module qec
 
         computeOBJ():string
         {
-            this.signedDistanceToTriangles.compute(this.getAllSd());
+            this.signedDistanceToTriangles.compute(this.getAllSd(), 50, 50, 50, 1);
             return this.exportOBJ.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals, this.signedDistanceToTriangles.colors);
         }
 
-        getOBJAsZip(done:(content:any)=>void)
+        computeOBJAsZip(icount:number, jcount:number, kcount:number, multiplier:number, done:(content:any)=>void)
         {
-            this.signedDistanceToTriangles.compute(this.getAllSd());
+            this.signedDistanceToTriangles.compute(this.getAllSd(), icount, jcount, kcount, multiplier);
             return this.exportOBJ.getZip(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals, this.signedDistanceToTriangles.colors, done);    
         }
 
         computeTextSTL():string
         {
-            this.signedDistanceToTriangles.compute(this.getAllSd());
+            this.signedDistanceToTriangles.compute(this.getAllSd(), 50, 50, 50, 1);
             return this.exportSTL.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals);
         }
 
-        computeBinarySTL():DataView
+        computeBinarySTL(icount:number, jcount:number, kcount:number, multiplier:number):DataView
         {
-            this.signedDistanceToTriangles.compute(this.getAllSd());
+            this.signedDistanceToTriangles.compute(this.getAllSd(), icount, jcount, kcount, multiplier);
             console.log("check tris, normals", this.signedDistanceToTriangles.triangles.length, 3*this.signedDistanceToTriangles.normals.length)
             return this.exportSTL.getBinary(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals);
         }
 
+        computeBinarySTLAsZip(icount:number, jcount:number, kcount:number, multiplier:number, done:(content:any)=>void)
+        {
+            console.log('computeBinarySTLAsZip');
+            var stl = this.computeBinarySTL(icount, jcount, kcount, multiplier);
+            var blob = new Blob([stl], {type: 'application/octet-stream'});
+            
+            zip.createWriter(new zip.BlobWriter("application/zip"), (zipWriter) => {
+                zipWriter.add("a.stl", new zip.BlobReader(blob), () => {
+                    console.log('zipwriter close');
+                    zipWriter.close(done);
+                });
+            }, (msg) =>  console.error(msg));
+        }
     }
 }

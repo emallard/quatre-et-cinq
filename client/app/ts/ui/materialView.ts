@@ -47,6 +47,20 @@ module qec {
             }
         }
 
+        isHole = ko.observable(false);
+        setAsHole()
+        {
+            if (this.selectedIndex >= 0)
+            {
+                if (this.isHole())
+                {
+                    var l = this.editor.workspace.editorObjects[this.selectedIndex];
+                    //l.profileSmooth = false;
+                    this.editor.setUpdateFlag();
+                }
+            }
+        }
+
     }
 
 }

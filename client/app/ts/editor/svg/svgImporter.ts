@@ -13,7 +13,6 @@ module qec {
         importSvgInWorkspace(workspace:workspace, content:string, done:() => void)
         {
             this.workspace = workspace;
-            this.workspace.svgContent = content;
             this.svgAutoHeightHelper.setSvg(content, ()=>
             {
                 this.helper.setSvg(content, ()=> this.nextImport(done));

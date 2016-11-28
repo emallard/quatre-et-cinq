@@ -2,10 +2,15 @@ module qec {
 
     export class workspaceDto
     {
-        svgContent:string;
-        svgRealSize:number[];
         
         editorObjects:editorObjectDto[] = [];
+
+        svgRealSize:number[];
+        importedSvgs:string[];
+        selectedSvgIndex:number;
+
+        sculpteoUuids:string[];
+        
         //camera:cameraDTO[] = [];
     }
     

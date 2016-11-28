@@ -36,7 +36,7 @@ module qec {
         collide = new renderCollide(); 
 
         isScaleMode = false;
-
+        isScaleModeBottom = false;
 
         set()
         {
@@ -75,13 +75,28 @@ module qec {
                     this.editor.renderer.updateTransform(this.selected.sd);
                     this.editor.setRenderFlag();
                 }
-                else
+                else if (!this.isScaleModeBottom)
                 { 
                     vec4.copy(this.newBounds, this.startBounds)
                     this.newBounds[3] += this.deltaPos[2];
                     this.selected.scaleProfilePoints(this.newBounds);
                     this.selected.updateSignedDistance();
                     this.editor.renderer.updateFloatTextures(this.selected.sd);
+                    this.editor.setRenderFlag();
+                }
+                else
+                {
+                    mat4.translate(this.selected.inverseTransform, this.startTransform, this.deltaPos);
+                    mat4.invert(this.selected.inverseTransform, this.selected.inverseTransform);
+                    this.selected.updateInverseTransform();
+                    this.editor.renderer.updateTransform(this.selected.sd);
+                    
+                    vec4.copy(this.newBounds, this.startBounds)
+                    this.newBounds[3] += (-this.deltaPos[2]);
+                    this.selected.scaleProfilePoints(this.newBounds);
+                    this.selected.updateSignedDistance();
+                    this.editor.renderer.updateFloatTextures(this.selected.sd);
+                    
                     this.editor.setRenderFlag();
                 }
 

@@ -6,6 +6,9 @@ module qec
     export class editorView
     {
         editor:editor = inject(editor);
+        saveWorkspace:saveWorkspace = inject(saveWorkspace);
+        loadWorkspace:loadWorkspace = inject(loadWorkspace);
+
         //updateLoop:updateLoop = inject(updateLoop);
         controllerManager:controllerManager = inject(controllerManager);
         selectController:selectController = inject(selectController);
@@ -13,6 +16,8 @@ module qec
         importView:importView = inject(importView);
         profileView:profileView = inject(profileView);
         materialView:materialView = inject(materialView);
+        shareView:shareView = inject(shareView);
+        printView:printView = inject(printView);
 
         afterInject()
         {
@@ -23,6 +28,21 @@ module qec
         initEditor(elt:HTMLElement)
         {
             this.editor.init(elt);
+        }
+
+        menuNew()
+        {
+
+        }
+
+        menuSave()
+        {
+            this.saveWorkspace.saveJsonInLocalStorage(this.editor);
+        }
+
+        menuOpen()
+        {
+            this.loadWorkspace.loadFromLocalStorage(this.editor);
         }
 
         onMouseMove(data:any, e:Event) { this.controllerManager.onMouseMove(e); }
@@ -40,8 +60,17 @@ module qec
         setScaleController()
         {
             this.heightController.isScaleMode = true;
+            this.heightController.isScaleModeBottom = false;
             this.controllerManager.setController(this.heightController);
             this.setActiveController(this.isScaleControllerActive);
+        }
+
+        setScaleBottomController()
+        {
+            this.heightController.isScaleMode = true;
+            this.heightController.isScaleModeBottom = true;
+            this.controllerManager.setController(this.heightController);
+            this.setActiveController(this.isScaleBottomControllerActive);
         }
 
         setSelectController()
@@ -53,11 +82,14 @@ module qec
         isSelectControllerActive = ko.observable(true);
         isMoveControllerActive = ko.observable(false);
         isScaleControllerActive = ko.observable(false);
+        isScaleBottomControllerActive = ko.observable(false);
+        
         setActiveController(c:KnockoutObservable<boolean>)
         {
             this.isSelectControllerActive(false);
             this.isMoveControllerActive(false);
             this.isScaleControllerActive(false);
+            this.isScaleBottomControllerActive(false);
             c(true);
         }
 
@@ -76,51 +108,26 @@ module qec
             requestAnimationFrame(()=>this.updateLoop());
         }
 
-        exportSTL()
-        {
-            var isStl = false;
-            //var blob:Blob;
-            if (!isStl)
-            {
-                /*
-                var obj = this.editor.computeOBJ();
-                var blob = new Blob([obj], {type: 'text/plain'});
-                saveAs(blob, 'download.obj');
-                */
-
-                this.editor.getOBJAsZip( content => saveAs(content, 'a.obj.zip'));
-            }
-            else
-            {
-                //var stl = this.editor.computeTextSTL();
-                var stl = this.editor.computeBinarySTL();
-                var blob = new Blob([stl], {type: 'application//octet-binary'});
-                saveAs(blob, 'download.stl');
-            }
-            
-        }
-
-        savePhoto()
-        {
-            saveAsImage(this.editor.renderer.getCanvas())
-        }
-
+        
         // toolbars
         importToolbarVisible = ko.observable<boolean>(true);
         modifyToolbarVisible = ko.observable<boolean>(false);
         environmentToolbarVisible = ko.observable<boolean>(false);
         photoToolbarVisible = ko.observable<boolean>(false);
+        printToolbarVisible = ko.observable<boolean>(false);
 
         toolbarsVisible:KnockoutObservable<boolean>[] = [
             this.importToolbarVisible, 
             this.modifyToolbarVisible, 
             this.environmentToolbarVisible,
-            this.photoToolbarVisible];
+            this.photoToolbarVisible,
+            this.printToolbarVisible];
 
         showImportToolbar() { this.setToolbar(this.importToolbarVisible); }
         showModifyToolbar() { this.setToolbar(this.modifyToolbarVisible);}
         showEnvironmentToolbar() { this.setToolbar(this.environmentToolbarVisible);}
         showPhotoToolbar() { this.setToolbar(this.photoToolbarVisible);}
+        showPrintToolbar() { this.setToolbar(this.printToolbarVisible);}
 
         setToolbar(selected:KnockoutObservable<boolean>)
         {
@@ -144,79 +151,6 @@ module qec
             w.fillLight.intensity = 0.5;
             w.rimLight.intensity = 0.5;
             this.editor.setRenderFlag();
-        }
-
-        sendToSculpteo()
-        {
-            $('.printPanel').show();
-
-            var req = new XMLHttpRequest();
-            req.open('POST', '/sculpteo?filename=coucou', true);
-            req.onreadystatechange = (aEvt) => {
-                if (req.readyState == 4) {
-                    if(req.status == 200)
-                    {
-                        alert(req.response);
-                        alert("OK !");
-                        var uuid = req.response.uuid;
-                        $('#sculpteoFrame').attr('src', '//www.sculpteo.com/en/embed/redirect/' + uuid + '?click=details');
-                    }
-                    else
-                    {
-                        alert("Erreur pendant le chargement de la page.\n");
-                    }
-                }
-            };
-
-            var stl = 
- "solid a\n"
-+"facet normal 0 0 1\n"
-+"outer loop\n"
-+"vertex 0 0 0\n"
-+"vertex 1 0 0\n"
-+"vertex 1 1 0\n"
-+"endloop"
-+"endfacet"
-+"endsolid a";
-            
-            var myArray = new ArrayBuffer(512);
-            var longInt8View = new Uint8Array(myArray);
-
-            for (var i=0; i < longInt8View.length; i++) {
-                longInt8View[i] = i % 255;
-            }
-
-            var blob = new Blob([longInt8View], {type: 'application/octet-binary'});
-
-            req.send(blob);
-        }
-
-        uploadedUrl = ko.observable<string>();
-        uploadPhoto()
-        {
-            var elt = this.editor.renderer.getCanvas();
-            var imgData = elt.toDataURL("image/jpeg");
-            var req = new XMLHttpRequest();
-            req.open('POST', '/uploadString', true);
-            req.responseType = 'json';
-            req.onreadystatechange = (aEvt) => {
-                if (req.readyState == 4) {
-                    if(req.status == 200)
-                    {
-                        var id = req.response.id;
-                        console.log(req.response);
-                        console.log(req.response.id);
-                        this.uploadedUrl(window.location.protocol + '//' + window.location.host + '/downloadDataUri?id=' + id);
-                    }
-                    else
-                    {
-                        alert("Erreur pendant le chargement de la page.\n");
-                    }
-                }
-            };
-            
-            console.log(imgData);
-            req.send(imgData);
         }
 
         toggleSoftwareHardware() {

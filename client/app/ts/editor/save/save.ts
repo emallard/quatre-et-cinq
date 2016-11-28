@@ -12,7 +12,9 @@ module qec
 
         saveJsonInLocalStorage(editor:editor)
         {
-            localStorage.setItem("workspace.json", JSON.stringify(editor.workspace.toDto()));
+            var content = JSON.stringify(editor.workspace.toDto());
+            console.log(content);
+            localStorage.setItem("workspace.json", content);
         }
 
         saveZip(editor:editor)
