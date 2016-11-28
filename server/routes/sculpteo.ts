@@ -5,7 +5,7 @@ import config = require('../config');
 import bodyParser = require("body-parser");
 let router = express.Router();
 
-router.post("/", bodyParser.raw({limit: 1000000, type:(req)=>true}), function (req: express.Request, res: express.Response, next: express.NextFunction) {
+router.post("/", bodyParser.raw({limit: 2000000, type:(req)=>true}), function (req: express.Request, res: express.Response, next: express.NextFunction) {
     
     console.log('designName: ' + req.query.designName);
     console.log(req.body);
