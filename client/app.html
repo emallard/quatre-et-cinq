@@ -115,17 +115,19 @@
                  </div>
                  Imported SVGs:
                  <div data-bind='foreach: importedSvgs'>
-                     <div data-bind="css : { activeSvg: isActive }">
+                     <button style="margin:5px" class="btn btn-default" data-bind="css : { 'btn-active-border': isActive }, click: onClick">
                         <div style="float:left">
-                            <input type="radio" data-bind="checked: isActive , event : { change: onClick }">
-                            <img style="max-width:200px;max-height:200px" data-bind="attr: {src: src}">
+                            <!--<input type="radio" ____data-bind="checked: isActive , event : { change: onClick }">-->
+                            <img style="max-width:100px;max-height:100px" data-bind="attr: {src: src}">
                         </div>
+                        <!--
                         <div style="float:right">
                             <button class="fa fa-trash-o" data-bind="click: remove"></button>
                             <br/>
                         </div>
                         <div style="clear: both"></div>
-                    </div>
+                        -->
+                    </button>
                  </div>
             </div>
 

@@ -245,10 +245,11 @@ nav ul ul li {
 	width:150px;
 }
 
-.activeSvg
+.btn-active-border, .btn-active-border:hover
 {
-	border:solid 1px red;
+	border-color:orange;
 }
+
 
 .modal-dialog-full {
   width: 100%;
