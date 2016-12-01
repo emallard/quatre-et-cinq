@@ -1,4 +1,10 @@
-
+/*
+uniform samplerCube u_cubemap;
+vec3 GetSkyGradient( const in vec3 vDir )
+{
+    return textureCube(u_cubemap, vDir).rgb;
+}
+*/
 vec3 GetSkyGradient( const in vec3 vDir )
 {
     //const vec3 cColourTop = vec3(0.7, 0.8, 1.0);

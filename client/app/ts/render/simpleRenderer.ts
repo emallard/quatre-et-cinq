@@ -18,6 +18,14 @@ module qec {
             this.renderUnit.setCanvasSize(canvas.width, canvas.height);    
         }
 
+        getViewportWidth():number {
+            return this.canvas.width;
+        }
+
+        getViewportHeight():number {
+            return this.canvas.height;
+        }
+
         getCanvas():HTMLCanvasElement
         {
             return this.canvas;

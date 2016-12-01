@@ -3,7 +3,9 @@ module qec {
     export class controllerManager
     {
         camActive = true;
-        cameraController:cameraController = inject(cameraController);
+        //cameraController:cameraController = inject(cameraController);
+        cameraController:cameraArcballController = inject(cameraArcballController);
+        
         currentController:iController;
 
         afterInject()

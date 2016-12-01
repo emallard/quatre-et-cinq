@@ -9,6 +9,8 @@ module qec
         render(settings: renderSettings);
 
         getCanvas():HTMLCanvasElement;
+        getViewportWidth():number;
+        getViewportHeight():number;
 
         showBoundingBox(b:boolean);
 

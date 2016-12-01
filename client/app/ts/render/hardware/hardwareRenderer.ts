@@ -14,6 +14,7 @@ module qec {
         gShaderMaterial:any;
         gScene:any;
         gCamera:any;
+        cubemap:any;
         
         fragmentShader = '';
 
@@ -31,6 +32,7 @@ module qec {
             this.container = container;
             this.width = rWidth;
             this.height = rHeight;
+            console.log("set hardwareRenderer " + rWidth + "," + rHeight );
 
             this.initTHREE();
 
@@ -45,6 +47,14 @@ module qec {
             this.gShaderMaterial.uniforms.u_profileTextures = { type: "tv", value: []};
             this.gShaderMaterial.uniforms.u_topBounds = { type: "4fv", value: []};
             this.gShaderMaterial.uniforms.u_profileBounds = { type: "'fv", value: []};
+        }
+
+        getViewportWidth():number {
+            return this.width;
+        }
+
+        getViewportHeight():number {
+            return this.height;
         }
 
         getCanvas():HTMLCanvasElement
@@ -224,7 +234,19 @@ module qec {
             this.gScene.add(node);
             
             //this.recompileShader();
-        }
+
+            // cubemap
+            /*
+            var texture = new THREE.CubeTexture();
+		    var loaded = 0;
+            for (var i=0; i<6; ++i)
+            {
+                texture.images[ i ] = resources.all['data/cubemap/cubemap' + i + '.jpg'];
+            }
+			texture.needsUpdate = true;
+            this.cubemap = texture;
+            */
+		}
     }
 
 }

@@ -86,6 +86,12 @@ var qec;
             this.sdGround.getMaterial(null).setDiffuse(0.8, 0.8, 0.8);
             this.sdGround.setHalfSize(2, 2, 0.01);
         };
+        editor.prototype.getViewportWidth = function () {
+            return this.renderer.getViewportWidth();
+        };
+        editor.prototype.getViewportHeight = function () {
+            return this.renderer.getViewportHeight();
+        };
         editor.prototype.setSelectedIndex = function (index) {
             var _this = this;
             this.workspace.selectedIndex = index;
@@ -2103,6 +2109,7 @@ var qec;
             this.container = container;
             this.width = rWidth;
             this.height = rHeight;
+            console.log("set hardwareRenderer " + rWidth + "," + rHeight);
             this.initTHREE();
             this.expl = new qec.hardwareSignedDistanceExplorer();
             this.text = new qec.hardwareShaderText();
@@ -2113,6 +2120,12 @@ var qec;
             this.gShaderMaterial.uniforms.u_profileTextures = { type: "tv", value: [] };
             this.gShaderMaterial.uniforms.u_topBounds = { type: "4fv", value: [] };
             this.gShaderMaterial.uniforms.u_profileBounds = { type: "'fv", value: [] };
+        };
+        hardwareRenderer.prototype.getViewportWidth = function () {
+            return this.width;
+        };
+        hardwareRenderer.prototype.getViewportHeight = function () {
+            return this.height;
         };
         hardwareRenderer.prototype.getCanvas = function () {
             return this.gRenderer.domElement;
@@ -2234,6 +2247,17 @@ var qec;
             node.add(this.gViewQuad);
             this.gScene.add(node);
             //this.recompileShader();
+            // cubemap
+            /*
+            var texture = new THREE.CubeTexture();
+            var loaded = 0;
+            for (var i=0; i<6; ++i)
+            {
+                texture.images[ i ] = resources.all['data/cubemap/cubemap' + i + '.jpg'];
+            }
+            texture.needsUpdate = true;
+            this.cubemap = texture;
+            */
         };
         return hardwareRenderer;
     }());
@@ -3188,6 +3212,12 @@ var qec;
             canvas.style.border = "1px solid";
             element.appendChild(canvas);
             this.renderUnit.setCanvasSize(canvas.width, canvas.height);
+        };
+        simpleRenderer.prototype.getViewportWidth = function () {
+            return this.canvas.width;
+        };
+        simpleRenderer.prototype.getViewportHeight = function () {
+            return this.canvas.height;
         };
         simpleRenderer.prototype.getCanvas = function () {
             return this.canvas;
@@ -5335,6 +5365,8 @@ var qec;
             run.push(function (_done) { return resources.doReq('app/ts/render/hardware/10_sd.glsl', _done); });
             run.push(function (_done) { return resources.doReq('app/ts/render/hardware/20_light.glsl', _done); });
             run.push(function (_done) { return resources.doReq('app/ts/render/hardware/30_renderPixel.glsl', _done); });
+            //for (var i=0; i < 6; ++i)
+            //    run.push(resources.loadImg('data/cubemap/cubemap' + i + '.jpg'));
             run.run(function () { resources.loaded = true; done(); });
         };
         resources.doReq = function (url, done) {
@@ -5352,6 +5384,17 @@ var qec;
                 }
             };
             req.send(null);
+        };
+        resources.loadImg = function (url) {
+            return function (_done) {
+                console.log(url);
+                var img = new Image();
+                img.onload = function () {
+                    resources.all[url] = img;
+                    _done();
+                };
+                img.src = url;
+            };
         };
         resources.all = [];
         resources.loaded = false;
@@ -5579,79 +5622,66 @@ var qec;
     }());
     qec.wm5Line3 = wm5Line3;
 })(qec || (qec = {}));
+// Inspiration :
+//
 // adapted from http://nehe.gamedev.net/tutorial/arcball_rotation/19003/
+// http://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
 var qec;
 (function (qec) {
     var arcball = (function () {
         function arcball() {
-            this.StVec = vec3.create();
-            this.EnVec = vec3.create();
-            this.TempPt = vec2.create();
-            this.sphereFactor = 0.777;
+            this.perp = vec3.create();
+            this.tmpPt1 = vec3.create();
+            this.tmpPt2 = vec3.create();
         }
-        arcball.prototype.setBounds = function (NewWidth, NewHeight) {
-            //Set adjustment factor for width/height
-            this.AdjustWidth = 1.0 / ((NewWidth - 1.0) * 0.5);
-            this.AdjustHeight = 1.0 / ((NewHeight - 1.0) * 0.5);
+        arcball.prototype.getRotationFrom2dPoints = function (viewportWidth, viewportHeight, sphereRadiusInPixels, startXY, endXY, result) {
+            this.map2DToSphere(viewportWidth, viewportHeight, sphereRadiusInPixels, startXY, this.tmpPt1);
+            this.map2DToSphere(viewportWidth, viewportHeight, sphereRadiusInPixels, endXY, this.tmpPt2);
+            this.getRotation(this.tmpPt1, this.tmpPt2, result);
         };
-        arcball.prototype._mapToSphere = function (NewPt, NewVec) {
-            var TempPt = this.TempPt;
-            //Copy paramter into temp point
-            vec2.copy(TempPt, NewPt);
-            //Adjust point coords and scale down to range of [-1 ... 1]
-            TempPt[0] = (TempPt[0] * this.AdjustWidth) - 1.0;
-            TempPt[1] = 1.0 - (TempPt[1] * this.AdjustHeight);
-            //Compute the square of the length of the vector to the point from the center
-            var length = (TempPt[0] * TempPt[0]) + (TempPt[1] * TempPt[1]);
+        arcball.prototype.map2DToSphere = function (viewportWidth, viewportHeight, sphereRadiusInPixels, screenXY, result) {
+            var dx = screenXY[0] - (viewportWidth / 2);
+            var dy = (viewportHeight - screenXY[1]) - (viewportHeight / 2);
+            //length of the vector to the point from the center
+            var length = Math.sqrt((dx * dx) + (dy * dy));
             //If the point is mapped outside of the sphere... (length > radius squared)
-            if (length > this.sphereFactor * this.sphereFactor) {
-                //Compute a normalizing factor (radius / sqrt(length))
-                var norm = 1.0 / Math.sqrt(length);
-                //Return the "normalized" vector, a point on the sphere
-                NewVec[0] = TempPt[0] * norm;
-                NewVec[1] = TempPt[1] * norm;
-                NewVec[2] = 0.0;
+            if (length > sphereRadiusInPixels) {
+                //Return the point on sphere at z=0
+                result[0] = dx / length * sphereRadiusInPixels;
+                result[1] = dy / length * sphereRadiusInPixels;
+                result[2] = 0.0;
             }
             else {
-                //Return a vector to a point mapped inside the sphere sqrt(radius squared - length)
-                NewVec[0] = TempPt[0];
-                NewVec[1] = TempPt[1];
-                NewVec[2] = Math.sqrt(this.sphereFactor * this.sphereFactor - length);
+                //Return a vector to a point mapped inside the sphere
+                result[0] = dx;
+                result[1] = dy;
+                result[2] = Math.sqrt(sphereRadiusInPixels * sphereRadiusInPixels - (dx * dx + dy * dy));
             }
         };
-        //Mouse down
-        arcball.prototype.click = function (NewPt) {
-            //Map the point to the sphere
-            this._mapToSphere(NewPt, this.StVec);
-        };
-        //Mouse drag, calculate rotation
-        arcball.prototype.drag = function (NewPt, NewRot) {
-            //Map the point to the sphere
-            this._mapToSphere(NewPt, this.EnVec);
-            //Return the quaternion equivalent to the rotation
-            if (NewRot) {
-                var Perp = vec3.create();
-                //Compute the vector perpendicular to the begin and end vectors
-                vec3.cross(Perp, this.StVec, this.EnVec);
-                //Compute the length of the perpendicular vector
-                if (vec3.length(Perp) > 0.00001) {
-                    //We're ok, so return the perpendicular vector as the transform after all
-                    NewRot[0] = Perp[0];
-                    NewRot[1] = Perp[1];
-                    NewRot[2] = Perp[2];
-                    //In the quaternion values, w is cosine (theta / 2), where theta is rotation angle
-                    //NewRot[3] = vec3.dot(this.StVec, this.EnVec);
-                    // '1 +' comes from :
-                    // http://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
-                    NewRot[3] = this.sphereFactor * this.sphereFactor + vec3.dot(this.StVec, this.EnVec);
-                }
-                else {
-                    //The begin and end vectors coincide, so return an identity transform
-                    NewRot[0] = 0;
-                    NewRot[1] = 0;
-                    NewRot[2] = 0;
-                    NewRot[3] = 1;
-                }
+        //return quaternion equivalent to rotation between 2 3D points
+        arcball.prototype.getRotation = function (startPoint, endPoint, result) {
+            var perp = this.perp;
+            vec3.cross(perp, startPoint, endPoint);
+            //Compute the length of the perpendicular vector
+            if (vec3.length(perp) > 0.00001) {
+                // http://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
+                //
+                // Quaternion q;
+                // vector a = crossproduct(v1, v2)
+                // q.xyz = a;
+                // q.w = sqrt((v1.Length ^ 2) * (v2.Length ^ 2)) + dotproduct(v1, v2)
+                result[0] = perp[0];
+                result[1] = perp[1];
+                result[2] = perp[2];
+                result[3] = vec3.length(startPoint) * vec3.length(endPoint) + vec3.dot(startPoint, endPoint);
+                quat.normalize(result, result);
+            }
+            else {
+                //The begin and end vectors coincide, so return an identity transform
+                result[0] = 0;
+                result[1] = 0;
+                result[2] = 0;
+                result[3] = 1;
             }
         };
         return arcball;
@@ -5662,15 +5692,11 @@ var qec;
 (function (qec) {
     var cameraArcballController = (function () {
         function cameraArcballController() {
-            this.projectionMatrix = mat4.create();
-            this.transformMatrix = mat4.create();
-            this.rotation = quat.normalize(null, quat.fromValues(0, 0, 0, -1));
-            this.rotationMat = mat4.create();
-            this.panTranslation = mat4.identity(mat4.create());
-            this.zTranslation = mat4.create();
-            this.zcam = -0.06;
+            this.editor = qec.inject(qec.editor);
             this.arcball = new qec.arcball();
+            this.cameraTransforms = qec.injectNew(qec.cameraTransforms);
             this.tmpVec3 = vec3.create();
+            this.tmpRotation = quat.create();
             this.isPanEnabled = true;
             this.isRotateEnabled = true;
             this.isZoomEnabled = true;
@@ -5681,118 +5707,80 @@ var qec;
             this.startPan = mat4.create();
             this.up = vec3.create();
             this.right = vec3.create();
+            this.dragQuat = quat.create();
         }
         cameraArcballController.prototype.afterInject = function () {
-            this.reset();
+            this.cameraTransforms.reset();
+            this.cameraTransforms.updateTransformMatrix();
         };
-        // called by view
-        cameraArcballController.prototype.initFromView = function (viewportWidth, viewportHeight) {
-            this.setCanvasSize(viewportWidth, viewportHeight);
-        };
-        cameraArcballController.prototype.setCanvasSize = function (viewportWidth, viewportHeight) {
-            this.viewportWidth = viewportWidth;
-            this.viewportHeight = viewportHeight;
-            this.arcball.setBounds(viewportWidth, viewportHeight);
-            mat4.perspective(this.projectionMatrix, 30, viewportWidth / viewportHeight, 0.001, 10.0);
-            this.updateTransformMatrix();
-        };
-        // compute transform matrix from rotation, zTranslation and panTranslation
-        cameraArcballController.prototype.updateTransformMatrix = function () {
-            mat4.fromQuat(this.rotationMat, this.rotation);
-            mat4.multiply(this.transformMatrix, this.rotationMat, this.panTranslation);
-            mat4.identity(this.zTranslation);
-            mat4.translate(this.zTranslation, this.zTranslation, vec3.fromValues(0, 0, this.zcam));
-            mat4.multiply(this.zTranslation, this.transformMatrix, this.transformMatrix);
-        };
-        cameraArcballController.prototype.initUI = function () {
-            this.reset();
-        };
-        cameraArcballController.prototype.reset = function () {
-            //var angleFromVertical = 3.14/8;
-            var angleFromVertical = 0;
-            quat.setAxisAngle(this.rotation, vec3.fromValues(1, 0, 0), angleFromVertical);
-            mat4.identity(this.panTranslation);
-            this.zcam = -0.06;
-            this.updateTransformMatrix();
-        };
-        cameraArcballController.prototype.getCenter = function (dest) {
-            mat4.getTranslation(dest, this.panTranslation);
-            vec3.scale(dest, dest, -1);
-        };
-        cameraArcballController.prototype.setCenter = function (center) {
-            mat4.identity(this.panTranslation);
-            vec3.scale(this.tmpVec3, center, -1);
-            mat4.translate(this.panTranslation, this.panTranslation, this.tmpVec3);
-            this.updateTransformMatrix();
-        };
-        cameraArcballController.prototype.getRotation = function (dest) {
-            quat.copy(dest, this.rotation);
-        };
-        cameraArcballController.prototype.setRotation = function (rot) {
-            quat.copy(this.rotation, rot);
-            this.updateTransformMatrix();
-        };
-        cameraArcballController.prototype.setZcam = function (z) {
-            this.zcam = z;
-            this.updateTransformMatrix();
+        cameraArcballController.prototype.setButton = function (button) {
+            this.button = button;
         };
         cameraArcballController.prototype.cameraTop = function (n, x, y) {
-            /*
-            var n = vec3.create();
-            var x = vec3.create();
-            var y = vec3.create();
-            this.workingPlaneService.getNormal(n);
-            this.workingPlaneService.getX(x);
-            this.workingPlaneService.getY(y);
-            */
-            /*
-            var mat = mat3.createFrom(
-                x[0], x[1], x[2],
-                y[0], y[1], y[2],
-                n[0], n[1], n[2]
-            );
-            */
             var mat = mat3.fromValues(x[0], y[0], n[0], x[1], y[1], n[1], x[2], y[2], n[2]);
-            quat.fromMat3(this.rotation, mat);
-            this.updateTransformMatrix();
-        };
-        cameraArcballController.prototype.zoom = function (delta) {
-            if (delta < 0) {
-                this.zcam *= 1.1;
-            }
-            else {
-                this.zcam *= 0.9;
-            }
-            this.updateTransformMatrix();
-        };
-        cameraArcballController.prototype.pan = function (dx, dy) {
-            var xFactor = -this.zcam / this.viewportWidth;
-            var yFactor = this.zcam / this.viewportHeight;
-            this.up[0] = this.rotationMat[1];
-            this.up[1] = this.rotationMat[5];
-            this.up[2] = this.rotationMat[9];
-            vec3.scale(this.up, this.up, yFactor * dy);
-            this.right[0] = this.rotationMat[0];
-            this.right[1] = this.rotationMat[4];
-            this.right[2] = this.rotationMat[8];
-            vec3.scale(this.right, this.right, xFactor * dx);
-            mat4.translate(this.panTranslation, this.up, this.panTranslation);
-            mat4.translate(this.panTranslation, this.right, this.panTranslation);
-            this.updateTransformMatrix();
+            this.cameraTransforms.setRotation(mat);
         };
         //
         //  Mouse Interactions
         //
-        cameraArcballController.prototype.onMouseWheel = function (sender, event, delta) {
+        cameraArcballController.prototype.onMouseWheel = function (e) {
             if (this.isZoomEnabled) {
-                this.zoom(delta);
+                this.hasMouseMoved = true;
+                var orig = e.originalEvent;
+                var d = Math.max(-1, Math.min(1, (orig.deltaY)));
+                //console.log('mousewheel', orig.deltaY);
+                this.cameraTransforms.zoom(d);
+                this.cameraTransforms.updateCamera(this.editor.getCamera());
+                this.editor.setRenderFlag();
             }
-            this.updateTransformMatrix();
         };
         cameraArcballController.prototype.setDisabledAll = function (b) {
             this.isPanEnabled = !b;
             this.isRotateEnabled = !b;
             this.isZoomEnabled = !b;
+        };
+        cameraArcballController.prototype.onMouseDown = function (event) {
+            this.isRightClick = (event.which == 3);
+            this.isLeftClick = (event.which == 1);
+            this.isMiddleClick = (event.which == 2);
+            this.isShiftKey = event.shiftKey;
+            this.isMouseDown = true;
+            // copy start state
+            vec2.set(this.startXY, event.offsetX, event.offsetY);
+            quat.copy(this.startQuat, this.cameraTransforms.rotation);
+            mat4.copy(this.startPan, this.cameraTransforms.panTranslation);
+            this.viewportWidth = this.editor.getViewportWidth();
+            this.viewportHeight = this.editor.getViewportHeight();
+        };
+        cameraArcballController.prototype.onMouseUp = function (event) {
+            this.isMouseDown = false;
+        };
+        cameraArcballController.prototype.onMouseMove = function (event) {
+            vec2.set(this.currentMouseXY, event.offsetX, event.offsetY);
+            this.hasMouseMoved = true;
+        };
+        cameraArcballController.prototype.updateLoop = function () {
+            if (!this.hasMouseMoved)
+                return;
+            this.hasMouseMoved = false;
+            if (this.isRotateEnabled) {
+                if (this.isMouseDown && this.isRightClick && !this.isShiftKey) {
+                    var sphereRadius = 0.5 * Math.min(this.viewportWidth, this.viewportHeight);
+                    this.arcball.getRotationFrom2dPoints(this.viewportWidth, this.viewportHeight, sphereRadius, this.startXY, this.currentMouseXY, this.dragQuat);
+                    quat.multiply(this.tmpRotation, this.dragQuat, this.startQuat);
+                    this.cameraTransforms.setRotation(this.tmpRotation);
+                    this.cameraTransforms.updateCamera(this.editor.getCamera());
+                    this.editor.setRenderFlag();
+                }
+            }
+            if (this.isPanEnabled) {
+                if ((this.isMouseDown && this.isRightClick && this.isShiftKey)
+                    || (this.isMouseDown && this.isMiddleClick)) {
+                    var xFactor = -this.cameraTransforms.zcam / this.viewportWidth;
+                    var yFactor = this.cameraTransforms.zcam / this.viewportHeight;
+                    this.cameraTransforms.pan(this.currentMouseXY[0] * xFactor, this.currentMouseXY[1] * yFactor);
+                }
+            }
         };
         return cameraArcballController;
     }());
@@ -5919,10 +5907,95 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var cameraTransforms = (function () {
+        function cameraTransforms() {
+            this.transformMatrix = mat4.create();
+            this.rotation = quat.fromValues(0, 0, 0, -1);
+            this.rotationMat = mat4.create();
+            this.panTranslation = mat4.identity(mat4.create());
+            this.zTranslation = mat4.create();
+            this.zcam = -3;
+            // tmp vectors
+            this.tmpVec3 = vec3.create();
+            this.up = vec3.create();
+            this.right = vec3.create();
+        }
+        cameraTransforms.prototype.afterInject = function () {
+            quat.normalize(this.rotation, this.rotation);
+        };
+        cameraTransforms.prototype.updateCamera = function (cam) {
+            mat4.copy(cam.transformMatrix, this.transformMatrix);
+            mat4.invert(cam.inverseTransformMatrix, this.transformMatrix);
+        };
+        cameraTransforms.prototype.updateTransformMatrix = function () {
+            mat4.fromQuat(this.rotationMat, this.rotation);
+            mat4.multiply(this.transformMatrix, this.rotationMat, this.panTranslation);
+            mat4.identity(this.zTranslation);
+            mat4.translate(this.zTranslation, this.zTranslation, vec3.fromValues(0, 0, this.zcam));
+            mat4.multiply(this.transformMatrix, this.zTranslation, this.transformMatrix);
+        };
+        cameraTransforms.prototype.reset = function () {
+            //var angleFromVertical = 3.14/8;
+            var angleFromVertical = 0;
+            quat.setAxisAngle(this.rotation, vec3.fromValues(1, 0, 0), angleFromVertical);
+            mat4.identity(this.panTranslation);
+            this.zcam = -3;
+            this.updateTransformMatrix();
+        };
+        cameraTransforms.prototype.getCenter = function (dest) {
+            mat4.getTranslation(dest, this.panTranslation);
+            vec3.scale(dest, dest, -1);
+        };
+        cameraTransforms.prototype.setCenter = function (center) {
+            mat4.identity(this.panTranslation);
+            vec3.scale(this.tmpVec3, center, -1);
+            mat4.translate(this.panTranslation, this.panTranslation, this.tmpVec3);
+            this.updateTransformMatrix();
+        };
+        cameraTransforms.prototype.getRotation = function (dest) {
+            quat.copy(dest, this.rotation);
+        };
+        cameraTransforms.prototype.setRotation = function (rot) {
+            quat.copy(this.rotation, rot);
+            this.updateTransformMatrix();
+        };
+        cameraTransforms.prototype.setZcam = function (z) {
+            this.zcam = z;
+            this.updateTransformMatrix();
+        };
+        cameraTransforms.prototype.zoom = function (delta) {
+            if (delta < 0) {
+                this.zcam *= 1.1;
+            }
+            else {
+                this.zcam *= 0.9;
+            }
+            this.updateTransformMatrix();
+        };
+        cameraTransforms.prototype.pan = function (dx, dy) {
+            this.up[0] = this.rotationMat[1];
+            this.up[1] = this.rotationMat[5];
+            this.up[2] = this.rotationMat[9];
+            vec3.scale(this.up, this.up, dy);
+            this.right[0] = this.rotationMat[0];
+            this.right[1] = this.rotationMat[4];
+            this.right[2] = this.rotationMat[8];
+            vec3.scale(this.right, this.right, dx);
+            mat4.translate(this.panTranslation, this.up, this.panTranslation);
+            mat4.translate(this.panTranslation, this.right, this.panTranslation);
+            this.updateTransformMatrix();
+        };
+        return cameraTransforms;
+    }());
+    qec.cameraTransforms = cameraTransforms;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var controllerManager = (function () {
         function controllerManager() {
             this.camActive = true;
-            this.cameraController = qec.inject(qec.cameraController);
+            //cameraController:cameraController = inject(cameraController);
+            this.cameraController = qec.inject(qec.cameraArcballController);
         }
         controllerManager.prototype.afterInject = function () {
             this.cameraController.setButton(2);

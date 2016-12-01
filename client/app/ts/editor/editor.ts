@@ -64,6 +64,14 @@ module qec
             this.sdGround.setHalfSize(2, 2, 0.01);
         }
 
+        getViewportWidth():number {
+            return this.renderer.getViewportWidth();
+        }
+
+        getViewportHeight():number {
+            return this.renderer.getViewportHeight();
+        }
+
         setSelectedIndex(index: number)
         {
             this.workspace.selectedIndex = index;

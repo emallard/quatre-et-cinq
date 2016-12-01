@@ -1,107 +1,87 @@
+// Inspiration :
+//
 // adapted from http://nehe.gamedev.net/tutorial/arcball_rotation/19003/
-
+// http://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
 module qec
 {
 
     export class arcball
     {
-        StVec = vec3.create();
-        EnVec = vec3.create();
-        AdjustWidth:number;
-        AdjustHeight:number;
-        TempPt = vec2.create();
+        perp = vec3.create();
+        tmpPt1 = vec3.create();
+        tmpPt2 = vec3.create();
 
-        sphereFactor = 0.777;
 
-        setBounds(NewWidth:number, NewHeight:number)
+        getRotationFrom2dPoints(viewportWidth:number, viewportHeight:number, sphereRadiusInPixels:number, startXY:Float32Array, endXY:Float32Array, result:Float32Array)
         {
-            //Set adjustment factor for width/height
-            this.AdjustWidth = 1.0 / ((NewWidth - 1.0) * 0.5);
-            this.AdjustHeight = 1.0 / ((NewHeight - 1.0) * 0.5);
+            this.map2DToSphere(viewportWidth, viewportHeight, sphereRadiusInPixels, startXY, this.tmpPt1);
+            this.map2DToSphere(viewportWidth, viewportHeight, sphereRadiusInPixels, endXY, this.tmpPt2);
+            this.getRotation(this.tmpPt1, this.tmpPt2, result);
         }
 
-        _mapToSphere(NewPt:Float32Array, NewVec:Float32Array)
+
+        map2DToSphere(viewportWidth:number, viewportHeight:number, sphereRadiusInPixels:number, screenXY:Float32Array, result:Float32Array)
         {
-            var TempPt = this.TempPt;
-            //Copy paramter into temp point
-            vec2.copy(TempPt, NewPt);
+            var dx = screenXY[0] - (viewportWidth/2);
+            var dy = (viewportHeight-screenXY[1]) - (viewportHeight/2);
 
-            //Adjust point coords and scale down to range of [-1 ... 1]
-            TempPt[0] = (TempPt[0] * this.AdjustWidth) - 1.0;
-            TempPt[1] = 1.0 - (TempPt[1] * this.AdjustHeight);
-
-            //Compute the square of the length of the vector to the point from the center
-            var length = (TempPt[0] * TempPt[0]) + (TempPt[1] * TempPt[1]);
+            //length of the vector to the point from the center
+            var length = Math.sqrt((dx * dx) + (dy * dy));
 
             //If the point is mapped outside of the sphere... (length > radius squared)
-            if (length > this.sphereFactor*this.sphereFactor)
+            if (length > sphereRadiusInPixels)
             {
-                //Compute a normalizing factor (radius / sqrt(length))
-                var norm = 1.0 / Math.sqrt(length);
-
-                //Return the "normalized" vector, a point on the sphere
-                NewVec[0] = TempPt[0] * norm;
-                NewVec[1] = TempPt[1] * norm;
-                NewVec[2] = 0.0;
+                //Return the point on sphere at z=0
+                result[0] = dx/length*sphereRadiusInPixels;
+                result[1] = dy/length*sphereRadiusInPixels;
+                result[2] = 0.0;
                 //console.log("not sphere");
             }
-            else    //Else it's on the inside
+            //Else it's on the inside
+            else
             {
-                //Return a vector to a point mapped inside the sphere sqrt(radius squared - length)
-                NewVec[0] = TempPt[0];
-                NewVec[1] = TempPt[1];
-                NewVec[2] = Math.sqrt(this.sphereFactor*this.sphereFactor - length);
+                //Return a vector to a point mapped inside the sphere
+                result[0] = dx;
+                result[1] = dy;
+                result[2] = Math.sqrt(sphereRadiusInPixels*sphereRadiusInPixels - (dx*dx + dy*dy));
                 //console.log("sphere");
             }
         }
 
 
-        //Mouse down
-        click(NewPt:Float32Array)
+        //return quaternion equivalent to rotation between 2 3D points
+        getRotation(startPoint:Float32Array, endPoint:Float32Array, result:Float32Array)
         {
-            //Map the point to the sphere
-            this._mapToSphere(NewPt, this.StVec);
-        }
+            var perp = this.perp;
+            vec3.cross(perp, startPoint, endPoint);
 
-        //Mouse drag, calculate rotation
-        drag(NewPt:Float32Array, NewRot:Float32Array)
-        {
-            //Map the point to the sphere
-            this._mapToSphere(NewPt, this.EnVec);
-
-            //Return the quaternion equivalent to the rotation
-            if (NewRot)
+            //Compute the length of the perpendicular vector
+            if (vec3.length(perp) > 0.00001)    //if its non-zero
             {
-                var Perp = vec3.create();
+                // http://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
+                //
+                // Quaternion q;
+                // vector a = crossproduct(v1, v2)
+                // q.xyz = a;
+                // q.w = sqrt((v1.Length ^ 2) * (v2.Length ^ 2)) + dotproduct(v1, v2)
 
-                //Compute the vector perpendicular to the begin and end vectors
-                vec3.cross(Perp, this.StVec, this.EnVec);
+                
+                result[0] = perp[0];
+                result[1] = perp[1];
+                result[2] = perp[2];
 
-                //Compute the length of the perpendicular vector
-                if (vec3.length(Perp) > 0.00001)    //if its non-zero
-                {
-
-                    //We're ok, so return the perpendicular vector as the transform after all
-                    NewRot[0] = Perp[0];
-                    NewRot[1] = Perp[1];
-                    NewRot[2] = Perp[2];
-                    //In the quaternion values, w is cosine (theta / 2), where theta is rotation angle
-                    //NewRot[3] = vec3.dot(this.StVec, this.EnVec);
-
-                    // '1 +' comes from :
-                    // http://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
-                    NewRot[3] = this.sphereFactor*this.sphereFactor + vec3.dot(this.StVec, this.EnVec);
-
-                }
-                else                                    //if its zero
-                {
-                    //The begin and end vectors coincide, so return an identity transform
-                    NewRot[0] = 0;
-                    NewRot[1] = 0;
-                    NewRot[2] = 0;
-                    NewRot[3] = 1;
-                }
+                result[3] = vec3.length(startPoint)*vec3.length(endPoint) + vec3.dot(startPoint, endPoint);
+                quat.normalize(result, result);
             }
+            else
+            {
+                //The begin and end vectors coincide, so return an identity transform
+                result[0] = 0;
+                result[1] = 0;
+                result[2] = 0;
+                result[3] = 1;
+            }
+            
         }
     }
 }

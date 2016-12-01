@@ -11,6 +11,10 @@ module qec {
             run.push((_done) => resources.doReq('app/ts/render/hardware/10_sd.glsl', _done));
             run.push((_done) => resources.doReq('app/ts/render/hardware/20_light.glsl', _done));
             run.push((_done) => resources.doReq('app/ts/render/hardware/30_renderPixel.glsl', _done));
+            
+            //for (var i=0; i < 6; ++i)
+            //    run.push(resources.loadImg('data/cubemap/cubemap' + i + '.jpg'));
+            
             run.run(() => {resources.loaded = true; done();});
         }
 
@@ -32,6 +36,22 @@ module qec {
                 }
             };
             req.send(null);
+        }
+
+        static loadImg(url:string)
+        {
+            return (_done) =>
+            {
+                console.log(url);
+                var img = new Image();
+                img.onload = () => 
+                {
+                    resources.all[url] = img;
+                    _done();
+                }
+                img.src = url;
+            }
+            
         }
     }
 }
