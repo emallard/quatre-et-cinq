@@ -15,7 +15,8 @@ module qec
         workspace:workspace = inject(workspace);
         sdUnion = new sdUnion();
         sdHoleUnion = new sdUnion();
-        sdSubtraction = new sdSubtraction();
+        sdSubtraction =  new sdSubtraction();
+        sdUnionWithHoleSd = new sdUnion();
 
         renderFlag = false;
         updateFlag = false;
@@ -76,7 +77,6 @@ module qec
 
         setSelectedIndex(index: number)
         {
-            console.log("setSelected " + index);
             this.workspace.selectedIndex = index;
             this.workspace.editorObjects.forEach((o, i) => {
                 o.setSelected(i == index);
@@ -171,6 +171,7 @@ module qec
             this.sdUnion.array = [];
             this.sdHoleUnion.array = [];
             this.sdSubtraction.array = [this.sdUnion, this.sdHoleUnion];
+            this.sdUnionWithHoleSd.array = [this.sdSubtraction];
 
             if (this.groundVisible)
                 this.sdUnion.array.push(this.sdGround);
@@ -181,13 +182,31 @@ module qec
                 if (!objs[i].isHole)
                     this.sdUnion.array.push(objs[i].sd);
                 else
+                {
                     this.sdHoleUnion.array.push(objs[i].sd);
+
+                    
+                    var sdEffect = new sdIntersection();
+                    
+                    var sdG = new sdGrid();
+                    vec3.set(sdG.size, 0.063, 0.063, 0.063);
+                    sdG.thickness = 0.0001;
+
+                    var sdB = new sdBorder();
+                    sdB.borderIn = 0.0001;
+                    sdB.borderOut = 0;
+                    sdB.sd = objs[i].sd;
+
+                    sdEffect.array = [sdB, sdG];
+                    this.sdUnionWithHoleSd.array.push(sdEffect);
+                }
+
             }
             
             if (this.sdHoleUnion.array.length == 0)
                 this.renderSettings.sd = this.sdUnion;
             else
-                this.renderSettings.sd = this.sdSubtraction;
+                this.renderSettings.sd = this.sdUnionWithHoleSd;//this.sdSubtraction;
             this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length);
         }
 

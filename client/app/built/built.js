@@ -49,6 +49,7 @@ var qec;
             this.sdUnion = new qec.sdUnion();
             this.sdHoleUnion = new qec.sdUnion();
             this.sdSubtraction = new qec.sdSubtraction();
+            this.sdUnionWithHoleSd = new qec.sdUnion();
             this.renderFlag = false;
             this.updateFlag = false;
             this.showBoundingBox = false;
@@ -96,7 +97,6 @@ var qec;
         };
         editor.prototype.setSelectedIndex = function (index) {
             var _this = this;
-            console.log("setSelected " + index);
             this.workspace.selectedIndex = index;
             this.workspace.editorObjects.forEach(function (o, i) {
                 o.setSelected(i == index);
@@ -167,19 +167,31 @@ var qec;
             this.sdUnion.array = [];
             this.sdHoleUnion.array = [];
             this.sdSubtraction.array = [this.sdUnion, this.sdHoleUnion];
+            this.sdUnionWithHoleSd.array = [this.sdSubtraction];
             if (this.groundVisible)
                 this.sdUnion.array.push(this.sdGround);
             var objs = this.workspace.editorObjects;
             for (var i = 0; i < objs.length; ++i) {
                 if (!objs[i].isHole)
                     this.sdUnion.array.push(objs[i].sd);
-                else
+                else {
                     this.sdHoleUnion.array.push(objs[i].sd);
+                    var sdEffect = new qec.sdIntersection();
+                    var sdG = new qec.sdGrid();
+                    vec3.set(sdG.size, 0.063, 0.063, 0.063);
+                    sdG.thickness = 0.0001;
+                    var sdB = new qec.sdBorder();
+                    sdB.borderIn = 0.0001;
+                    sdB.borderOut = 0;
+                    sdB.sd = objs[i].sd;
+                    sdEffect.array = [sdB, sdG];
+                    this.sdUnionWithHoleSd.array.push(sdEffect);
+                }
             }
             if (this.sdHoleUnion.array.length == 0)
                 this.renderSettings.sd = this.sdUnion;
             else
-                this.renderSettings.sd = this.sdSubtraction;
+                this.renderSettings.sd = this.sdUnionWithHoleSd; //this.sdSubtraction;
             this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length);
         };
         editor.prototype.render = function () {
@@ -2160,7 +2172,7 @@ var qec;
                 + qec.resources.all['app/ts/render/hardware/20_light.glsl']
                 + generatedLight
                 + qec.resources.all['app/ts/render/hardware/30_renderPixel.glsl'];
-            //console.log(generatedPart);
+            console.log(generatedPart);
             //console.log(generatedLight);
             this.gViewQuad.material.fragmentShader = this.fragmentShader;
             this.gViewQuad.material.needsUpdate = true;
@@ -2295,6 +2307,12 @@ var qec;
                     'uniform sampler2D u_profileTextures[' + count + '];\n' +
                     'uniform vec4 u_topBounds[' + count + '];\n' +
                     'uniform vec4 u_profileBounds[' + count + '];\n\n';
+            // declare functions
+            for (var i = hsdArray.length - 1; i >= 0; --i) {
+                shader += 'float getDist_' + i + '(vec3 pos);\n';
+            }
+            shader += '\n';
+            // implementations
             for (var i = hsdArray.length - 1; i >= 0; --i) {
                 shader += this.generateOneDistance(hsdArray[i]);
                 shader += '\n\n';
@@ -2306,18 +2324,6 @@ var qec;
         hardwareShaderText.prototype.generateOneDistance = function (hsd) {
             var sd = hsd.sd;
             console.log('generateOneDistance ' + hsd.index);
-            if (sd instanceof qec.sdUnion) {
-                var array = sd.array;
-                var concat = '  float d=666.0;\n';
-                for (var j = 0; j < array.length; ++j) {
-                    var childHsd = this.expl.getHsd(array[j]);
-                    concat += '  d = opU(d, getDist_' + childHsd.index + '(pos));\n';
-                }
-                return 'float getDist_' + hsd.index + '(vec3 pos) { '
-                    + '\n' + concat
-                    + '  return d;'
-                    + '\n}';
-            }
             if (sd instanceof qec.sdFields) {
                 var m = mat4.create();
                 sd.getInverseTransform(m);
@@ -2345,12 +2351,49 @@ var qec;
                     + '\n  return sdPlane(pos, ' + vec3.str(sd.normal) + ');'
                     + '\n}';
             }
+            if (sd instanceof qec.sdGrid) {
+                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                    + '\n  return sdGrid(pos, ' + vec3.str(sd.size) + ', ' + sd.thickness + ');'
+                    + '\n}';
+            }
+            if (sd instanceof qec.sdBorder) {
+                var childHsd = this.expl.getHsd(sd.sd);
+                var concat = '\n  float d = getDist_' + childHsd.index + '(pos);';
+                concat += '\n  return opBorder(d, ' + sd.borderIn + ');';
+                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                    + concat
+                    + '\n}';
+            }
+            if (sd instanceof qec.sdUnion) {
+                var array = sd.array;
+                var concat = '  float d=666.0;\n';
+                for (var j = 0; j < array.length; ++j) {
+                    var childHsd = this.expl.getHsd(array[j]);
+                    concat += '  d = opU(d, getDist_' + childHsd.index + '(pos));\n';
+                }
+                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                    + '\n' + concat
+                    + '  return d;'
+                    + '\n}';
+            }
             if (sd instanceof qec.sdSubtraction) {
                 var array = sd.array;
                 var concat = '  float d=666.0;\n';
                 var childHsd0 = this.expl.getHsd(array[0]);
                 var childHsd1 = this.expl.getHsd(array[1]);
                 concat += '  d = opS(getDist_' + childHsd0.index + '(pos), getDist_' + childHsd1.index + '(pos));\n';
+                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                    + '\n' + concat
+                    + '  return d;'
+                    + '\n}';
+            }
+            if (sd instanceof qec.sdIntersection) {
+                var array = sd.array;
+                var concat = '  float d=-666.0;\n';
+                for (var j = 0; j < array.length; ++j) {
+                    var childHsd = this.expl.getHsd(array[j]);
+                    concat += '  d = opI(d, getDist_' + childHsd.index + '(pos));\n';
+                }
                 return 'float getDist_' + hsd.index + '(vec3 pos) { '
                     + '\n' + concat
                     + '  return d;'
@@ -2363,7 +2406,10 @@ var qec;
             var shader = '';
             var hsdArray = this.expl.array;
             shader += '\n\nuniform vec3 u_diffuses[' + hsdArray.length + '];\n\n';
-            console.log(hsdArray[0]);
+            for (var i = hsdArray.length - 1; i >= 0; --i) {
+                shader += 'vec3 getColor_' + i + '(vec3 pos);\n';
+            }
+            shader += '\n';
             for (var i = hsdArray.length - 1; i >= 0; --i) {
                 shader += this.generateOneColor(hsdArray[i]);
                 shader += '\n\n';
@@ -2397,6 +2443,18 @@ var qec;
                 return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
                     + '\n' + concat
                     + '  return color;'
+                    + '\n}';
+            }
+            else if (sd instanceof qec.sdIntersection) {
+                var childHsd = this.expl.getHsd(sd.array[0]);
+                return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
+                    + '\n' + 'return getColor_' + childHsd.index + '(pos);'
+                    + '\n}';
+            }
+            else if (sd instanceof qec.sdBorder) {
+                var childHsd = this.expl.getHsd(sd.sd);
+                return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
+                    + '\n' + 'return getColor_' + childHsd.index + '(pos);'
                     + '\n}';
             }
             else {
@@ -2439,6 +2497,9 @@ var qec;
             this.exploreRec(sd);
         };
         hardwareSignedDistanceExplorer.prototype.exploreRec = function (sd) {
+            // stop if (signedDistance already explored)
+            if (this.getHsd(sd) != null)
+                return;
             var hsd = new hardwareSignedDistance();
             this.array.push(hsd);
             hsd.sd = sd;
@@ -2455,6 +2516,13 @@ var qec;
             else if (sd instanceof qec.sdSubtraction) {
                 for (var i = 0; i < sd.array.length; ++i)
                     this.exploreRec(sd.array[i]);
+            }
+            else if (sd instanceof qec.sdIntersection) {
+                for (var i = 0; i < sd.array.length; ++i)
+                    this.exploreRec(sd.array[i]);
+            }
+            else if (sd instanceof qec.sdBorder) {
+                this.exploreRec(sd.sd);
             }
         };
         hardwareSignedDistanceExplorer.prototype.getSdFieldsCount = function () {
@@ -5116,11 +5184,12 @@ var qec;
     var sdGrid = (function () {
         function sdGrid() {
             this.material = new qec.material();
+            this.size = vec3.create();
             this.d = vec3.create();
             this.mod = vec3.create();
         }
         sdGrid.prototype.createFrom = function (dto) {
-            this.size = dto.size;
+            vec3.set(this.size, dto.size, dto.size, dto.size);
             this.thickness = dto.thickness;
             this.material.createFrom(dto.material);
         };
@@ -5129,7 +5198,7 @@ var qec;
         };
         sdGrid.prototype.getDist = function (pos, boundingBox, debug) {
             for (var i = 0; i < 3; ++i) {
-                this.d[i] = 0.5 * this.size - Math.abs(fmod(pos[i], this.size) - 0.5 * this.size);
+                this.d[i] = 0.5 * this.size[i] - Math.abs(fmod(pos[i], this.size[i]) - 0.5 * this.size[i]);
             }
             var dMin = Math.min(this.d[0], this.d[1], this.d[2]);
             return dMin - this.thickness;
@@ -5236,6 +5305,8 @@ var qec;
                     minMat = this.array[i].getMaterial(pos);
                 }
             }
+            if (minMat == null)
+                return new qec.material();
             return minMat;
         };
         sdIntersection.prototype.getInverseTransform = function (out) {
@@ -5489,6 +5560,8 @@ var qec;
                     minMat = this.array[i].getMaterial(pos);
                 }
             }
+            if (minMat == null)
+                return new qec.material();
             return minMat;
         };
         sdUnion.prototype.getInverseTransform = function (out) {

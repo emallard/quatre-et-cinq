@@ -85,7 +85,7 @@ module qec {
                 + generatedLight
                 + resources.all['app/ts/render/hardware/30_renderPixel.glsl'];
             
-            //console.log(generatedPart);
+            console.log(generatedPart);
             //console.log(generatedLight);
 
             this.gViewQuad.material.fragmentShader = this.fragmentShader;

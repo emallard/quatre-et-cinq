@@ -11,14 +11,14 @@ module qec {
     export class sdGrid implements signedDistance, canCreate<sdGridDTO>
     {
         material = new material();
-        size:number;
+        size = vec3.create();
         thickness:number;
         d = vec3.create();
         mod = vec3.create();
 
         createFrom(dto:sdGridDTO)
         {
-            this.size = dto.size;    
+            vec3.set(this.size, dto.size, dto.size, dto.size);    
             this.thickness = dto.thickness;
             this.material.createFrom(dto.material)
         }
@@ -33,7 +33,7 @@ module qec {
         {
             for (var i = 0; i < 3; ++i)
             {
-                this.d[i] = 0.5*this.size - Math.abs( fmod(pos[i], this.size) - 0.5*this.size );
+                this.d[i] = 0.5*this.size[i] - Math.abs( fmod(pos[i], this.size[i]) - 0.5*this.size[i] );
             }    
             var dMin = Math.min(this.d[0], this.d[1], this.d[2]);
             

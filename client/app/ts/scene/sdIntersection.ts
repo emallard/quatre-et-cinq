@@ -52,6 +52,9 @@ module qec{
                     minMat = this.array[i].getMaterial(pos);
                 }
             }
+            if (minMat == null)
+                return new material();
+            
             return minMat;
         }
 

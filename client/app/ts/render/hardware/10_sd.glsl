@@ -37,6 +37,13 @@ float sdPlane( vec3 p, vec3 n ) {
     return dot(p, n);
 }
 
+float sdGrid(vec3 p, vec3 size, float thickness) {
+    vec3 d = 0.5*size - abs(mod(p, size) - 0.5*size);
+    //vec3 d = abs(floor((p + size*0.5)/size));
+    float dMin = min(d[0], min(d[1], d[2]));
+    return dMin - thickness;
+}
+
 /* OPERATIONS */
 float opU( float d1, float d2 )
 {
@@ -49,6 +56,11 @@ float opS( float d1, float d2 )
 float opI( float d1, float d2 )
 {
     return max(d1,d2);
+}
+
+float opBorder(float d1, float thickness)
+{
+    return (d1 < 0.0) ? -d1 - thickness : d1;
 }
 
 float getFieldDistance(sampler2D field, vec2 uv)

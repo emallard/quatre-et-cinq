@@ -23,6 +23,14 @@ module qec {
                 'uniform vec4 u_topBounds[' + count +'];\n' +
                 'uniform vec4 u_profileBounds[' + count + '];\n\n';
 
+            // declare functions
+            for (var i=hsdArray.length-1; i>=0; --i)
+            {
+                shader += 'float getDist_' + i + '(vec3 pos);\n';
+            }
+            shader += '\n';
+
+            // implementations
             for (var i=hsdArray.length-1; i>=0; --i)
             {
                 shader += this.generateOneDistance(hsdArray[i]);
@@ -40,21 +48,7 @@ module qec {
             var sd = hsd.sd;
 
             console.log('generateOneDistance ' + hsd.index);
-            if (sd instanceof sdUnion)
-            {
-                var array = sd.array;
-                var concat = '  float d=666.0;\n';
-                for (var j=0; j < array.length; ++j)
-                {
-                    var childHsd = this.expl.getHsd(array[j]);
-                    concat += '  d = opU(d, getDist_' + childHsd.index  + '(pos));\n';
-                }
-
-                return 'float getDist_' + hsd.index + '(vec3 pos) { '
-                +'\n' + concat
-                +'  return d;'
-                +'\n}';
-            }
+            
             if (sd instanceof sdFields)
             {
                 var m = mat4.create();
@@ -87,6 +81,36 @@ module qec {
                 +'\n  return sdPlane(pos, ' + vec3.str(sd.normal) + ');'
                 +'\n}';
             }
+            if (sd instanceof sdGrid)
+            {
+                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                +'\n  return sdGrid(pos, ' + vec3.str(sd.size) + ', ' + sd.thickness + ');'
+                +'\n}';
+            }
+            if (sd instanceof sdBorder)
+            {
+                var childHsd = this.expl.getHsd(sd.sd);
+                var concat = '\n  float d = getDist_' + childHsd.index + '(pos);';
+                concat +=  '\n  return opBorder(d, ' + sd.borderIn + ');'
+                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                + concat
+                +'\n}';
+            }
+            if (sd instanceof sdUnion)
+            {
+                var array = sd.array;
+                var concat = '  float d=666.0;\n';
+                for (var j=0; j < array.length; ++j)
+                {
+                    var childHsd = this.expl.getHsd(array[j]);
+                    concat += '  d = opU(d, getDist_' + childHsd.index  + '(pos));\n';
+                }
+
+                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                +'\n' + concat
+                +'  return d;'
+                +'\n}';
+            }
             if (sd instanceof sdSubtraction)
             {
                 var array = sd.array;
@@ -95,6 +119,21 @@ module qec {
                 var childHsd0 = this.expl.getHsd(array[0]);
                 var childHsd1 = this.expl.getHsd(array[1]);
                 concat += '  d = opS(getDist_' + childHsd0.index  + '(pos), getDist_' + childHsd1.index  + '(pos));\n';
+
+                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                +'\n' + concat
+                +'  return d;'
+                +'\n}';
+            }
+            if (sd instanceof sdIntersection)
+            {
+                var array = sd.array;
+                var concat = '  float d=-666.0;\n';
+                for (var j=0; j < array.length; ++j)
+                {
+                    var childHsd = this.expl.getHsd(array[j]);
+                    concat += '  d = opI(d, getDist_' + childHsd.index  + '(pos));\n';
+                }
 
                 return 'float getDist_' + hsd.index + '(vec3 pos) { '
                 +'\n' + concat
@@ -113,8 +152,12 @@ module qec {
             var hsdArray = this.expl.array;
             
             shader += '\n\nuniform vec3 u_diffuses[' + hsdArray.length + '];\n\n'
-
-            console.log(hsdArray[0]);
+            
+            for (var i=hsdArray.length-1; i>=0; --i)
+            {
+                shader += 'vec3 getColor_' + i + '(vec3 pos);\n';
+            }
+            shader += '\n';
 
             for (var i=hsdArray.length-1; i>=0; --i)
             {
@@ -162,7 +205,22 @@ module qec {
                 +'  return color;'
                 +'\n}';
             }
-
+            else if (sd instanceof sdIntersection)
+            {
+                var childHsd = this.expl.getHsd(sd.array[0]);
+                return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
+                +'\n' + 'return getColor_'+ childHsd.index + '(pos);'
+                //+'  return color;'
+                +'\n}';
+            }
+            else if (sd instanceof sdBorder)
+            {
+                var childHsd = this.expl.getHsd(sd.sd);
+                return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
+                +'\n' + 'return getColor_'+ childHsd.index + '(pos);'
+                //+'  return color;'
+                +'\n}';
+            }
             else
             {
                 return 'vec3 getColor_' + hsd.index + '(vec3 pos) { return u_diffuses[' + hsd.index + ']; }'

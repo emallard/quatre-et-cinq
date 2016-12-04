@@ -26,6 +26,10 @@ module qec
 
         private exploreRec(sd: signedDistance)
         {
+            // stop if (signedDistance already explored)
+            if (this.getHsd(sd) != null)
+                return;
+            
             var hsd = new hardwareSignedDistance();
             this.array.push(hsd);
 
@@ -38,17 +42,24 @@ module qec
                 hsd.sdFieldIndex = this.sdFieldsCount;
                 this.sdFieldsCount++;
             }
-
             else if (sd instanceof sdUnion)
             {
                 for (var i=0; i < sd.array.length; ++i)
                     this.exploreRec(sd.array[i]);
             }
-
             else if (sd instanceof sdSubtraction)
             {
                 for (var i=0; i < sd.array.length; ++i)
                     this.exploreRec(sd.array[i]);
+            }
+            else if (sd instanceof sdIntersection)
+            {
+                for (var i=0; i < sd.array.length; ++i)
+                    this.exploreRec(sd.array[i]);
+            }
+            else if (sd instanceof sdBorder)
+            {
+                this.exploreRec(sd.sd);
             }
         }
 
