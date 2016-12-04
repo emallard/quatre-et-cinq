@@ -87,6 +87,20 @@ module qec {
                 +'\n  return sdPlane(pos, ' + vec3.str(sd.normal) + ');'
                 +'\n}';
             }
+            if (sd instanceof sdSubtraction)
+            {
+                var array = sd.array;
+                var concat = '  float d=666.0;\n';
+                
+                var childHsd0 = this.expl.getHsd(array[0]);
+                var childHsd1 = this.expl.getHsd(array[1]);
+                concat += '  d = opS(getDist_' + childHsd0.index  + '(pos), getDist_' + childHsd1.index  + '(pos));\n';
+
+                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                +'\n' + concat
+                +'  return d;'
+                +'\n}';
+            }
 
             return '';
         }
@@ -134,6 +148,21 @@ module qec {
                 +'  return color;'
                 +'\n}';
             }
+            else if (sd instanceof sdSubtraction)
+            {
+                var array = sd.array;
+                var concat = '  float d=666.0;\n  float d2;  vec3 color;\n';
+            
+                var childHsd = this.expl.getHsd(array[0]);
+                concat += '  d2 = getDist_' + childHsd.index + '(pos);\n'
+                + '  if (d2 < d) { d = d2; color = getColor_'+ childHsd.index + '(pos);}\n'
+
+                return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
+                +'\n' + concat
+                +'  return color;'
+                +'\n}';
+            }
+
             else
             {
                 return 'vec3 getColor_' + hsd.index + '(vec3 pos) { return u_diffuses[' + hsd.index + ']; }'

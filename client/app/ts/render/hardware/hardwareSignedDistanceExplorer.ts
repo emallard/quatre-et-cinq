@@ -44,6 +44,12 @@ module qec
                 for (var i=0; i < sd.array.length; ++i)
                     this.exploreRec(sd.array[i]);
             }
+
+            else if (sd instanceof sdSubtraction)
+            {
+                for (var i=0; i < sd.array.length; ++i)
+                    this.exploreRec(sd.array[i]);
+            }
         }
 
         getSdFieldsCount():number {

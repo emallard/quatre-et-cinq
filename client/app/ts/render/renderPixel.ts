@@ -46,7 +46,7 @@ module qec {
 
         showBoundingBox = false;
         reflection = false;
-        rayToBounds = true;
+        rayToBounds = false;
 
         init(settings:renderSettings)
         {

@@ -77,9 +77,9 @@
                 
                 
                 <div class='materialView' data-bind="with: materialView">
-                    <!--
-                    <input type="radio" data-bind="checked: isHole, event: {change: setAsHole}">Is a hole
-                    -->
+                    
+                    <input type="checkbox" data-bind="checked: isHole, event: {change: changeIsHole}">Is a hole
+                    
                     <input data-bind="setElement: setElement" value="#B6BD79" />
                 </div>
 

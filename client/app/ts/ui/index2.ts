@@ -70,7 +70,7 @@ module qec {
 
                     var scrend = this.sc.get<scRenderer>(o=>o instanceof scRenderer, 'render');
                     this.renderSettings = scrend.settings;
-                    this.renderSettings.shadows = true; 
+                    this.renderSettings.shadows = false;//true; 
                     this.render(()=>{});        
                 });
             }

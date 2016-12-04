@@ -12,10 +12,14 @@ module qec {
             s.register('spotLightDTO', spotLight);
             
             s.register('scRendererDTO', scRenderer);
+            s.register('sdBorderDTO', sdBorder);
             s.register('sdBoxDTO', sdBox);
             s.register('sdFieldsDTO', sdFields);
+            s.register('sdGridDTO', sdGrid);
+            s.register('sdGrid2DTO', sdGrid2);
             s.register('sdIntersectionDTO', sdIntersection);
             s.register('sdPlaneDTO', sdPlane);
+            s.register('sdRepeatDTO', sdRepeat);
             s.register('sdSphereDTO', sdSphere);
             s.register('sdSubtractionDTO', sdSubtraction);
             s.register('sdUnionDTO', sdUnion);

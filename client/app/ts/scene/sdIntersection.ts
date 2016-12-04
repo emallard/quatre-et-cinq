@@ -13,8 +13,9 @@ module qec{
 
         createFrom(dto:sdIntersectionDTO)
         {
-            this.array[0] = <signedDistance> dto.a;
-            this.array[1] = <signedDistance> dto.b;
+
+            this.array[0] = <signedDistance> (dto.a['__instance']);
+            this.array[1] = <signedDistance> (dto.b['__instance']);
         }
 
 

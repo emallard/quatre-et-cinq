@@ -77,3 +77,12 @@ function float32ArrayToString(a:Float32Array)
     }
     return s;
 }
+
+function fmod(a:number, b:number):number
+{
+    var m = a%b
+    if (a<0)
+        m *= -1;
+    //if (m < 0) m+=b; 
+    return m;
+}

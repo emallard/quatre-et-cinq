@@ -7,7 +7,7 @@ module qec{
         b : any;
     }
 
-    export class sdSubtraction implements signedDistance, canCreate<sdUnionDTO>
+    export class sdSubtraction implements signedDistance
     {
         array : signedDistance[] = [];
 

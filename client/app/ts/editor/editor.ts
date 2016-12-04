@@ -14,6 +14,8 @@ module qec
         renderSettings = new renderSettings();        
         workspace:workspace = inject(workspace);
         sdUnion = new sdUnion();
+        sdHoleUnion = new sdUnion();
+        sdSubtraction = new sdSubtraction();
 
         renderFlag = false;
         updateFlag = false;
@@ -74,6 +76,7 @@ module qec
 
         setSelectedIndex(index: number)
         {
+            console.log("setSelected " + index);
             this.workspace.selectedIndex = index;
             this.workspace.editorObjects.forEach((o, i) => {
                 o.setSelected(i == index);
@@ -166,14 +169,26 @@ module qec
         {
             // update scene
             this.sdUnion.array = [];
+            this.sdHoleUnion.array = [];
+            this.sdSubtraction.array = [this.sdUnion, this.sdHoleUnion];
+
             if (this.groundVisible)
                 this.sdUnion.array.push(this.sdGround);
-            for (var i=0; i < this.workspace.editorObjects.length; ++i)
+            
+            var objs = this.workspace.editorObjects;
+            for (var i=0; i < objs.length; ++i)
             {
-                this.sdUnion.array.push(this.workspace.editorObjects[i].sd);
+                if (!objs[i].isHole)
+                    this.sdUnion.array.push(objs[i].sd);
+                else
+                    this.sdHoleUnion.array.push(objs[i].sd);
             }
-            this.renderSettings.sd = this.sdUnion;
-            this.renderer.updateShader(this.sdUnion, this.renderSettings.spotLights.length);
+            
+            if (this.sdHoleUnion.array.length == 0)
+                this.renderSettings.sd = this.sdUnion;
+            else
+                this.renderSettings.sd = this.sdSubtraction;
+            this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length);
         }
 
         private render()

@@ -47,6 +47,8 @@ var qec;
             this.renderSettings = new qec.renderSettings();
             this.workspace = qec.inject(qec.workspace);
             this.sdUnion = new qec.sdUnion();
+            this.sdHoleUnion = new qec.sdUnion();
+            this.sdSubtraction = new qec.sdSubtraction();
             this.renderFlag = false;
             this.updateFlag = false;
             this.showBoundingBox = false;
@@ -94,6 +96,7 @@ var qec;
         };
         editor.prototype.setSelectedIndex = function (index) {
             var _this = this;
+            console.log("setSelected " + index);
             this.workspace.selectedIndex = index;
             this.workspace.editorObjects.forEach(function (o, i) {
                 o.setSelected(i == index);
@@ -162,13 +165,22 @@ var qec;
         editor.prototype.updateScene = function () {
             // update scene
             this.sdUnion.array = [];
+            this.sdHoleUnion.array = [];
+            this.sdSubtraction.array = [this.sdUnion, this.sdHoleUnion];
             if (this.groundVisible)
                 this.sdUnion.array.push(this.sdGround);
-            for (var i = 0; i < this.workspace.editorObjects.length; ++i) {
-                this.sdUnion.array.push(this.workspace.editorObjects[i].sd);
+            var objs = this.workspace.editorObjects;
+            for (var i = 0; i < objs.length; ++i) {
+                if (!objs[i].isHole)
+                    this.sdUnion.array.push(objs[i].sd);
+                else
+                    this.sdHoleUnion.array.push(objs[i].sd);
             }
-            this.renderSettings.sd = this.sdUnion;
-            this.renderer.updateShader(this.sdUnion, this.renderSettings.spotLights.length);
+            if (this.sdHoleUnion.array.length == 0)
+                this.renderSettings.sd = this.sdUnion;
+            else
+                this.renderSettings.sd = this.sdSubtraction;
+            this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length);
         };
         editor.prototype.render = function () {
             if (this.renderer == null)
@@ -247,6 +259,7 @@ var qec;
     var editorObject = (function () {
         function editorObject() {
             this.sd = new qec.sdFields();
+            this.isHole = false;
             this.top = new qec.distanceFieldCanvas();
             this.profile = new qec.distanceFieldCanvas();
             this.diffuseColor = vec3.create();
@@ -362,6 +375,9 @@ var qec;
         editorObject.prototype.updateSignedDistance = function () {
             this.sd.init(this.top.floatTexture, this.top.totalBounds, this.profile.floatTexture, this.profile.totalBounds);
             mat4.copy(this.sd.inverseTransform, this.inverseTransform);
+        };
+        editorObject.prototype.setIsHole = function (isHole) {
+            this.isHole = isHole;
         };
         return editorObject;
     }());
@@ -2329,6 +2345,17 @@ var qec;
                     + '\n  return sdPlane(pos, ' + vec3.str(sd.normal) + ');'
                     + '\n}';
             }
+            if (sd instanceof qec.sdSubtraction) {
+                var array = sd.array;
+                var concat = '  float d=666.0;\n';
+                var childHsd0 = this.expl.getHsd(array[0]);
+                var childHsd1 = this.expl.getHsd(array[1]);
+                concat += '  d = opS(getDist_' + childHsd0.index + '(pos), getDist_' + childHsd1.index + '(pos));\n';
+                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                    + '\n' + concat
+                    + '  return d;'
+                    + '\n}';
+            }
             return '';
         };
         hardwareShaderText.prototype.generateColor = function () {
@@ -2356,6 +2383,17 @@ var qec;
                     concat += '  d2 = getDist_' + childHsd.index + '(pos);\n'
                         + '  if (d2 < d) { d = d2; color = getColor_' + childHsd.index + '(pos);}\n';
                 }
+                return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
+                    + '\n' + concat
+                    + '  return color;'
+                    + '\n}';
+            }
+            else if (sd instanceof qec.sdSubtraction) {
+                var array = sd.array;
+                var concat = '  float d=666.0;\n  float d2;  vec3 color;\n';
+                var childHsd = this.expl.getHsd(array[0]);
+                concat += '  d2 = getDist_' + childHsd.index + '(pos);\n'
+                    + '  if (d2 < d) { d = d2; color = getColor_' + childHsd.index + '(pos);}\n';
                 return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
                     + '\n' + concat
                     + '  return color;'
@@ -2411,6 +2449,10 @@ var qec;
                 this.sdFieldsCount++;
             }
             else if (sd instanceof qec.sdUnion) {
+                for (var i = 0; i < sd.array.length; ++i)
+                    this.exploreRec(sd.array[i]);
+            }
+            else if (sd instanceof qec.sdSubtraction) {
                 for (var i = 0; i < sd.array.length; ++i)
                     this.exploreRec(sd.array[i]);
             }
@@ -2715,7 +2757,7 @@ var qec;
             this.reflCol = vec3.create();
             this.showBoundingBox = false;
             this.reflection = false;
-            this.rayToBounds = true;
+            this.rayToBounds = false;
             this.intersectPos = vec3.create();
             this.diffToLight = vec3.create();
             this.ssTmp = vec3.create();
@@ -3602,6 +3644,181 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    qec.pushExample("Grid", function () { return new exGrid(); });
+    var exGrid = (function () {
+        function exGrid() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.grid = {
+                type: 'sdGridDTO',
+                size: 0.33,
+                thickness: 0.001,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.6,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.sphere,
+                b: this.grid
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exGrid;
+    }());
+    qec.exGrid = exGrid;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Grid2", function () { return new exGrid2(); });
+    var exGrid2 = (function () {
+        function exGrid2() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.grid = {
+                type: 'sdGrid2DTO',
+                size: 0.33,
+                thickness: 0.001,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.6,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.sphere,
+                b: this.grid
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exGrid2;
+    }());
+    qec.exGrid2 = exGrid2;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("GridWithBorder", function () { return new exGridWithBorder(); });
+    var exGridWithBorder = (function () {
+        function exGridWithBorder() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.grid = {
+                type: 'sdGridDTO',
+                size: 0.33,
+                thickness: 0.01,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.6,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            /*
+            box: sdBoxDTO = {
+                type: 'sdBoxDTO',
+                halfSize:[0.6,0.6,0.6],
+                material : {
+                    type:'materialDTO',
+                    diffuse : [0, 1, 0]
+                },
+                transform : mat4Identity()
+            };*/
+            this.border1 = {
+                type: 'sdBorderDTO',
+                sd: this.sphere,
+                borderIn: 0.0,
+                borderOut: 0
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.border1,
+                b: this.grid
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exGridWithBorder;
+    }());
+    qec.exGridWithBorder = exGridWithBorder;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     qec.pushExample("Intersection", function () { return new exIntersection(); });
     var exIntersection = (function () {
         function exIntersection() {
@@ -3651,6 +3868,64 @@ var qec;
         return exIntersection;
     }());
     qec.exIntersection = exIntersection;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("IntersectionWithBorder", function () { return new exIntersectionWithBorder(); });
+    var exIntersectionWithBorder = (function () {
+        function exIntersectionWithBorder() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.ground = {
+                type: 'sdBoxDTO',
+                halfSize: [0.5, 0.1, 0.25],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.4,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 0, 1]
+                }
+            };
+            this.borderSphere = {
+                type: 'sdBorderDTO',
+                sd: this.sphere,
+                borderIn: 0.05,
+                borderOut: 0.0
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.ground,
+                b: this.borderSphere
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exIntersectionWithBorder;
+    }());
+    qec.exIntersectionWithBorder = exIntersectionWithBorder;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -3851,6 +4126,132 @@ var qec;
         return exPlane;
     }());
     qec.exPlane = exPlane;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Repeat", function () { return new exRepeat(); });
+    var exRepeat = (function () {
+        function exRepeat() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.05,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 0, 1]
+                }
+            };
+            this.repeat = {
+                type: 'sdRepeatDTO',
+                sd: this.sphere,
+                box: [0.3, 0.3, 0.3]
+            };
+            this.box = {
+                type: 'sdBoxDTO',
+                halfSize: [0.6, 0.6, 0.6],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.box,
+                b: this.repeat
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exRepeat;
+    }());
+    qec.exRepeat = exRepeat;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Repeat2", function () { return new exRepeat2(); });
+    var exRepeat2 = (function () {
+        function exRepeat2() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.2,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 0, 1]
+                }
+            };
+            this.borderSphere = {
+                type: 'sdBorderDTO',
+                sd: this.sphere,
+                borderIn: 0.02,
+                borderOut: 0.0
+            };
+            this.repeat = {
+                type: 'sdRepeatDTO',
+                sd: this.borderSphere,
+                box: [0.4, 0.4, 0.4]
+            };
+            this.box = {
+                type: 'sdBoxDTO',
+                halfSize: [0.6, 0.6, 0.6],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Array(mat4.rotateZ(mat4.create(), mat4.identity(mat4.create()), Math.PI / 6))
+            };
+            this.borderBox = {
+                type: 'sdBorderDTO',
+                sd: this.box,
+                borderIn: 0.02,
+                borderOut: 0.0
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.borderBox,
+                b: this.repeat
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exRepeat2;
+    }());
+    qec.exRepeat2 = exRepeat2;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -4158,10 +4559,14 @@ var qec;
             s.register('directionalLightDTO', qec.directionalLight);
             s.register('spotLightDTO', qec.spotLight);
             s.register('scRendererDTO', qec.scRenderer);
+            s.register('sdBorderDTO', qec.sdBorder);
             s.register('sdBoxDTO', qec.sdBox);
             s.register('sdFieldsDTO', qec.sdFields);
+            s.register('sdGridDTO', qec.sdGrid);
+            s.register('sdGrid2DTO', qec.sdGrid2);
             s.register('sdIntersectionDTO', qec.sdIntersection);
             s.register('sdPlaneDTO', qec.sdPlane);
+            s.register('sdRepeatDTO', qec.sdRepeat);
             s.register('sdSphereDTO', qec.sdSphere);
             s.register('sdSubtractionDTO', qec.sdSubtraction);
             s.register('sdUnionDTO', qec.sdUnion);
@@ -4333,6 +4738,58 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var sdBorderDTO = (function () {
+        function sdBorderDTO() {
+        }
+        return sdBorderDTO;
+    }());
+    qec.sdBorderDTO = sdBorderDTO;
+    var sdBorder = (function () {
+        function sdBorder() {
+        }
+        sdBorder.prototype.createFrom = function (dto) {
+            this.sd = (dto.sd['__instance']);
+            this.borderIn = dto.borderIn;
+            this.borderOut = dto.borderOut;
+        };
+        sdBorder.prototype.getDist2 = function (pos, rd, boundingBox, debug) {
+            return 1000;
+            /*
+            var d = this.array[0].getDist(pos, boundingBox, debug);
+            var l = this.array.length;
+            for (var i=1; i < l; ++i)
+            {
+                d = Math.max(d, -this.array[i].getDist2(pos, rd, boundingBox, debug));
+            }
+            //var d = Math.max(-this.array[0].getDist(pos, debug), this.array[1].getDist(pos, debug));
+            return d;
+            */
+        };
+        sdBorder.prototype.getDist = function (pos, boundingBox, debug) {
+            var d = this.sd.getDist(pos, boundingBox, debug);
+            if (d < 0) {
+                return -d - this.borderIn;
+            }
+            else {
+                return d - this.borderOut;
+            }
+            //return d - this.borderOut;
+        };
+        sdBorder.prototype.getMaterial = function (pos) {
+            return this.sd.getMaterial(pos);
+        };
+        sdBorder.prototype.getInverseTransform = function (out) {
+            mat4.identity(out);
+        };
+        sdBorder.prototype.getBoundingBox = function (out) {
+            vec3.set(out, 100, 100, 100);
+        };
+        return sdBorder;
+    }());
+    qec.sdBorder = sdBorder;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var sdBoxDTO = (function () {
         function sdBoxDTO() {
             this.type = 'sdBoxDTO';
@@ -4373,15 +4830,17 @@ var qec;
         };
         sdBox.prototype.getDist = function (pos, boundingBox, debug) {
             vec3.transformMat4(this.tmpPos, pos, this.inverseTransform);
-            var d0 = Math.abs(this.tmpPos[0]) - this.halfSize[0];
-            var d1 = Math.abs(this.tmpPos[1]) - this.halfSize[1];
-            var d2 = Math.abs(this.tmpPos[2]) - this.halfSize[2];
-            var mc = Math.max(d0, d1, d2);
+            //vec3 d = abs(p) - b;
+            //return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+            var dx = Math.abs(this.tmpPos[0]) - this.halfSize[0];
+            var dy = Math.abs(this.tmpPos[1]) - this.halfSize[1];
+            var dz = Math.abs(this.tmpPos[2]) - this.halfSize[2];
+            var mc = Math.max(dx, dy, dz);
             var t = this.tmp;
-            t[0] = Math.max(d0, 0);
-            t[1] = Math.max(d1, 1);
-            t[2] = Math.max(d2, 2);
-            return Math.min(mc, vec3.length(t));
+            t[0] = Math.max(dx, 0);
+            t[1] = Math.max(dy, 0);
+            t[2] = Math.max(dz, 0);
+            return Math.min(mc, 0) + vec3.length(t);
         };
         sdBox.prototype.getMaterial = function (pos) {
             return this.material;
@@ -4594,6 +5053,152 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var sdFillSphere = (function () {
+        function sdFillSphere() {
+            this.material = new qec.material();
+            this.radius = 1;
+            this.inverseTransform = mat4.create();
+            this.tmp = vec3.create();
+            this.transformedRd = vec3.create();
+            this.aabb = vec3.create();
+        }
+        sdFillSphere.prototype.createFrom = function (dto) {
+            this.material.createFrom(dto.material);
+            this.radius = dto.radius;
+            var transform = dto.transform;
+            if (!transform)
+                mat4.identity(this.inverseTransform);
+            else
+                mat4.invert(this.inverseTransform, new Float32Array(transform));
+        };
+        sdFillSphere.prototype.getDist2 = function (pos, rd, boundingBox, debug) {
+            return 1000;
+            /*
+            this.getBoundingBox(this.aabb);
+            vec3.transformMat4(this.tmp, pos, this.inverseTransform);
+            vec3.transformMat4(this.transformedRd, rd, this.inverseTransform);
+            
+            if (raybox.inbox(this.aabb, this.tmp, 0))
+                return this.getDist(pos, boundingBox, debug);
+
+            var t = raybox.intersection(this.aabb, this.tmp, rd, debug);
+            if (t <= 0.01)
+                return this.getDist(pos, boundingBox, debug);
+            
+            return t;
+            */
+        };
+        sdFillSphere.prototype.getDist = function (pos, boundingBox, debug) {
+            return vec3.length(this.tmp) - this.radius;
+        };
+        sdFillSphere.prototype.getMaterial = function (pos) {
+            return this.material;
+        };
+        sdFillSphere.prototype.getInverseTransform = function (out) {
+            mat4.copy(out, this.inverseTransform);
+        };
+        sdFillSphere.prototype.getBoundingBox = function (out) {
+            vec3.set(out, this.radius, this.radius, this.radius);
+        };
+        return sdFillSphere;
+    }());
+    qec.sdFillSphere = sdFillSphere;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var sdGridDTO = (function () {
+        function sdGridDTO() {
+            this.type = 'sdGridDTO';
+        }
+        return sdGridDTO;
+    }());
+    qec.sdGridDTO = sdGridDTO;
+    var sdGrid = (function () {
+        function sdGrid() {
+            this.material = new qec.material();
+            this.d = vec3.create();
+            this.mod = vec3.create();
+        }
+        sdGrid.prototype.createFrom = function (dto) {
+            this.size = dto.size;
+            this.thickness = dto.thickness;
+            this.material.createFrom(dto.material);
+        };
+        sdGrid.prototype.getDist2 = function (pos, rd, boundingBox, debug) {
+            return 1000;
+        };
+        sdGrid.prototype.getDist = function (pos, boundingBox, debug) {
+            for (var i = 0; i < 3; ++i) {
+                this.d[i] = 0.5 * this.size - Math.abs(fmod(pos[i], this.size) - 0.5 * this.size);
+            }
+            var dMin = Math.min(this.d[0], this.d[1], this.d[2]);
+            return dMin - this.thickness;
+        };
+        sdGrid.prototype.getMaterial = function (pos) {
+            return this.material;
+        };
+        sdGrid.prototype.getInverseTransform = function (out) {
+            mat4.identity(out);
+        };
+        sdGrid.prototype.getBoundingBox = function (out) {
+            vec3.set(out, 100, 100, 100);
+        };
+        return sdGrid;
+    }());
+    qec.sdGrid = sdGrid;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var sdGrid2DTO = (function () {
+        function sdGrid2DTO() {
+            this.type = 'sdGrid2DTO';
+        }
+        return sdGrid2DTO;
+    }());
+    qec.sdGrid2DTO = sdGrid2DTO;
+    var sdGrid2 = (function () {
+        function sdGrid2() {
+            this.material = new qec.material();
+            this.d = vec3.create();
+            this.mod = vec3.create();
+        }
+        sdGrid2.prototype.createFrom = function (dto) {
+            this.size = dto.size;
+            this.thickness = dto.thickness;
+            this.material.createFrom(dto.material);
+        };
+        sdGrid2.prototype.getDist2 = function (pos, rd, boundingBox, debug) {
+            return 1000;
+        };
+        sdGrid2.prototype.sqrLen = function (x, y) {
+            return x * x + y * y;
+        };
+        sdGrid2.prototype.getDist = function (pos, boundingBox, debug) {
+            // abs modulo
+            for (var i = 0; i < 3; ++i) {
+                this.mod[i] = Math.abs(fmod(pos[i], this.size) - 0.5 * this.size);
+            }
+            var s0 = this.sqrLen(this.mod[1], this.mod[2]);
+            var s1 = this.sqrLen(this.mod[0], this.mod[2]);
+            var s2 = this.sqrLen(this.mod[0], this.mod[1]);
+            var dMin = Math.sqrt(Math.min(s0, s1, s2));
+            return dMin - this.thickness;
+        };
+        sdGrid2.prototype.getMaterial = function (pos) {
+            return this.material;
+        };
+        sdGrid2.prototype.getInverseTransform = function (out) {
+            mat4.identity(out);
+        };
+        sdGrid2.prototype.getBoundingBox = function (out) {
+            vec3.set(out, 100, 100, 100);
+        };
+        return sdGrid2;
+    }());
+    qec.sdGrid2 = sdGrid2;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var sdIntersectionDTO = (function () {
         function sdIntersectionDTO() {
         }
@@ -4605,8 +5210,8 @@ var qec;
             this.array = [];
         }
         sdIntersection.prototype.createFrom = function (dto) {
-            this.array[0] = dto.a;
-            this.array[1] = dto.b;
+            this.array[0] = (dto.a['__instance']);
+            this.array[1] = (dto.b['__instance']);
         };
         sdIntersection.prototype.getDist2 = function (pos, rd, boundingBox, debug) {
             var d = 66666;
@@ -4691,6 +5296,53 @@ var qec;
         return sdPlane;
     }());
     qec.sdPlane = sdPlane;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var sdRepeatDTO = (function () {
+        function sdRepeatDTO() {
+        }
+        return sdRepeatDTO;
+    }());
+    qec.sdRepeatDTO = sdRepeatDTO;
+    var sdRepeat = (function () {
+        function sdRepeat() {
+            this.box = vec3.create();
+            this.q = vec3.create();
+        }
+        sdRepeat.prototype.createFrom = function (dto) {
+            this.sd = (dto.sd['__instance']);
+            vec3FromArray(this.box, dto.box);
+        };
+        sdRepeat.prototype.getDist2 = function (pos, rd, boundingBox, debug) {
+            return 1000;
+            /*
+            var d = 66666;
+            var l = this.array.length;
+            for (var i=0; i < l; ++i)
+                d = Math.max(d, this.array[i].getDist2(pos, rd, boundingBox, debug));
+
+            return d;
+            */
+        };
+        sdRepeat.prototype.getDist = function (pos, boundingBox, debug) {
+            for (var i = 0; i < 3; ++i) {
+                this.q[i] = fmod(pos[i], this.box[i]) - 0.5 * this.box[i];
+            }
+            return this.sd.getDist(this.q, boundingBox, debug);
+        };
+        sdRepeat.prototype.getMaterial = function (pos) {
+            return this.sd.getMaterial(pos);
+        };
+        sdRepeat.prototype.getInverseTransform = function (out) {
+            mat4.identity(out);
+        };
+        sdRepeat.prototype.getBoundingBox = function (out) {
+            vec3.set(out, 100, 100, 100);
+        };
+        return sdRepeat;
+    }());
+    qec.sdRepeat = sdRepeat;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -5355,6 +6007,13 @@ function float32ArrayToString(a) {
     }
     return s;
 }
+function fmod(a, b) {
+    var m = a % b;
+    if (a < 0)
+        m *= -1;
+    //if (m < 0) m+=b; 
+    return m;
+}
 var qec;
 (function (qec) {
     var resources = (function () {
@@ -5695,6 +6354,9 @@ var qec;
             this.editor = qec.inject(qec.editor);
             this.arcball = new qec.arcball();
             this.cameraTransforms = qec.injectNew(qec.cameraTransforms);
+            this.collide = qec.injectNew(qec.renderCollide);
+            this.ro = vec3.create();
+            this.rd = vec3.create();
             this.tmpVec3 = vec3.create();
             this.tmpRotation = quat.create();
             this.isPanEnabled = true;
@@ -5739,24 +6401,29 @@ var qec;
             this.isRotateEnabled = !b;
             this.isZoomEnabled = !b;
         };
-        cameraArcballController.prototype.onMouseDown = function (event) {
-            this.isRightClick = (event.which == 3);
-            this.isLeftClick = (event.which == 1);
-            this.isMiddleClick = (event.which == 2);
-            this.isShiftKey = event.shiftKey;
+        cameraArcballController.prototype.onMouseDown = function (e) {
+            this.isRightClick = (e.which == 3);
+            this.isLeftClick = (e.which == 1);
+            this.isMiddleClick = (e.which == 2);
+            this.isShiftKey = e.shiftKey;
             this.isMouseDown = true;
             // copy start state
-            vec2.set(this.startXY, event.offsetX, event.offsetY);
+            vec2.set(this.startXY, e.offsetX, e.offsetY);
             quat.copy(this.startQuat, this.cameraTransforms.rotation);
             mat4.copy(this.startPan, this.cameraTransforms.panTranslation);
             this.viewportWidth = this.editor.getViewportWidth();
             this.viewportHeight = this.editor.getViewportHeight();
+            // pick point in 3D
+            this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+            this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
+            if (this.collide.hasCollided) {
+            }
         };
-        cameraArcballController.prototype.onMouseUp = function (event) {
+        cameraArcballController.prototype.onMouseUp = function (e) {
             this.isMouseDown = false;
         };
-        cameraArcballController.prototype.onMouseMove = function (event) {
-            vec2.set(this.currentMouseXY, event.offsetX, event.offsetY);
+        cameraArcballController.prototype.onMouseMove = function (e) {
+            vec2.set(this.currentMouseXY, e.offsetX, e.offsetY);
             this.hasMouseMoved = true;
         };
         cameraArcballController.prototype.updateLoop = function () {
@@ -5765,8 +6432,12 @@ var qec;
             this.hasMouseMoved = false;
             if (this.isRotateEnabled) {
                 if (this.isMouseDown && this.isRightClick && !this.isShiftKey) {
-                    var sphereRadius = 0.5 * Math.min(this.viewportWidth, this.viewportHeight);
-                    this.arcball.getRotationFrom2dPoints(this.viewportWidth, this.viewportHeight, sphereRadius, this.startXY, this.currentMouseXY, this.dragQuat);
+                    if (false && this.collide.hasCollided) {
+                    }
+                    else {
+                        var sphereRadius = 0.5 * Math.min(this.viewportWidth, this.viewportHeight);
+                        this.arcball.getRotationFrom2dPoints(this.viewportWidth, this.viewportHeight, sphereRadius, this.startXY, this.currentMouseXY, this.dragQuat);
+                    }
                     quat.multiply(this.tmpRotation, this.dragQuat, this.startQuat);
                     this.cameraTransforms.setRotation(this.tmpRotation);
                     this.cameraTransforms.updateCamera(this.editor.getCamera());
@@ -6519,7 +7190,7 @@ var qec;
                     _this.renderer.setContainerAndSize(_this.element, 600, 600);
                     var scrend = _this.sc.get(function (o) { return o instanceof qec.scRenderer; }, 'render');
                     _this.renderSettings = scrend.settings;
-                    _this.renderSettings.shadows = true;
+                    _this.renderSettings.shadows = false; //true; 
                     _this.render(function () { });
                 });
             }
@@ -6620,13 +7291,12 @@ var qec;
                 this.editor.setRenderFlag();
             }
         };
-        materialView.prototype.setAsHole = function () {
+        materialView.prototype.changeIsHole = function () {
             if (this.selectedIndex >= 0) {
-                if (this.isHole()) {
-                    var l = this.editor.workspace.editorObjects[this.selectedIndex];
-                    //l.profileSmooth = false;
-                    this.editor.setUpdateFlag();
-                }
+                var l = this.editor.workspace.editorObjects[this.selectedIndex];
+                l.setIsHole(this.isHole());
+                //l.profileSmooth = false;
+                this.editor.setUpdateFlag();
             }
         };
         return materialView;

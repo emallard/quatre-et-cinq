@@ -8,6 +8,7 @@ module qec {
         topSvgId:string;
 
         sd = new sdFields();
+        isHole = false;
         top = new distanceFieldCanvas();
         profile = new distanceFieldCanvas();
         
@@ -165,6 +166,11 @@ module qec {
         {
             this.sd.init(this.top.floatTexture, this.top.totalBounds, this.profile.floatTexture, this.profile.totalBounds);
             mat4.copy(this.sd.inverseTransform, this.inverseTransform);
+        }
+
+        setIsHole(isHole: boolean)
+        {
+            this.isHole = isHole;
         }
     }
 

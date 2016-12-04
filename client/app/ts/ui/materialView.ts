@@ -48,16 +48,14 @@ module qec {
         }
 
         isHole = ko.observable(false);
-        setAsHole()
+        changeIsHole()
         {
             if (this.selectedIndex >= 0)
-            {
-                if (this.isHole())
-                {
-                    var l = this.editor.workspace.editorObjects[this.selectedIndex];
-                    //l.profileSmooth = false;
-                    this.editor.setUpdateFlag();
-                }
+            {                
+                var l = this.editor.workspace.editorObjects[this.selectedIndex];
+                l.setIsHole(this.isHole());
+                //l.profileSmooth = false;
+                this.editor.setUpdateFlag();
             }
         }
 

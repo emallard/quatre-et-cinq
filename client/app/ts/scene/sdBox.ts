@@ -51,18 +51,21 @@ module qec {
         getDist(pos: Float32Array, boundingBox:boolean, debug:boolean):number
         {
             vec3.transformMat4(this.tmpPos, pos, this.inverseTransform);
+
+            //vec3 d = abs(p) - b;
+            //return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
             
-            var d0 = Math.abs(this.tmpPos[0]) - this.halfSize[0];
-            var d1 = Math.abs(this.tmpPos[1]) - this.halfSize[1];
-            var d2 = Math.abs(this.tmpPos[2]) - this.halfSize[2];
-            var mc = Math.max(d0, d1, d2);
+            var dx = Math.abs(this.tmpPos[0]) - this.halfSize[0];
+            var dy = Math.abs(this.tmpPos[1]) - this.halfSize[1];
+            var dz = Math.abs(this.tmpPos[2]) - this.halfSize[2];
+            var mc = Math.max(dx, dy, dz);
 
             var t = this.tmp;
-            t[0] = Math.max(d0, 0);
-            t[1] = Math.max(d1, 1);
-            t[2] = Math.max(d2, 2);
-
-            return Math.min(mc, vec3.length(t));
+            t[0] = Math.max(dx, 0);
+            t[1] = Math.max(dy, 0);
+            t[2] = Math.max(dz, 0);
+            
+            return Math.min(mc, 0) + vec3.length(t);
         }
 
         getMaterial(pos: Float32Array):material

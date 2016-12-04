@@ -13,6 +13,10 @@ module qec
         arcball = new arcball();
         cameraTransforms:cameraTransforms = injectNew(cameraTransforms);
         
+        collide:renderCollide = injectNew(renderCollide); 
+        ro = vec3.create();
+        rd = vec3.create();
+
         tmpVec3 = vec3.create();
         tmpRotation = quat.create();
 
@@ -83,31 +87,40 @@ module qec
         right = vec3.create();
 
         
-        onMouseDown(event:MouseEvent)
+        onMouseDown(e:MouseEvent)
         {
-            this.isRightClick = (event.which == 3);
-            this.isLeftClick = (event.which == 1);
-            this.isMiddleClick = (event.which == 2);
-            this.isShiftKey = event.shiftKey;
+            this.isRightClick = (e.which == 3);
+            this.isLeftClick = (e.which == 1);
+            this.isMiddleClick = (e.which == 2);
+            this.isShiftKey = e.shiftKey;
             this.isMouseDown = true;
 
             // copy start state
-            vec2.set(this.startXY, event.offsetX, event.offsetY)
+            vec2.set(this.startXY, e.offsetX, e.offsetY)
             quat.copy(this.startQuat, this.cameraTransforms.rotation);
             mat4.copy(this.startPan, this.cameraTransforms.panTranslation);
             this.viewportWidth = this.editor.getViewportWidth();
             this.viewportHeight = this.editor.getViewportHeight();
+
+            // pick point in 3D
+            this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+            this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
+            if (this.collide.hasCollided)
+            {
+                
+            }
+            
         }
 
-        onMouseUp(event:MouseEvent)
+        onMouseUp(e:MouseEvent)
         {
             this.isMouseDown = false;
         }
 
         dragQuat = quat.create();
-        onMouseMove(event:MouseEvent)
+        onMouseMove(e:MouseEvent)
         {
-            vec2.set(this.currentMouseXY, event.offsetX, event.offsetY);
+            vec2.set(this.currentMouseXY, e.offsetX, e.offsetY);
             this.hasMouseMoved = true;
         }
 
@@ -121,8 +134,16 @@ module qec
             {
                 if (this.isMouseDown && this.isRightClick && !this.isShiftKey)
                 {
-                    var sphereRadius = 0.5*Math.min(this.viewportWidth, this.viewportHeight);
-                    this.arcball.getRotationFrom2dPoints(this.viewportWidth, this.viewportHeight, sphereRadius, this.startXY, this.currentMouseXY, this.dragQuat);
+                    if (false && this.collide.hasCollided)
+                    {
+                        // Proj*Pan*Rot*LocalPicked = (x1,y1) => permet de déduire localpicked
+                        // Proj*Pan*Rot*DeltaRot*LocalPicked = (x2,y2) => permet de déduire DeltaRot
+                    }
+                    else
+                    {
+                        var sphereRadius = 0.5*Math.min(this.viewportWidth, this.viewportHeight);
+                        this.arcball.getRotationFrom2dPoints(this.viewportWidth, this.viewportHeight, sphereRadius, this.startXY, this.currentMouseXY, this.dragQuat);
+                    }
 
                     quat.multiply(this.tmpRotation, this.dragQuat, this.startQuat);
                     this.cameraTransforms.setRotation(this.tmpRotation);
