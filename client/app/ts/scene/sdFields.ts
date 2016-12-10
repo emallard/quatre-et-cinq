@@ -21,8 +21,10 @@ module qec {
 
         material = new material();
         topTexture:floatTexture;
+        topSpriteBounds:Float32Array;
         topBounds:Float32Array;
         profileTexture:floatTexture;
+        profileSpriteBounds:Float32Array;
         profileBounds:Float32Array;
         boundingCenterAndHalfSize:Float32Array;
 
@@ -59,8 +61,10 @@ module qec {
             $('.debug').append(this.profileDfCanvas.canvas);
 */
             this.init(this.topDfCanvas.floatTexture,
+                      vec4.fromValues(0,0,1,1),
                       new Float32Array(this.topDfCanvas.totalBounds),
                       this.profileDfCanvas.floatTexture,
+                      vec4.fromValues(0,0,1,1),
                       new Float32Array(this.profileDfCanvas.totalBounds));
 
             this.material.createFrom(dto.material);
@@ -69,15 +73,18 @@ module qec {
 
         init( 
             topTexture: floatTexture,
+            topSpriteBounds: Float32Array,
             topBounds:Float32Array,
             profileTexture: floatTexture,
+            profileSpriteBounds: Float32Array,
             profileBounds:Float32Array)
         {
             this.topTexture = topTexture;
             this.topBounds = new Float32Array(topBounds);
+            this.topSpriteBounds = new Float32Array(topSpriteBounds);
             this.profileTexture = profileTexture;
             this.profileBounds = new Float32Array(profileBounds);
-        
+            this.profileSpriteBounds = new Float32Array(profileSpriteBounds);
 
             this.boundingCenterAndHalfSize = new Float32Array(6);
             this.boundingCenterAndHalfSize[0] = 0;
@@ -167,11 +174,11 @@ module qec {
 
             var u = (p[0] - this.topBounds[0]) / (this.topBounds[2] - this.topBounds[0]);
             var v = (p[1] - this.topBounds[1]) / (this.topBounds[3] - this.topBounds[1]);
-            var d = this.getFieldDistance(this.topTexture, u, v);
+            var d = this.getFieldDistanceWithSprite(this.topTexture, u, v, this.topSpriteBounds);
             
             var u2 = (d - this.profileBounds[0]) / (this.profileBounds[2] - this.profileBounds[0]);
             var v2 = (p[2] - this.profileBounds[1]) / (this.profileBounds[3] - this.profileBounds[1]); 
-            var d2 = this.getFieldDistance(this.profileTexture, u2, v2);
+            var d2 = this.getFieldDistanceWithSprite(this.profileTexture, u2, v2, this.profileSpriteBounds);
             
             if (this.debug)
             {
@@ -197,6 +204,16 @@ module qec {
                 //console.log(this.color[0].toFixed(2) ,' at xy : [' +  (u * (field.width-1)).toFixed(1) + ',' + (v * (field.height-1)).toFixed(1));
             }
             return this.color[0];
+        }
+
+        private getFieldDistanceWithSprite(field:floatTexture, u:number, v:number, spriteBounds:Float32Array)
+        {
+            u = Math.min(Math.max(u, 0), 1);
+            v = Math.min(Math.max(v, 0), 1);
+
+            var u2 = mix(spriteBounds[0], spriteBounds[2], u);
+            var v2 = mix(spriteBounds[1], spriteBounds[3], v);
+            return this.getFieldDistance(field, u2, v2);
         }
 
 

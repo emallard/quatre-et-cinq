@@ -85,10 +85,8 @@ module qec {
             /*
             console.log('bounds : ' + vec4.str(_bounds));
             console.log('totalBounds : ' + vec4.str(this.totalBounds));
-
             console.log('dfWidth : ' + dfWidth);
             console.log('dfHeight : ' + dfHeight);
-
             console.log('offsetX : ' + offsetX);
             console.log('offsetY : ' + offsetY);
             */

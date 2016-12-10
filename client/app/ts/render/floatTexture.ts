@@ -13,7 +13,7 @@ module qec {
         texture.width = df.M;
         texture.height = df.N;
         texture.data = new Float32Array(df.M * df.N * 4);
-        for (var q=0; q<texture.width*texture.height; q++)
+        for (var q=0; q < texture.width*texture.height; q++)
         {
             var d = df.D[q];
             texture.data[4*q + 0] = d;
@@ -32,7 +32,7 @@ module qec {
         }
         texture.width = df.M;
         texture.height = df.N;
-        for (var q=0; q<texture.width*texture.height; q++)
+        for (var q=0; q < texture.width*texture.height; q++)
         {
             var d = df.D[q];
             texture.data[4*q + 0] = d;
@@ -78,6 +78,40 @@ module qec {
     function texture2Dat(t:floatTexture, x:number, y:number, index:number):number
     {
         return t.data[4*(y*t.width + x) + index];
+    }
+
+
+    export function textureDebugInCanvas(texture:floatTexture, textureComponent:number, scale:number, canvas:HTMLCanvasElement)
+    {
+        canvas.width = texture.width;
+        canvas.height = texture.height;
+        var ctx = canvas.getContext('2d');
+        var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var data = imageData.data;
+        var w = texture.width;
+        var h = texture.height;
+        for (var i=0; i < w; ++i)
+        {
+            for (var j=0; j < h; ++j)
+            {
+                var d = texture.data[4*(j*w + i)+textureComponent] * scale;
+                
+                var q = (h-1-j) * w + i;
+                data[4*q] = 0;
+                data[4*q+1]= 0;
+                data[4*q+2]= 0;
+                data[4*q+3]= 255;
+                if (d > 0)
+                {
+                    data[4*q] = d;
+                }
+                else
+                {
+                    data[4*q+1] = -d;
+                }
+            }
+        }
+        ctx.putImageData(imageData, 0, 0, 0, 0, canvas.width, canvas.height);
     }
 
 }

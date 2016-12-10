@@ -5,7 +5,6 @@ module qec
         sd: signedDistance;
         index:number;
         sdFieldIndex = -1;
-        //shaderText:string;
     }
 
     

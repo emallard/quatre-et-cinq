@@ -86,3 +86,8 @@ function fmod(a:number, b:number):number
     //if (m < 0) m+=b; 
     return m;
 }
+
+function mix(x:number, y:number, a:number)
+{
+    return (x*(1-a) + y*a);
+}

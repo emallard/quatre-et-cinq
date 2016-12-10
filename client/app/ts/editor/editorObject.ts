@@ -162,9 +162,21 @@ module qec {
             mat4.copy(this.sd.inverseTransform, this.inverseTransform);
         }
 
+        /*
         updateSignedDistance()
         {
-            this.sd.init(this.top.floatTexture, this.top.totalBounds, this.profile.floatTexture, this.profile.totalBounds);
+            this.sd.init(
+                this.top.floatTexture, vec4.fromValues(0,0,1,1), this.top.totalBounds, 
+                this.profile.floatTexture, vec4.fromValues(0,0,1,1), this.profile.totalBounds);
+            mat4.copy(this.sd.inverseTransform, this.inverseTransform);
+        }
+        */
+        
+        updateSignedDistanceWithSprites(topSprite:textureSprite, profileSprite:textureSprite)
+        {
+            this.sd.init(
+                topSprite.bigTexture, topSprite.bounds, this.top.totalBounds, 
+                profileSprite.bigTexture, profileSprite.bounds, this.profile.totalBounds);
             mat4.copy(this.sd.inverseTransform, this.inverseTransform);
         }
 

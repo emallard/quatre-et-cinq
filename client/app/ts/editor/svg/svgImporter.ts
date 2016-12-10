@@ -63,7 +63,10 @@ module qec {
             mat4.identity(l.inverseTransform);
             mat4.translate(l.inverseTransform, l.inverseTransform, vec3.fromValues(center[0], center[1], 0))
             mat4.invert(l.inverseTransform, l.inverseTransform);
-            l.updateSignedDistance();
+            
+            // TODO Etienne
+            //l.updateSignedDistance();
+            
             //l.top.debugInfoInCanvas();
             //$('.debug').append(l.profile.canvas);              
         }
@@ -101,7 +104,6 @@ module qec {
                     this.tmpTranslation[0] = -this.tmpTranslation[0] - center[0];
                     this.tmpTranslation[1] = -this.tmpTranslation[1] - center[1];
                     mat4.translate(l.inverseTransform, l.inverseTransform, this.tmpTranslation);
-                    l.updateSignedDistance();
 
                     this.indexReimport++;    
                     this.nextReimport(done);

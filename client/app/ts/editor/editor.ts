@@ -6,7 +6,8 @@ module qec
         simpleRenderer:simpleRenderer = injectNew(simpleRenderer);
         hardwareRenderer:hardwareRenderer = injectNew(hardwareRenderer);
         svgImporter: svgImporter = inject(svgImporter);
-        
+        texturePacker: texturePacker = inject(texturePacker);
+
         exportSTL:exportSTL = inject(exportSTL);
         exportOBJ:exportOBJ = inject(exportOBJ);
         signedDistanceToTriangles:signedDistanceToTriangles = inject(signedDistanceToTriangles);
@@ -207,7 +208,42 @@ module qec
                 this.renderSettings.sd = this.sdUnion;
             else
                 this.renderSettings.sd = this.sdUnionWithHoleSd;//this.sdSubtraction;
-            this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length);
+            this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length, this.texturePacker);
+        }
+
+        private updateSprites()
+        {
+            var textures = [];
+            this.workspace.editorObjects.forEach(o =>
+            {
+                textures.push(o.top.floatTexture, o.profile.floatTexture);
+                /*
+                var canvas1 = document.createElement('canvas');
+                textureDebugInCanvas(o.top.floatTexture ,0 ,10000, canvas1);
+                document.body.appendChild(canvas1);
+                var canvas2 = document.createElement('canvas');
+                textureDebugInCanvas(o.profile.floatTexture ,0 ,10000, canvas2);
+                document.body.appendChild(canvas2);
+                */
+            });
+            this.texturePacker.repack2(textures);
+        
+            //this.texturePacker.debugInfoInBody(10000);
+
+            this.workspace.editorObjects.forEach(o =>
+            {
+                this.updateSignedDistance(o);
+            });
+
+            this.renderer.updateAllPackedTextures(this.texturePacker);
+        }
+
+        public updateSignedDistance(obj:editorObject) : void
+        {
+            obj.updateSignedDistanceWithSprites(
+                this.texturePacker.getSprite(obj.top.floatTexture),
+                this.texturePacker.getSprite(obj.profile.floatTexture)
+                );
         }
 
         private render()
@@ -224,6 +260,7 @@ module qec
         {
             if (this.updateFlag)
             {
+                this.updateSprites();
                 this.updateScene();
                 this.updateFlag = false;
                 this.renderFlag = true;

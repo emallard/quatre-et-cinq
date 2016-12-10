@@ -89,7 +89,7 @@ module qec {
             var _light = new pointLight();
             vec3.copy(_light.position, message.lightPos);
             
-            this.sd.init(_topTexture, message.topBounds, _profileTexture, message.profileBounds);
+            //this.sd.init(_topTexture, message.topBounds, _profileTexture, message.profileBounds);
 
             //this.renderPixel.init(this.sd, _light, false);
             this.renderUnit.setCanvasSize(message.canvasWidth, message.canvasHeight);

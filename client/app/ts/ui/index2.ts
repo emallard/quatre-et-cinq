@@ -6,6 +6,8 @@ module qec {
         element:HTMLElement;
         renderer:irenderer;
         rendererParallel:parallelRenderer;
+        texturePacker:texturePacker;
+
         /*
         sd:signedDistance;
         light:spotLight;
@@ -71,6 +73,11 @@ module qec {
                     var scrend = this.sc.get<scRenderer>(o=>o instanceof scRenderer, 'render');
                     this.renderSettings = scrend.settings;
                     this.renderSettings.shadows = false;//true; 
+                    
+                    this.texturePacker = new texturePacker();
+                    this.texturePacker.repackMode = 0;
+                    this.texturePacker.repackSdRec(this.renderSettings.sd); 
+
                     this.render(()=>{});        
                 });
             }
@@ -91,7 +98,7 @@ module qec {
         {
             if (!this.isParallel)
             {
-                this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length);
+                this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length, this.texturePacker);
                 this.renderer.render(this.renderSettings);
                 done();
             }

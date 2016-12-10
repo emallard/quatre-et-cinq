@@ -4,18 +4,32 @@ module qec {
 
         static all:any[] = [];
         static loaded=false;
+        static run:runAll;
 
         static loadAll(done:()=>void)
-        {
-            var run = new runAll();
-            run.push((_done) => resources.doReq('app/ts/render/hardware/10_sd.glsl', _done));
-            run.push((_done) => resources.doReq('app/ts/render/hardware/20_light.glsl', _done));
-            run.push((_done) => resources.doReq('app/ts/render/hardware/30_renderPixel.glsl', _done));
+        { 
+            if (resources.run == null)
+                resources.run = new runAll();
+            resources.run.push((_done) => resources.doReq('app/ts/render/hardware/10_sd.glsl', _done));
+            resources.run.push((_done) => resources.doReq('app/ts/render/hardware/20_light.glsl', _done));
+            resources.run.push((_done) => resources.doReq('app/ts/render/hardware/30_renderPixel.glsl', _done));
             
             //for (var i=0; i < 6; ++i)
             //    run.push(resources.loadImg('data/cubemap/cubemap' + i + '.jpg'));
             
-            run.run(() => {resources.loaded = true; done();});
+            resources.run.run(() => {resources.loaded = true; done();});
+        }
+
+        static addImg(url:string):void
+        {
+            if (resources.run == null)
+                resources.run = new runAll();
+            resources.run.push(resources.loadImg(url));
+        }
+
+        static loadAll2(done:()=>void):void
+        {
+            resources.run.run(() => {resources.loaded = true; done();});
         }
 
         static doReq(url:string, done:()=>void)
@@ -38,7 +52,7 @@ module qec {
             req.send(null);
         }
 
-        static loadImg(url:string)
+        static loadImg(url:string):(done:()=>void)=>void
         {
             return (_done) =>
             {
@@ -51,7 +65,6 @@ module qec {
                 }
                 img.src = url;
             }
-            
         }
     }
 }

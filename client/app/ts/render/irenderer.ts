@@ -14,11 +14,12 @@ module qec
 
         showBoundingBox(b:boolean);
 
-        updateShader(sd:signedDistance, lightCount:number);
+        updateShader(sd:signedDistance, lightCount:number, packer:texturePacker);
         updateAllUniformsForAll();
         updateAllUniforms(sd: signedDistance);
         updateDiffuse(sd: signedDistance);
         updateTransform(sd: signedDistance);
         updateFloatTextures(sd: sdFields);
+        updateAllPackedTextures(packer:texturePacker);
     }
 }

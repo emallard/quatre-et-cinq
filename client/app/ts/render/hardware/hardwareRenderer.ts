@@ -38,15 +38,16 @@ module qec {
 
             this.expl = new hardwareSignedDistanceExplorer();
             this.text = new hardwareShaderText();
-            this.text.expl = this.expl;
 
             this.gShaderMaterial.uniforms.u_inverseTransforms = { type: "m4v", value: []};
             this.gShaderMaterial.uniforms.u_diffuses = { type: "3fv", value: []};
-
-            this.gShaderMaterial.uniforms.u_topTextures = { type: "tv", value: []};
-            this.gShaderMaterial.uniforms.u_profileTextures = { type: "tv", value: []};
+            this.gShaderMaterial.uniforms.u_floatTextures = { type: "tv", value: []};
+            //this.gShaderMaterial.uniforms.u_topTextureIndex = { type: "fv", value: []};
+            //this.gShaderMaterial.uniforms.u_profileTextureIndex = { type: "fv", value: []};
+            this.gShaderMaterial.uniforms.u_topTextureSpriteBounds = { type: "4fv", value: []};
+            this.gShaderMaterial.uniforms.u_profileTextureSpriteBounds = { type: "4fv", value: []};
             this.gShaderMaterial.uniforms.u_topBounds = { type: "4fv", value: []};
-            this.gShaderMaterial.uniforms.u_profileBounds = { type: "'fv", value: []};
+            this.gShaderMaterial.uniforms.u_profileBounds = { type: "4fv", value: []};
         }
 
         getViewportWidth():number {
@@ -67,14 +68,14 @@ module qec {
 
         }
 
-        updateShader(sd:signedDistance, lightCount:number)
+        updateShader(sd:signedDistance, lightCount:number, packer:texturePacker)
         {
             console.log('hardwareRenderer.updateShader');
             
             this.expl.explore(sd);
             var generatedPart = 
-                  this.text.generateDistance()
-                + this.text.generateColor();
+                  this.text.generateDistance(this.expl, packer)
+                + this.text.generateColor(this.expl);
             
             var generatedLight = this.text.generateLight(lightCount);
 
@@ -92,6 +93,7 @@ module qec {
             this.gViewQuad.material.needsUpdate = true;
 
             this.updateAllUniformsForAll();
+            this.updateAllPackedTextures(packer);
         }
 
         updateAllUniformsForAll()
@@ -136,21 +138,44 @@ module qec {
         {
             var hsd = this.expl.getHsd(sd);
             
-            var topDataTexture = new THREE.DataTexture( sd.topTexture.data, sd.topTexture.width, sd.topTexture.height, THREE.RGBAFormat, THREE.FloatType);
-            topDataTexture.needsUpdate = true;
-            var profileDataTexture = new THREE.DataTexture( sd.profileTexture.data, sd.profileTexture.width, sd.profileTexture.height, THREE.RGBAFormat, THREE.FloatType);
-            profileDataTexture.needsUpdate = true;   
-            
+            // bounds
             var topBounds = new THREE.Vector4();
             topBounds.fromArray(sd.topBounds);
 
             var profileBounds = new THREE.Vector4();
             profileBounds.fromArray(sd.profileBounds);
-
-            this.gShaderMaterial.uniforms.u_topTextures.value[hsd.sdFieldIndex] = topDataTexture;
-            this.gShaderMaterial.uniforms.u_profileTextures.value[hsd.sdFieldIndex] = profileDataTexture;
+            
             this.gShaderMaterial.uniforms.u_topBounds.value[hsd.sdFieldIndex] = topBounds;
             this.gShaderMaterial.uniforms.u_profileBounds.value[hsd.sdFieldIndex] = profileBounds;
+
+            var topSpriteBounds = new THREE.Vector4();
+            topSpriteBounds.fromArray(sd.topSpriteBounds);
+            var profileSpriteBounds = new THREE.Vector4();
+            profileSpriteBounds.fromArray(sd.profileSpriteBounds);
+
+            this.gShaderMaterial.uniforms.u_topTextureSpriteBounds.value[hsd.sdFieldIndex] = topSpriteBounds;
+            this.gShaderMaterial.uniforms.u_profileTextureSpriteBounds.value[hsd.sdFieldIndex] = profileSpriteBounds;
+
+            // texture
+            // TODO suppr
+            /*
+            var topDataTexture = new THREE.DataTexture( sd.topTexture.data, sd.topTexture.width, sd.topTexture.height, THREE.RGBAFormat, THREE.FloatType);
+            topDataTexture.needsUpdate = true;
+            var profileDataTexture = new THREE.DataTexture( sd.profileTexture.data, sd.profileTexture.width, sd.profileTexture.height, THREE.RGBAFormat, THREE.FloatType);
+            profileDataTexture.needsUpdate = true;   
+            this.gShaderMaterial.uniforms.u_topTextures.value[hsd.sdFieldIndex] = topDataTexture;
+            this.gShaderMaterial.uniforms.u_profileTextures.value[hsd.sdFieldIndex] = profileDataTexture;
+            */            
+        }
+
+        updateAllPackedTextures(packer:texturePacker)
+        {
+            packer.allBigTextures.forEach( (t, i) =>
+            {
+                var texture = new THREE.DataTexture(t.data, t.width, t.height, THREE.RGBAFormat, THREE.FloatType);
+                texture.needsUpdate = true;
+                this.gShaderMaterial.uniforms.u_floatTextures.value[i] = texture;
+            });
         }
 
         renderDebug(x:number, y:number, settings:renderSettings)

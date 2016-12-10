@@ -70,6 +70,7 @@ module qec {
         updateDiffuse(sd: signedDistance) {}
         updateTransform(sd: signedDistance) {}
         updateFloatTextures(sd: sdFields) {}
+        updateAllPackedTextures(packer:texturePacker){}
         
     }
 }

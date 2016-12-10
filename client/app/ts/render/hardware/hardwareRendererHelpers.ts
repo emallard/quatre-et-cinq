@@ -1,28 +1,37 @@
 module qec {
 
-    
-   
-
     export class hardwareShaderText
     {
-        expl: hardwareSignedDistanceExplorer;
-
-        generateDistance()
+        generateDistance(expl: hardwareSignedDistanceExplorer, packer:texturePacker)
         {
             console.log('generateDistance');
             
             var shader = '';
-            var hsdArray = this.expl.array;
+            var hsdArray = expl.array;
             
             shader += 'uniform mat4 u_inverseTransforms[' + hsdArray.length + '];\n\n'
 
-            var count = this.expl.getSdFieldsCount();
+            var count = expl.getSdFieldsCount();
+            
+            /*
             shader +=  count == 0 ? '' :
                 'uniform sampler2D u_topTextures[' + count +'];\n' +
                 'uniform sampler2D u_profileTextures[' + count + '];\n' +
                 'uniform vec4 u_topBounds[' + count +'];\n' +
-                'uniform vec4 u_profileBounds[' + count + '];\n\n';
-
+                'uniform vec4 u_profileBounds[' + count + '];\n'+
+                '\n';
+            */
+            
+            shader +=  count == 0 ? '' :
+                'uniform sampler2D u_floatTextures[' + packer.allBigTextures.length +'];\n' +
+                'uniform int  u_topTextureIndex[' + count +'];\n' +
+                'uniform int  u_profileTextureIndex[' + count +'];\n' +
+                'uniform vec4 u_topTextureSpriteBounds[' + count +'];\n' +
+                'uniform vec4 u_profileTextureSpriteBounds[' + count +'];\n' +
+                'uniform vec4 u_topBounds[' + count +'];\n' +
+                'uniform vec4 u_profileBounds[' + count + '];\n'+
+                '\n';
+            
             // declare functions
             for (var i=hsdArray.length-1; i>=0; --i)
             {
@@ -33,7 +42,7 @@ module qec {
             // implementations
             for (var i=hsdArray.length-1; i>=0; --i)
             {
-                shader += this.generateOneDistance(hsdArray[i]);
+                shader += this.generateOneDistance(expl, packer, hsdArray[i]);
                 shader += '\n\n';
             }
                 
@@ -43,7 +52,7 @@ module qec {
             return shader;
         }
 
-        generateOneDistance(hsd:hardwareSignedDistance)
+        generateOneDistance(expl: hardwareSignedDistanceExplorer, packer:texturePacker, hsd:hardwareSignedDistance)
         {
             var sd = hsd.sd;
 
@@ -53,6 +62,8 @@ module qec {
             {
                 var m = mat4.create();
                 sd.getInverseTransform(m);
+                // TODO suppr
+                /*
                 return 'float getDist_' + hsd.index + '(vec3 pos) { '
                 +'\n  return sdFields_(pos,'
                 +'\n    u_topTextures['+hsd.sdFieldIndex+'],'
@@ -61,6 +72,22 @@ module qec {
                 +'\n    u_profileBounds['+hsd.sdFieldIndex+'],'
                 +'\n    u_inverseTransforms['+hsd.index+']'
                 +'\n  );}';
+                */
+
+                var topTextureIndex = packer.getTextureIndex(sd.topTexture);
+                var profileTextureIndex = packer.getTextureIndex(sd.profileTexture);
+
+                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                +'\n  return sdFieldsWithSprites_(pos,'
+                +'\n    u_floatTextures['+topTextureIndex+'],'
+                +'\n    u_floatTextures['+profileTextureIndex+'],'
+                +'\n    u_topTextureSpriteBounds['+hsd.sdFieldIndex+'],'
+                +'\n    u_profileTextureSpriteBounds['+hsd.sdFieldIndex+'],'
+                +'\n    u_topBounds['+hsd.sdFieldIndex+'],'
+                +'\n    u_profileBounds['+hsd.sdFieldIndex+'],'
+                +'\n    u_inverseTransforms['+hsd.index+']'
+                +'\n  );}';
+
             }
             if (sd instanceof sdBox)
             {
@@ -89,7 +116,7 @@ module qec {
             }
             if (sd instanceof sdBorder)
             {
-                var childHsd = this.expl.getHsd(sd.sd);
+                var childHsd = expl.getHsd(sd.sd);
                 var concat = '\n  float d = getDist_' + childHsd.index + '(pos);';
                 concat +=  '\n  return opBorder(d, ' + sd.borderIn + ');'
                 return 'float getDist_' + hsd.index + '(vec3 pos) { '
@@ -102,7 +129,7 @@ module qec {
                 var concat = '  float d=666.0;\n';
                 for (var j=0; j < array.length; ++j)
                 {
-                    var childHsd = this.expl.getHsd(array[j]);
+                    var childHsd = expl.getHsd(array[j]);
                     concat += '  d = opU(d, getDist_' + childHsd.index  + '(pos));\n';
                 }
 
@@ -116,8 +143,8 @@ module qec {
                 var array = sd.array;
                 var concat = '  float d=666.0;\n';
                 
-                var childHsd0 = this.expl.getHsd(array[0]);
-                var childHsd1 = this.expl.getHsd(array[1]);
+                var childHsd0 = expl.getHsd(array[0]);
+                var childHsd1 = expl.getHsd(array[1]);
                 concat += '  d = opS(getDist_' + childHsd0.index  + '(pos), getDist_' + childHsd1.index  + '(pos));\n';
 
                 return 'float getDist_' + hsd.index + '(vec3 pos) { '
@@ -131,7 +158,7 @@ module qec {
                 var concat = '  float d=-666.0;\n';
                 for (var j=0; j < array.length; ++j)
                 {
-                    var childHsd = this.expl.getHsd(array[j]);
+                    var childHsd = expl.getHsd(array[j]);
                     concat += '  d = opI(d, getDist_' + childHsd.index  + '(pos));\n';
                 }
 
@@ -144,12 +171,12 @@ module qec {
             return '';
         }
 
-        generateColor():string
+        generateColor(expl: hardwareSignedDistanceExplorer):string
         {
             console.log('generateColor');
             
             var shader = '';
-            var hsdArray = this.expl.array;
+            var hsdArray = expl.array;
             
             shader += '\n\nuniform vec3 u_diffuses[' + hsdArray.length + '];\n\n'
             
@@ -161,7 +188,7 @@ module qec {
 
             for (var i=hsdArray.length-1; i>=0; --i)
             {
-                shader += this.generateOneColor(hsdArray[i]);
+                shader += this.generateOneColor(expl, hsdArray[i]);
                 shader += '\n\n';
             }
             shader += 
@@ -170,7 +197,7 @@ module qec {
             return shader;
         }
 
-        generateOneColor(hsd:hardwareSignedDistance):string
+        generateOneColor(expl: hardwareSignedDistanceExplorer, hsd:hardwareSignedDistance):string
         {
             var sd = hsd.sd;
 
@@ -181,7 +208,7 @@ module qec {
                 var concat = '  float d=666.0;\n  float d2;  vec3 color;\n';
                 for (var j=0; j < array.length; ++j)
                 {
-                    var childHsd = this.expl.getHsd(array[j]);
+                    var childHsd = expl.getHsd(array[j]);
                     concat += '  d2 = getDist_' + childHsd.index + '(pos);\n'
                     + '  if (d2 < d) { d = d2; color = getColor_'+ childHsd.index + '(pos);}\n'
                 }
@@ -196,7 +223,7 @@ module qec {
                 var array = sd.array;
                 var concat = '  float d=666.0;\n  float d2;  vec3 color;\n';
             
-                var childHsd = this.expl.getHsd(array[0]);
+                var childHsd = expl.getHsd(array[0]);
                 concat += '  d2 = getDist_' + childHsd.index + '(pos);\n'
                 + '  if (d2 < d) { d = d2; color = getColor_'+ childHsd.index + '(pos);}\n'
 
@@ -207,7 +234,7 @@ module qec {
             }
             else if (sd instanceof sdIntersection)
             {
-                var childHsd = this.expl.getHsd(sd.array[0]);
+                var childHsd = expl.getHsd(sd.array[0]);
                 return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
                 +'\n' + 'return getColor_'+ childHsd.index + '(pos);'
                 //+'  return color;'
@@ -215,7 +242,7 @@ module qec {
             }
             else if (sd instanceof sdBorder)
             {
-                var childHsd = this.expl.getHsd(sd.sd);
+                var childHsd = expl.getHsd(sd.sd);
                 return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
                 +'\n' + 'return getColor_'+ childHsd.index + '(pos);'
                 //+'  return color;'

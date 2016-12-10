@@ -80,7 +80,7 @@ module qec {
                     vec4.copy(this.newBounds, this.startBounds)
                     this.newBounds[3] += this.deltaPos[2];
                     this.selected.scaleProfilePoints(this.newBounds);
-                    this.selected.updateSignedDistance();
+                    this.editor.updateSignedDistance(this.selected);
                     this.editor.renderer.updateFloatTextures(this.selected.sd);
                     this.editor.setRenderFlag();
                 }
@@ -94,7 +94,7 @@ module qec {
                     vec4.copy(this.newBounds, this.startBounds)
                     this.newBounds[3] += (-this.deltaPos[2]);
                     this.selected.scaleProfilePoints(this.newBounds);
-                    this.selected.updateSignedDistance();
+                    this.editor.updateSignedDistance(this.selected);
                     this.editor.renderer.updateFloatTextures(this.selected.sd);
                     
                     this.editor.setRenderFlag();

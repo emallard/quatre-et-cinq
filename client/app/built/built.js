@@ -41,6 +41,7 @@ var qec;
             this.simpleRenderer = qec.injectNew(qec.simpleRenderer);
             this.hardwareRenderer = qec.injectNew(qec.hardwareRenderer);
             this.svgImporter = qec.inject(qec.svgImporter);
+            this.texturePacker = qec.inject(qec.texturePacker);
             this.exportSTL = qec.inject(qec.exportSTL);
             this.exportOBJ = qec.inject(qec.exportOBJ);
             this.signedDistanceToTriangles = qec.inject(qec.signedDistanceToTriangles);
@@ -192,7 +193,31 @@ var qec;
                 this.renderSettings.sd = this.sdUnion;
             else
                 this.renderSettings.sd = this.sdUnionWithHoleSd; //this.sdSubtraction;
-            this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length);
+            this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length, this.texturePacker);
+        };
+        editor.prototype.updateSprites = function () {
+            var _this = this;
+            var textures = [];
+            this.workspace.editorObjects.forEach(function (o) {
+                textures.push(o.top.floatTexture, o.profile.floatTexture);
+                /*
+                var canvas1 = document.createElement('canvas');
+                textureDebugInCanvas(o.top.floatTexture ,0 ,10000, canvas1);
+                document.body.appendChild(canvas1);
+                var canvas2 = document.createElement('canvas');
+                textureDebugInCanvas(o.profile.floatTexture ,0 ,10000, canvas2);
+                document.body.appendChild(canvas2);
+                */
+            });
+            this.texturePacker.repack2(textures);
+            //this.texturePacker.debugInfoInBody(10000);
+            this.workspace.editorObjects.forEach(function (o) {
+                _this.updateSignedDistance(o);
+            });
+            this.renderer.updateAllPackedTextures(this.texturePacker);
+        };
+        editor.prototype.updateSignedDistance = function (obj) {
+            obj.updateSignedDistanceWithSprites(this.texturePacker.getSprite(obj.top.floatTexture), this.texturePacker.getSprite(obj.profile.floatTexture));
         };
         editor.prototype.render = function () {
             if (this.renderer == null)
@@ -204,6 +229,7 @@ var qec;
         };
         editor.prototype.updateLoop = function () {
             if (this.updateFlag) {
+                this.updateSprites();
                 this.updateScene();
                 this.updateFlag = false;
                 this.renderFlag = true;
@@ -384,8 +410,17 @@ var qec;
         editorObject.prototype.updateInverseTransform = function () {
             mat4.copy(this.sd.inverseTransform, this.inverseTransform);
         };
-        editorObject.prototype.updateSignedDistance = function () {
-            this.sd.init(this.top.floatTexture, this.top.totalBounds, this.profile.floatTexture, this.profile.totalBounds);
+        /*
+        updateSignedDistance()
+        {
+            this.sd.init(
+                this.top.floatTexture, vec4.fromValues(0,0,1,1), this.top.totalBounds,
+                this.profile.floatTexture, vec4.fromValues(0,0,1,1), this.profile.totalBounds);
+            mat4.copy(this.sd.inverseTransform, this.inverseTransform);
+        }
+        */
+        editorObject.prototype.updateSignedDistanceWithSprites = function (topSprite, profileSprite) {
+            this.sd.init(topSprite.bigTexture, topSprite.bounds, this.top.totalBounds, profileSprite.bigTexture, profileSprite.bounds, this.profile.totalBounds);
             mat4.copy(this.sd.inverseTransform, this.inverseTransform);
         };
         editorObject.prototype.setIsHole = function (isHole) {
@@ -1502,7 +1537,8 @@ var qec;
             mat4.identity(l.inverseTransform);
             mat4.translate(l.inverseTransform, l.inverseTransform, vec3.fromValues(center[0], center[1], 0));
             mat4.invert(l.inverseTransform, l.inverseTransform);
-            l.updateSignedDistance();
+            // TODO Etienne
+            //l.updateSignedDistance();
             //l.top.debugInfoInCanvas();
             //$('.debug').append(l.profile.canvas);              
         };
@@ -1532,7 +1568,6 @@ var qec;
                     _this.tmpTranslation[0] = -_this.tmpTranslation[0] - center[0];
                     _this.tmpTranslation[1] = -_this.tmpTranslation[1] - center[1];
                     mat4.translate(l.inverseTransform, l.inverseTransform, _this.tmpTranslation);
-                    l.updateSignedDistance();
                     _this.indexReimport++;
                     _this.nextReimport(done);
                 });
@@ -1945,10 +1980,8 @@ var qec;
             /*
             console.log('bounds : ' + vec4.str(_bounds));
             console.log('totalBounds : ' + vec4.str(this.totalBounds));
-
             console.log('dfWidth : ' + dfWidth);
             console.log('dfHeight : ' + dfHeight);
-
             console.log('offsetX : ' + offsetX);
             console.log('offsetY : ' + offsetY);
             */
@@ -2120,6 +2153,33 @@ var qec;
     function texture2Dat(t, x, y, index) {
         return t.data[4 * (y * t.width + x) + index];
     }
+    function textureDebugInCanvas(texture, textureComponent, scale, canvas) {
+        canvas.width = texture.width;
+        canvas.height = texture.height;
+        var ctx = canvas.getContext('2d');
+        var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var data = imageData.data;
+        var w = texture.width;
+        var h = texture.height;
+        for (var i = 0; i < w; ++i) {
+            for (var j = 0; j < h; ++j) {
+                var d = texture.data[4 * (j * w + i) + textureComponent] * scale;
+                var q = (h - 1 - j) * w + i;
+                data[4 * q] = 0;
+                data[4 * q + 1] = 0;
+                data[4 * q + 2] = 0;
+                data[4 * q + 3] = 255;
+                if (d > 0) {
+                    data[4 * q] = d;
+                }
+                else {
+                    data[4 * q + 1] = -d;
+                }
+            }
+        }
+        ctx.putImageData(imageData, 0, 0, 0, 0, canvas.width, canvas.height);
+    }
+    qec.textureDebugInCanvas = textureDebugInCanvas;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -2141,13 +2201,15 @@ var qec;
             this.initTHREE();
             this.expl = new qec.hardwareSignedDistanceExplorer();
             this.text = new qec.hardwareShaderText();
-            this.text.expl = this.expl;
             this.gShaderMaterial.uniforms.u_inverseTransforms = { type: "m4v", value: [] };
             this.gShaderMaterial.uniforms.u_diffuses = { type: "3fv", value: [] };
-            this.gShaderMaterial.uniforms.u_topTextures = { type: "tv", value: [] };
-            this.gShaderMaterial.uniforms.u_profileTextures = { type: "tv", value: [] };
+            this.gShaderMaterial.uniforms.u_floatTextures = { type: "tv", value: [] };
+            //this.gShaderMaterial.uniforms.u_topTextureIndex = { type: "fv", value: []};
+            //this.gShaderMaterial.uniforms.u_profileTextureIndex = { type: "fv", value: []};
+            this.gShaderMaterial.uniforms.u_topTextureSpriteBounds = { type: "4fv", value: [] };
+            this.gShaderMaterial.uniforms.u_profileTextureSpriteBounds = { type: "4fv", value: [] };
             this.gShaderMaterial.uniforms.u_topBounds = { type: "4fv", value: [] };
-            this.gShaderMaterial.uniforms.u_profileBounds = { type: "'fv", value: [] };
+            this.gShaderMaterial.uniforms.u_profileBounds = { type: "4fv", value: [] };
         };
         hardwareRenderer.prototype.getViewportWidth = function () {
             return this.width;
@@ -2160,11 +2222,11 @@ var qec;
         };
         hardwareRenderer.prototype.showBoundingBox = function (b) {
         };
-        hardwareRenderer.prototype.updateShader = function (sd, lightCount) {
+        hardwareRenderer.prototype.updateShader = function (sd, lightCount, packer) {
             console.log('hardwareRenderer.updateShader');
             this.expl.explore(sd);
-            var generatedPart = this.text.generateDistance()
-                + this.text.generateColor();
+            var generatedPart = this.text.generateDistance(this.expl, packer)
+                + this.text.generateColor(this.expl);
             var generatedLight = this.text.generateLight(lightCount);
             this.fragmentShader = ''
                 + qec.resources.all['app/ts/render/hardware/10_sd.glsl']
@@ -2177,6 +2239,7 @@ var qec;
             this.gViewQuad.material.fragmentShader = this.fragmentShader;
             this.gViewQuad.material.needsUpdate = true;
             this.updateAllUniformsForAll();
+            this.updateAllPackedTextures(packer);
         };
         hardwareRenderer.prototype.updateAllUniformsForAll = function () {
             for (var i = 0; i < this.expl.array.length; ++i)
@@ -2205,18 +2268,37 @@ var qec;
         };
         hardwareRenderer.prototype.updateFloatTextures = function (sd) {
             var hsd = this.expl.getHsd(sd);
-            var topDataTexture = new THREE.DataTexture(sd.topTexture.data, sd.topTexture.width, sd.topTexture.height, THREE.RGBAFormat, THREE.FloatType);
-            topDataTexture.needsUpdate = true;
-            var profileDataTexture = new THREE.DataTexture(sd.profileTexture.data, sd.profileTexture.width, sd.profileTexture.height, THREE.RGBAFormat, THREE.FloatType);
-            profileDataTexture.needsUpdate = true;
+            // bounds
             var topBounds = new THREE.Vector4();
             topBounds.fromArray(sd.topBounds);
             var profileBounds = new THREE.Vector4();
             profileBounds.fromArray(sd.profileBounds);
-            this.gShaderMaterial.uniforms.u_topTextures.value[hsd.sdFieldIndex] = topDataTexture;
-            this.gShaderMaterial.uniforms.u_profileTextures.value[hsd.sdFieldIndex] = profileDataTexture;
             this.gShaderMaterial.uniforms.u_topBounds.value[hsd.sdFieldIndex] = topBounds;
             this.gShaderMaterial.uniforms.u_profileBounds.value[hsd.sdFieldIndex] = profileBounds;
+            var topSpriteBounds = new THREE.Vector4();
+            topSpriteBounds.fromArray(sd.topSpriteBounds);
+            var profileSpriteBounds = new THREE.Vector4();
+            profileSpriteBounds.fromArray(sd.profileSpriteBounds);
+            this.gShaderMaterial.uniforms.u_topTextureSpriteBounds.value[hsd.sdFieldIndex] = topSpriteBounds;
+            this.gShaderMaterial.uniforms.u_profileTextureSpriteBounds.value[hsd.sdFieldIndex] = profileSpriteBounds;
+            // texture
+            // TODO suppr
+            /*
+            var topDataTexture = new THREE.DataTexture( sd.topTexture.data, sd.topTexture.width, sd.topTexture.height, THREE.RGBAFormat, THREE.FloatType);
+            topDataTexture.needsUpdate = true;
+            var profileDataTexture = new THREE.DataTexture( sd.profileTexture.data, sd.profileTexture.width, sd.profileTexture.height, THREE.RGBAFormat, THREE.FloatType);
+            profileDataTexture.needsUpdate = true;
+            this.gShaderMaterial.uniforms.u_topTextures.value[hsd.sdFieldIndex] = topDataTexture;
+            this.gShaderMaterial.uniforms.u_profileTextures.value[hsd.sdFieldIndex] = profileDataTexture;
+            */
+        };
+        hardwareRenderer.prototype.updateAllPackedTextures = function (packer) {
+            var _this = this;
+            packer.allBigTextures.forEach(function (t, i) {
+                var texture = new THREE.DataTexture(t.data, t.width, t.height, THREE.RGBAFormat, THREE.FloatType);
+                texture.needsUpdate = true;
+                _this.gShaderMaterial.uniforms.u_floatTextures.value[i] = texture;
+            });
         };
         hardwareRenderer.prototype.renderDebug = function (x, y, settings) {
             alert('not supported');
@@ -2296,17 +2378,29 @@ var qec;
     var hardwareShaderText = (function () {
         function hardwareShaderText() {
         }
-        hardwareShaderText.prototype.generateDistance = function () {
+        hardwareShaderText.prototype.generateDistance = function (expl, packer) {
             console.log('generateDistance');
             var shader = '';
-            var hsdArray = this.expl.array;
+            var hsdArray = expl.array;
             shader += 'uniform mat4 u_inverseTransforms[' + hsdArray.length + '];\n\n';
-            var count = this.expl.getSdFieldsCount();
+            var count = expl.getSdFieldsCount();
+            /*
+            shader +=  count == 0 ? '' :
+                'uniform sampler2D u_topTextures[' + count +'];\n' +
+                'uniform sampler2D u_profileTextures[' + count + '];\n' +
+                'uniform vec4 u_topBounds[' + count +'];\n' +
+                'uniform vec4 u_profileBounds[' + count + '];\n'+
+                '\n';
+            */
             shader += count == 0 ? '' :
-                'uniform sampler2D u_topTextures[' + count + '];\n' +
-                    'uniform sampler2D u_profileTextures[' + count + '];\n' +
+                'uniform sampler2D u_floatTextures[' + packer.allBigTextures.length + '];\n' +
+                    'uniform int  u_topTextureIndex[' + count + '];\n' +
+                    'uniform int  u_profileTextureIndex[' + count + '];\n' +
+                    'uniform vec4 u_topTextureSpriteBounds[' + count + '];\n' +
+                    'uniform vec4 u_profileTextureSpriteBounds[' + count + '];\n' +
                     'uniform vec4 u_topBounds[' + count + '];\n' +
-                    'uniform vec4 u_profileBounds[' + count + '];\n\n';
+                    'uniform vec4 u_profileBounds[' + count + '];\n' +
+                    '\n';
             // declare functions
             for (var i = hsdArray.length - 1; i >= 0; --i) {
                 shader += 'float getDist_' + i + '(vec3 pos);\n';
@@ -2314,23 +2408,38 @@ var qec;
             shader += '\n';
             // implementations
             for (var i = hsdArray.length - 1; i >= 0; --i) {
-                shader += this.generateOneDistance(hsdArray[i]);
+                shader += this.generateOneDistance(expl, packer, hsdArray[i]);
                 shader += '\n\n';
             }
             shader +=
                 'float getDist(vec3 pos) { return getDist_0(pos); }\n';
             return shader;
         };
-        hardwareShaderText.prototype.generateOneDistance = function (hsd) {
+        hardwareShaderText.prototype.generateOneDistance = function (expl, packer, hsd) {
             var sd = hsd.sd;
             console.log('generateOneDistance ' + hsd.index);
             if (sd instanceof qec.sdFields) {
                 var m = mat4.create();
                 sd.getInverseTransform(m);
+                // TODO suppr
+                /*
                 return 'float getDist_' + hsd.index + '(vec3 pos) { '
-                    + '\n  return sdFields_(pos,'
-                    + '\n    u_topTextures[' + hsd.sdFieldIndex + '],'
-                    + '\n    u_profileTextures[' + hsd.sdFieldIndex + '],'
+                +'\n  return sdFields_(pos,'
+                +'\n    u_topTextures['+hsd.sdFieldIndex+'],'
+                +'\n    u_profileTextures['+hsd.sdFieldIndex+'],'
+                +'\n    u_topBounds['+hsd.sdFieldIndex+'],'
+                +'\n    u_profileBounds['+hsd.sdFieldIndex+'],'
+                +'\n    u_inverseTransforms['+hsd.index+']'
+                +'\n  );}';
+                */
+                var topTextureIndex = packer.getTextureIndex(sd.topTexture);
+                var profileTextureIndex = packer.getTextureIndex(sd.profileTexture);
+                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                    + '\n  return sdFieldsWithSprites_(pos,'
+                    + '\n    u_floatTextures[' + topTextureIndex + '],'
+                    + '\n    u_floatTextures[' + profileTextureIndex + '],'
+                    + '\n    u_topTextureSpriteBounds[' + hsd.sdFieldIndex + '],'
+                    + '\n    u_profileTextureSpriteBounds[' + hsd.sdFieldIndex + '],'
                     + '\n    u_topBounds[' + hsd.sdFieldIndex + '],'
                     + '\n    u_profileBounds[' + hsd.sdFieldIndex + '],'
                     + '\n    u_inverseTransforms[' + hsd.index + ']'
@@ -2357,7 +2466,7 @@ var qec;
                     + '\n}';
             }
             if (sd instanceof qec.sdBorder) {
-                var childHsd = this.expl.getHsd(sd.sd);
+                var childHsd = expl.getHsd(sd.sd);
                 var concat = '\n  float d = getDist_' + childHsd.index + '(pos);';
                 concat += '\n  return opBorder(d, ' + sd.borderIn + ');';
                 return 'float getDist_' + hsd.index + '(vec3 pos) { '
@@ -2368,7 +2477,7 @@ var qec;
                 var array = sd.array;
                 var concat = '  float d=666.0;\n';
                 for (var j = 0; j < array.length; ++j) {
-                    var childHsd = this.expl.getHsd(array[j]);
+                    var childHsd = expl.getHsd(array[j]);
                     concat += '  d = opU(d, getDist_' + childHsd.index + '(pos));\n';
                 }
                 return 'float getDist_' + hsd.index + '(vec3 pos) { '
@@ -2379,8 +2488,8 @@ var qec;
             if (sd instanceof qec.sdSubtraction) {
                 var array = sd.array;
                 var concat = '  float d=666.0;\n';
-                var childHsd0 = this.expl.getHsd(array[0]);
-                var childHsd1 = this.expl.getHsd(array[1]);
+                var childHsd0 = expl.getHsd(array[0]);
+                var childHsd1 = expl.getHsd(array[1]);
                 concat += '  d = opS(getDist_' + childHsd0.index + '(pos), getDist_' + childHsd1.index + '(pos));\n';
                 return 'float getDist_' + hsd.index + '(vec3 pos) { '
                     + '\n' + concat
@@ -2391,7 +2500,7 @@ var qec;
                 var array = sd.array;
                 var concat = '  float d=-666.0;\n';
                 for (var j = 0; j < array.length; ++j) {
-                    var childHsd = this.expl.getHsd(array[j]);
+                    var childHsd = expl.getHsd(array[j]);
                     concat += '  d = opI(d, getDist_' + childHsd.index + '(pos));\n';
                 }
                 return 'float getDist_' + hsd.index + '(vec3 pos) { '
@@ -2401,31 +2510,31 @@ var qec;
             }
             return '';
         };
-        hardwareShaderText.prototype.generateColor = function () {
+        hardwareShaderText.prototype.generateColor = function (expl) {
             console.log('generateColor');
             var shader = '';
-            var hsdArray = this.expl.array;
+            var hsdArray = expl.array;
             shader += '\n\nuniform vec3 u_diffuses[' + hsdArray.length + '];\n\n';
             for (var i = hsdArray.length - 1; i >= 0; --i) {
                 shader += 'vec3 getColor_' + i + '(vec3 pos);\n';
             }
             shader += '\n';
             for (var i = hsdArray.length - 1; i >= 0; --i) {
-                shader += this.generateOneColor(hsdArray[i]);
+                shader += this.generateOneColor(expl, hsdArray[i]);
                 shader += '\n\n';
             }
             shader +=
                 'vec3 getColor(vec3 pos) { return getColor_0(pos); }\n';
             return shader;
         };
-        hardwareShaderText.prototype.generateOneColor = function (hsd) {
+        hardwareShaderText.prototype.generateOneColor = function (expl, hsd) {
             var sd = hsd.sd;
             var fakePos = vec3.create();
             if (sd instanceof qec.sdUnion) {
                 var array = sd.array;
                 var concat = '  float d=666.0;\n  float d2;  vec3 color;\n';
                 for (var j = 0; j < array.length; ++j) {
-                    var childHsd = this.expl.getHsd(array[j]);
+                    var childHsd = expl.getHsd(array[j]);
                     concat += '  d2 = getDist_' + childHsd.index + '(pos);\n'
                         + '  if (d2 < d) { d = d2; color = getColor_' + childHsd.index + '(pos);}\n';
                 }
@@ -2437,7 +2546,7 @@ var qec;
             else if (sd instanceof qec.sdSubtraction) {
                 var array = sd.array;
                 var concat = '  float d=666.0;\n  float d2;  vec3 color;\n';
-                var childHsd = this.expl.getHsd(array[0]);
+                var childHsd = expl.getHsd(array[0]);
                 concat += '  d2 = getDist_' + childHsd.index + '(pos);\n'
                     + '  if (d2 < d) { d = d2; color = getColor_' + childHsd.index + '(pos);}\n';
                 return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
@@ -2446,13 +2555,13 @@ var qec;
                     + '\n}';
             }
             else if (sd instanceof qec.sdIntersection) {
-                var childHsd = this.expl.getHsd(sd.array[0]);
+                var childHsd = expl.getHsd(sd.array[0]);
                 return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
                     + '\n' + 'return getColor_' + childHsd.index + '(pos);'
                     + '\n}';
             }
             else if (sd instanceof qec.sdBorder) {
-                var childHsd = this.expl.getHsd(sd.sd);
+                var childHsd = expl.getHsd(sd.sd);
                 return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
                     + '\n' + 'return getColor_' + childHsd.index + '(pos);'
                     + '\n}';
@@ -3258,7 +3367,7 @@ var qec;
             var _profileTexture = this.populate(new qec.floatTexture(), message.profileTexture);
             var _light = new qec.pointLight();
             vec3.copy(_light.position, message.lightPos);
-            this.sd.init(_topTexture, message.topBounds, _profileTexture, message.profileBounds);
+            //this.sd.init(_topTexture, message.topBounds, _profileTexture, message.profileBounds);
             //this.renderPixel.init(this.sd, _light, false);
             this.renderUnit.setCanvasSize(message.canvasWidth, message.canvasHeight);
             var msg = new renderWorkerInitDoneMessage();
@@ -3360,6 +3469,7 @@ var qec;
         simpleRenderer.prototype.updateDiffuse = function (sd) { };
         simpleRenderer.prototype.updateTransform = function (sd) { };
         simpleRenderer.prototype.updateFloatTextures = function (sd) { };
+        simpleRenderer.prototype.updateAllPackedTextures = function (packer) { };
         return simpleRenderer;
     }());
     qec.simpleRenderer = simpleRenderer;
@@ -3387,6 +3497,143 @@ var qec;
         return spotLight;
     }());
     qec.spotLight = spotLight;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var textureSprite = (function () {
+        function textureSprite() {
+            this.bounds = vec4.create(); // bounds between 0 and 1
+        }
+        return textureSprite;
+    }());
+    qec.textureSprite = textureSprite;
+    var texturePacker = (function () {
+        function texturePacker() {
+            this.allBigTextures = [];
+            this.allSprites = [];
+            this.repackMode = 2;
+        }
+        texturePacker.prototype.repackSdRec = function (rootSignedDistance) {
+            var floatTextures = [];
+            var expl = new qec.hardwareSignedDistanceExplorer();
+            expl.explore(rootSignedDistance);
+            expl.array.forEach(function (hsd) {
+                var sd = hsd.sd;
+                if (sd instanceof qec.sdFields) {
+                    floatTextures.push(sd.topTexture, sd.profileTexture);
+                }
+            });
+            this.repack(floatTextures);
+        };
+        texturePacker.prototype.repack = function (floatTextures) {
+            if (this.repackMode == 0)
+                this.repack0(floatTextures);
+            else if (this.repackMode == 1)
+                this.repack1(floatTextures);
+            else if (this.repackMode == 2)
+                this.repack2(floatTextures);
+        };
+        texturePacker.prototype.repack0 = function (floatTextures) {
+            this.allBigTextures = [];
+            this.allSprites = [];
+            for (var i = 0; i < floatTextures.length; ++i) {
+                var texture = floatTextures[i];
+                var sprite = new textureSprite();
+                sprite.originalTexture = texture;
+                sprite.bigTexture = texture;
+                vec4.set(sprite.bounds, 0, 0, 1, 1);
+                this.allSprites.push(sprite);
+                this.allBigTextures.push(texture);
+                console.log('sprite pushed #' + i + ' ' + vec4.str(sprite.bounds));
+            }
+        };
+        texturePacker.prototype.repack1 = function (floatTextures) {
+            console.log('repack mode 1 ' + floatTextures.length + ' textures');
+            this.allBigTextures = [];
+            this.allSprites = [];
+            for (var i = 0; i < floatTextures.length; ++i) {
+                var texture = floatTextures[i];
+                var bigTexture = new qec.floatTexture();
+                bigTexture.width = 400;
+                bigTexture.height = 400;
+                bigTexture.data = new Float32Array(bigTexture.width * bigTexture.height * 4);
+                for (var x = 0; x < texture.width; x++) {
+                    for (var y = 0; y < texture.height; y++) {
+                        var q = y * texture.width + x;
+                        var qb = y * (bigTexture.width) + x;
+                        bigTexture.data[4 * qb + 0] = texture.data[4 * q + 0];
+                        bigTexture.data[4 * qb + 1] = texture.data[4 * q + 1];
+                        bigTexture.data[4 * qb + 2] = texture.data[4 * q + 2];
+                        bigTexture.data[4 * qb + 3] = texture.data[4 * q + 3];
+                    }
+                }
+                var sprite = new textureSprite();
+                sprite.originalTexture = texture;
+                sprite.bigTexture = bigTexture;
+                var xMax = texture.width / bigTexture.width;
+                var yMax = texture.height / bigTexture.height;
+                vec4.set(sprite.bounds, 0, 0, xMax, yMax);
+                this.allSprites.push(sprite);
+                this.allBigTextures.push(bigTexture);
+                console.log('sprite pushed #' + i + ' ' + vec4.str(sprite.bounds));
+            }
+        };
+        texturePacker.prototype.repack2 = function (floatTextures) {
+            console.log('repack mode 2 ' + floatTextures.length + ' textures');
+            this.allBigTextures = [];
+            this.allSprites = [];
+            var w = 400; //floatTextures[0].width;
+            var h = 400; //floatTextures[0].height;
+            var bigTexture = new qec.floatTexture();
+            bigTexture.width = w * floatTextures.length;
+            bigTexture.height = h;
+            bigTexture.data = new Float32Array(bigTexture.width * bigTexture.height * 4);
+            for (var i = 0; i < floatTextures.length; ++i) {
+                var texture = floatTextures[i];
+                for (var x = 0; x < texture.width; x++) {
+                    for (var y = 0; y < texture.height; y++) {
+                        var q = y * texture.width + x;
+                        var qb = y * (bigTexture.width) + (i * w + x);
+                        bigTexture.data[4 * qb + 0] = texture.data[4 * q + 0];
+                        bigTexture.data[4 * qb + 1] = texture.data[4 * q + 1];
+                        bigTexture.data[4 * qb + 2] = texture.data[4 * q + 2];
+                        bigTexture.data[4 * qb + 3] = texture.data[4 * q + 3];
+                    }
+                }
+                var sprite = new textureSprite();
+                sprite.originalTexture = texture;
+                sprite.bigTexture = bigTexture;
+                // sprite bounds
+                var xMin = i / (floatTextures.length);
+                var yMin = 0;
+                var xMax = (i + (texture.width / 400)) / floatTextures.length;
+                var yMax = (texture.height / 400);
+                var offsetX = 1 / bigTexture.width;
+                var offsetY = 1 / bigTexture.height;
+                vec4.set(sprite.bounds, xMin + offsetX, yMin + offsetY, xMax - offsetX, yMax - offsetY);
+                this.allSprites.push(sprite);
+                console.log('sprite pushed #' + i + ' ' + vec4.str(sprite.bounds));
+            }
+            this.allBigTextures.push(bigTexture);
+        };
+        texturePacker.prototype.getSprite = function (texture) {
+            var found = this.allSprites.find(function (t) { return t.originalTexture == texture; });
+            return found;
+        };
+        texturePacker.prototype.getTextureIndex = function (texture) {
+            var found = this.allBigTextures.indexOf(texture);
+            return found;
+        };
+        texturePacker.prototype.debugInfoInBody = function (scale) {
+            this.allBigTextures.forEach(function (t) {
+                var canvas = document.createElement('canvas');
+                qec.textureDebugInCanvas(t, 0, scale, canvas);
+                document.body.appendChild(canvas);
+            });
+        };
+        return texturePacker;
+    }());
+    qec.texturePacker = texturePacker;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -5019,15 +5266,17 @@ var qec;
                         $('.debug').append(this.topDfCanvas.canvas);
                         $('.debug').append(this.profileDfCanvas.canvas);
             */
-            this.init(this.topDfCanvas.floatTexture, new Float32Array(this.topDfCanvas.totalBounds), this.profileDfCanvas.floatTexture, new Float32Array(this.profileDfCanvas.totalBounds));
+            this.init(this.topDfCanvas.floatTexture, vec4.fromValues(0, 0, 1, 1), new Float32Array(this.topDfCanvas.totalBounds), this.profileDfCanvas.floatTexture, vec4.fromValues(0, 0, 1, 1), new Float32Array(this.profileDfCanvas.totalBounds));
             this.material.createFrom(dto.material);
             this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
         };
-        sdFields.prototype.init = function (topTexture, topBounds, profileTexture, profileBounds) {
+        sdFields.prototype.init = function (topTexture, topSpriteBounds, topBounds, profileTexture, profileSpriteBounds, profileBounds) {
             this.topTexture = topTexture;
             this.topBounds = new Float32Array(topBounds);
+            this.topSpriteBounds = new Float32Array(topSpriteBounds);
             this.profileTexture = profileTexture;
             this.profileBounds = new Float32Array(profileBounds);
+            this.profileSpriteBounds = new Float32Array(profileSpriteBounds);
             this.boundingCenterAndHalfSize = new Float32Array(6);
             this.boundingCenterAndHalfSize[0] = 0;
             this.boundingCenterAndHalfSize[1] = 0;
@@ -5088,10 +5337,10 @@ var qec;
             }
             var u = (p[0] - this.topBounds[0]) / (this.topBounds[2] - this.topBounds[0]);
             var v = (p[1] - this.topBounds[1]) / (this.topBounds[3] - this.topBounds[1]);
-            var d = this.getFieldDistance(this.topTexture, u, v);
+            var d = this.getFieldDistanceWithSprite(this.topTexture, u, v, this.topSpriteBounds);
             var u2 = (d - this.profileBounds[0]) / (this.profileBounds[2] - this.profileBounds[0]);
             var v2 = (p[2] - this.profileBounds[1]) / (this.profileBounds[3] - this.profileBounds[1]);
-            var d2 = this.getFieldDistance(this.profileTexture, u2, v2);
+            var d2 = this.getFieldDistanceWithSprite(this.profileTexture, u2, v2, this.profileSpriteBounds);
             if (this.debug) {
                 //console.log('profileBounds ' + vec4.str(this.profileBounds));
                 console.log(' uv : [' + u.toFixed(3) + ' , ' + v.toFixed(3) + ']');
@@ -5108,6 +5357,13 @@ var qec;
             if (this.debug) {
             }
             return this.color[0];
+        };
+        sdFields.prototype.getFieldDistanceWithSprite = function (field, u, v, spriteBounds) {
+            u = Math.min(Math.max(u, 0), 1);
+            v = Math.min(Math.max(v, 0), 1);
+            var u2 = mix(spriteBounds[0], spriteBounds[2], u);
+            var v2 = mix(spriteBounds[1], spriteBounds[3], v);
+            return this.getFieldDistance(field, u2, v2);
         };
         sdFields.prototype.getMaterial = function (pos) {
             return this.material;
@@ -5666,6 +5922,35 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var texturePackerTest = (function () {
+        function texturePackerTest() {
+        }
+        texturePackerTest.prototype.test = function () {
+            var _this = this;
+            // load imgs
+            qec.resources.addImg('data/512x512.png');
+            qec.resources.addImg('data/font.png');
+            qec.resources.loadAll2(function () { _this.test2(); });
+        };
+        texturePackerTest.prototype.test2 = function () {
+            var packer = new qec.texturePacker();
+            var allDfCanvas = [];
+            for (var key in qec.resources.all) {
+                var dfCanvas = new qec.distanceFieldCanvas();
+                var img = qec.resources.all[key];
+                dfCanvas.computeDistanceField(img, 1, img.height / img.width);
+                dfCanvas.update();
+                allDfCanvas.push(dfCanvas);
+            }
+            packer.repack(allDfCanvas.map(function (c) { return c.floatTexture; }));
+            packer.debugInfoInBody(255);
+        };
+        return texturePackerTest;
+    }());
+    qec.texturePackerTest = texturePackerTest;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var bspline = (function () {
         function bspline() {
         }
@@ -6087,19 +6372,31 @@ function fmod(a, b) {
     //if (m < 0) m+=b; 
     return m;
 }
+function mix(x, y, a) {
+    return (x * (1 - a) + y * a);
+}
 var qec;
 (function (qec) {
     var resources = (function () {
         function resources() {
         }
         resources.loadAll = function (done) {
-            var run = new qec.runAll();
-            run.push(function (_done) { return resources.doReq('app/ts/render/hardware/10_sd.glsl', _done); });
-            run.push(function (_done) { return resources.doReq('app/ts/render/hardware/20_light.glsl', _done); });
-            run.push(function (_done) { return resources.doReq('app/ts/render/hardware/30_renderPixel.glsl', _done); });
+            if (resources.run == null)
+                resources.run = new qec.runAll();
+            resources.run.push(function (_done) { return resources.doReq('app/ts/render/hardware/10_sd.glsl', _done); });
+            resources.run.push(function (_done) { return resources.doReq('app/ts/render/hardware/20_light.glsl', _done); });
+            resources.run.push(function (_done) { return resources.doReq('app/ts/render/hardware/30_renderPixel.glsl', _done); });
             //for (var i=0; i < 6; ++i)
             //    run.push(resources.loadImg('data/cubemap/cubemap' + i + '.jpg'));
-            run.run(function () { resources.loaded = true; done(); });
+            resources.run.run(function () { resources.loaded = true; done(); });
+        };
+        resources.addImg = function (url) {
+            if (resources.run == null)
+                resources.run = new qec.runAll();
+            resources.run.push(resources.loadImg(url));
+        };
+        resources.loadAll2 = function (done) {
+            resources.run.run(function () { resources.loaded = true; done(); });
         };
         resources.doReq = function (url, done) {
             var req = new XMLHttpRequest();
@@ -7058,7 +7355,7 @@ var qec;
                     vec4.copy(this.newBounds, this.startBounds);
                     this.newBounds[3] += this.deltaPos[2];
                     this.selected.scaleProfilePoints(this.newBounds);
-                    this.selected.updateSignedDistance();
+                    this.editor.updateSignedDistance(this.selected);
                     this.editor.renderer.updateFloatTextures(this.selected.sd);
                     this.editor.setRenderFlag();
                 }
@@ -7070,7 +7367,7 @@ var qec;
                     vec4.copy(this.newBounds, this.startBounds);
                     this.newBounds[3] += (-this.deltaPos[2]);
                     this.selected.scaleProfilePoints(this.newBounds);
-                    this.selected.updateSignedDistance();
+                    this.editor.updateSignedDistance(this.selected);
                     this.editor.renderer.updateFloatTextures(this.selected.sd);
                     this.editor.setRenderFlag();
                 }
@@ -7264,6 +7561,9 @@ var qec;
                     var scrend = _this.sc.get(function (o) { return o instanceof qec.scRenderer; }, 'render');
                     _this.renderSettings = scrend.settings;
                     _this.renderSettings.shadows = false; //true; 
+                    _this.texturePacker = new qec.texturePacker();
+                    _this.texturePacker.repackMode = 0;
+                    _this.texturePacker.repackSdRec(_this.renderSettings.sd);
                     _this.render(function () { });
                 });
             }
@@ -7279,7 +7579,7 @@ var qec;
         };
         index2.prototype.render = function (done) {
             if (!this.isParallel) {
-                this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length);
+                this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length, this.texturePacker);
                 this.renderer.render(this.renderSettings);
                 done();
             }
