@@ -132,7 +132,7 @@ float sdFieldsWithSprites_(vec3 p1,
 
     p[2] -= pz;
     float distToBbox = sdBox(p, box);
-    if (distToBbox > 0.1)
+    if (distToBbox > 0.01)
         return distToBbox;
     p[2] += pz;
         

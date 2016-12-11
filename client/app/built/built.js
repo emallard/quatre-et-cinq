@@ -2935,7 +2935,7 @@ var qec;
             this.reflCol = vec3.create();
             this.showBoundingBox = false;
             this.reflection = false;
-            this.rayToBounds = false;
+            this.rayToBounds = true;
             this.intersectPos = vec3.create();
             this.diffToLight = vec3.create();
             this.ssTmp = vec3.create();
@@ -3776,13 +3776,13 @@ var qec;
             };
             this.box = {
                 type: 'sdBoxDTO',
-                halfSize: [0.3, 0.3, 0.6],
+                halfSize: [0.3, 0.3, 0.4],
                 //transform: [0, 0, 0.4],
                 material: {
                     type: 'materialDTO',
                     diffuse: [1, 0, 0]
                 },
-                transform: mat4Identity()
+                transform: mat4Translate(0, 0, 0.45)
             };
             this.union = {
                 type: 'sdUnionDTO',
@@ -4840,11 +4840,89 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    //https://tavianator.com/fast-branchless-raybounding-box-intersections/
+    var Ray = (function () {
+        function Ray() {
+            this.origin = vec3.create();
+            this.direction = vec3.create();
+            this.inv_direction = vec3.create();
+        }
+        return Ray;
+    }());
+    qec.Ray = Ray;
+    ;
+    function makeRay(ray, origin, direction) {
+        vec3.copy(ray.origin, origin);
+        vec3.copy(ray.direction, direction);
+        for (var i = 0; i < 3; ++i)
+            ray.inv_direction[i] = 1.0 / direction[i];
+        ray.sign0 = (ray.inv_direction[0] < 0.0) ? 1 : 0;
+        ray.sign1 = (ray.inv_direction[1] < 0.0) ? 1 : 0;
+        ray.sign2 = (ray.inv_direction[2] < 0.0) ? 1 : 0;
+        return ray;
+    }
+    qec.makeRay = makeRay;
     var raybox = (function () {
         function raybox() {
         }
-        raybox.intersection = function (b, ro, rd, debug) {
+        raybox.intersection = function (ray, aabb, debug) {
+            var tx1 = (aabb[0][0] - ray.origin[0]) * ray.inv_direction[0];
+            var tx2 = (aabb[1][0] - ray.origin[0]) * ray.inv_direction[0];
+            var tmin = Math.min(tx1, tx2);
+            var tmax = Math.max(tx1, tx2);
+            var ty1 = (aabb[0][1] - ray.origin[1]) * ray.inv_direction[1];
+            var ty2 = (aabb[1][1] - ray.origin[1]) * ray.inv_direction[1];
+            tmin = Math.max(tmin, Math.min(ty1, ty2));
+            tmax = Math.min(tmax, Math.max(ty1, ty2));
+            var tz1 = (aabb[0][2] - ray.origin[2]) * ray.inv_direction[2];
+            var tz2 = (aabb[1][2] - ray.origin[2]) * ray.inv_direction[2];
+            tmin = Math.max(tmin, Math.min(tz1, tz2));
+            tmax = Math.min(tmax, Math.max(tz1, tz2));
+            if (debug)
+                console.log('hop', tmin, tmax);
+            if (tmin > tmax)
+                return 10000;
+            else
+                return tmin;
+            //return tmax >= tmin;
+        };
+        raybox.intersection_test0 = function (ray, aabb, debug) {
+            var txmin = (aabb[ray.sign0][0] - ray.origin[0]) * ray.inv_direction[0];
+            var txmax = (aabb[1 - ray.sign0][0] - ray.origin[0]) * ray.inv_direction[0];
+            var tymin = (aabb[ray.sign1][1] - ray.origin[1]) * ray.inv_direction[1];
+            var tymax = (aabb[1 - ray.sign1][1] - ray.origin[1]) * ray.inv_direction[1];
+            var tzmin = (aabb[ray.sign2][2] - ray.origin[2]) * ray.inv_direction[2];
+            var tzmax = (aabb[1 - ray.sign2][2] - ray.origin[2]) * ray.inv_direction[2];
+            var tmin = Math.max(Math.max(txmin, tymin), tzmin);
+            var tmax = Math.min(Math.min(txmax, tymax), tzmax);
+            if (debug)
+                console.log(tmin, tmax);
+            if (tmin > tmax)
+                return 10000;
+            else
+                return tmin;
+            // post condition:
+            // if tmin > tmax (in the code above this is represented by a return value of INFINITY)
+            //     no intersection
+            // else
+            //     front intersection point = ray.origin + ray.direction * tmin (normally only this point matters)
+            //     back intersection point  = ray.origin + ray.direction * tmax
+        };
+        raybox.inbox = function (aabb, ro, m) {
+            return ro[0] > (aabb[0][0] + m) && ro[0] < (aabb[1][0] + m)
+                && ro[1] > (aabb[0][1] + m) && ro[1] < (aabb[1][1] + m)
+                && ro[2] > (aabb[0][2] + m) && ro[2] < (aabb[1][2] + m);
+        };
+        return raybox;
+    }());
+    qec.raybox = raybox;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    //https://tavianator.com/fast-branchless-raybounding-box-intersections/
+    var raybox_old = (function () {
+        function raybox_old() {
+        }
+        raybox_old.intersection = function (b, ro, rd, debug) {
             var tmin = -10000; //-INFINITY;
             var tmax = 10000; //INFINITY;
             for (var i = 0; i < 3; ++i)
@@ -4860,14 +4938,14 @@ var qec;
                 return 10000;
             return tmin;
         };
-        raybox.inbox = function (b, ro, m) {
+        raybox_old.inbox = function (b, ro, m) {
             return ro[0] > -(b[0] + m) && ro[0] < (b[0] + m)
                 && ro[1] > -(b[1] + m) && ro[1] < (b[1] + m)
                 && ro[2] > -(b[2] + m) && ro[2] < (b[2] + m);
         };
-        return raybox;
+        return raybox_old;
     }());
-    qec.raybox = raybox;
+    qec.raybox_old = raybox_old;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -5176,8 +5254,9 @@ var qec;
             this.tmpPos = vec3.create();
             this.material = new qec.material();
             this.inverseTransform = mat4.create();
+            this.transformedRay = new qec.Ray();
             this.transformedRd = vec3.create();
-            this.aabb = vec3.create();
+            this.aabb = [vec3.create(), vec3.create()];
         }
         sdBox.prototype.createFrom = function (dto) {
             vec3FromArray(this.halfSize, dto.halfSize);
@@ -5189,16 +5268,20 @@ var qec;
         };
         sdBox.prototype.getDist2 = function (pos, rd, boundingBox, debug) {
             this.getBoundingBox(this.aabb);
+            // create a ray, from transformed position, and transformed direction
             vec3.transformMat4(this.tmp, pos, this.inverseTransform);
-            vec3.transformMat4(this.transformedRd, rd, this.inverseTransform);
-            if (qec.raybox.inbox(this.aabb, this.tmp, 0))
-                return this.getDist(pos, boundingBox, debug);
-            var t = qec.raybox.intersection(this.aabb, this.tmp, rd, debug);
+            vec3TransformMat4RotOnly(this.transformedRd, rd, this.inverseTransform);
+            qec.makeRay(this.transformedRay, this.tmp, this.transformedRd);
+            var t = qec.raybox.intersection(this.transformedRay, this.aabb, debug);
             if (debug)
                 console.log('tttt ' + t);
             if (t <= 0.01)
                 return this.getDist(pos, boundingBox, debug);
             return t;
+        };
+        sdBox.prototype.getBoundingBox = function (out) {
+            vec3.scale(out[0], this.halfSize, -1);
+            vec3.scale(out[1], this.halfSize, 1);
         };
         sdBox.prototype.getDist = function (pos, boundingBox, debug) {
             vec3.transformMat4(this.tmpPos, pos, this.inverseTransform);
@@ -5219,9 +5302,6 @@ var qec;
         };
         sdBox.prototype.getInverseTransform = function (out) {
             mat4.copy(out, this.inverseTransform);
-        };
-        sdBox.prototype.getBoundingBox = function (out) {
-            vec3.copy(out, this.halfSize);
         };
         return sdBox;
     }());
@@ -5296,8 +5376,9 @@ var qec;
             this.material = new qec.material();
             this.inverseTransform = mat4.identity(mat4.create());
             this.tmp = vec3.create();
+            this.transformedRay = new qec.Ray();
             this.transformedRd = vec3.create();
-            this.aabb = vec3.create();
+            this.aabb = [vec3.create(), vec3.create()];
             this.dist2Pos = vec3.create();
             this.color = vec4.create();
         }
@@ -5357,18 +5438,18 @@ var qec;
             var sx = 0.5 * (this.topBounds[2] - this.topBounds[0]);
             var sy = 0.5 * (this.topBounds[3] - this.topBounds[1]);
             var sz = 0.5 * (this.profileBounds[3] - this.profileBounds[1]);
-            vec3.set(out, sx, sy, sz);
+            vec3.set(out[0], sx, sy, sz);
+            vec3.set(out[1], -sx, -sy, -sz);
         };
         sdFields.prototype.getDist2 = function (pos, rd, boundingBox, debug) {
             this.getBoundingBox(this.aabb);
             vec3.transformMat4(this.dist2Pos, pos, this.inverseTransform);
-            vec3.transformMat4(this.transformedRd, rd, this.inverseTransform);
+            vec3TransformMat4RotOnly(this.transformedRd, rd, this.inverseTransform);
             this.dist2Pos[2] -= 0.5 * (this.profileBounds[3] + this.profileBounds[1]);
-            if (qec.raybox.inbox(this.aabb, this.dist2Pos, 0))
-                return this.getDist(pos, boundingBox, debug);
-            var t = qec.raybox.intersection(this.aabb, this.dist2Pos, rd, debug);
+            qec.makeRay(this.transformedRay, this.dist2Pos, this.transformedRd);
+            var t = qec.raybox.intersection(this.transformedRay, this.aabb, debug);
             if (t <= 0.01)
-                return this.getDist(pos, boundingBox, debug);
+                return this.getDist(pos, boundingBox, false);
             return t;
         };
         sdFields.prototype.getDist = function (pos, boundingBox, debug) {
@@ -5646,19 +5727,27 @@ var qec;
             this.material = new qec.material();
             this.normal = vec3.set(vec3.create(), 0, 0, 1);
             this.tmp = vec3.create();
+            this.transformedRay = new qec.Ray();
             this.transformedRd = vec3.create();
-            this.aabb = vec3.create();
+            this.aabb = [vec3.create(), vec3.create()];
         }
         sdPlane.prototype.createFrom = function (dto) {
             vec3FromArray(this.normal, dto.normal);
             vec3.normalize(this.normal, this.normal);
             this.material.createFrom(dto.material);
         };
+        sdPlane.prototype.getBoundingBox = function (out) {
+            vec3.set(out[0], -1000, -1000, -0.001);
+            vec3.set(out[1], 1000, 1000, 0.001);
+        };
         sdPlane.prototype.getDist2 = function (pos, rd, boundingBox, debug) {
             this.getBoundingBox(this.aabb);
-            if (qec.raybox.inbox(this.aabb, pos, 0))
-                return this.getDist(pos, boundingBox, debug);
-            var t = qec.raybox.intersection(this.aabb, pos, rd, debug);
+            qec.makeRay(this.transformedRay, pos, rd);
+            /*
+                        if (raybox.inbox(this.aabb, pos, 0))
+                            return this.getDist(pos, boundingBox, debug);
+            */
+            var t = qec.raybox.intersection(this.transformedRay, this.aabb, debug);
             if (debug)
                 console.log('tttt ' + t);
             if (t <= 0.01)
@@ -5673,9 +5762,6 @@ var qec;
         };
         sdPlane.prototype.getInverseTransform = function (out) {
             mat4.identity(out);
-        };
-        sdPlane.prototype.getBoundingBox = function (out) {
-            vec3.set(out, 1000, 1000, 0.001);
         };
         return sdPlane;
     }());
@@ -5736,8 +5822,9 @@ var qec;
             this.radius = 1;
             this.inverseTransform = mat4.create();
             this.tmp = vec3.create();
+            this.transformedRay = new qec.Ray();
             this.transformedRd = vec3.create();
-            this.aabb = vec3.create();
+            this.aabb = [vec3.create(), vec3.create()];
         }
         sdSphere.prototype.createFrom = function (dto) {
             this.material.createFrom(dto.material);
@@ -5748,13 +5835,25 @@ var qec;
             else
                 mat4.invert(this.inverseTransform, new Float32Array(transform));
         };
+        sdSphere.prototype.getBoundingBox = function (out) {
+            vec3.set(out[0], -this.radius, -this.radius, -this.radius);
+            vec3.set(out[1], this.radius, this.radius, this.radius);
+        };
         sdSphere.prototype.getDist2 = function (pos, rd, boundingBox, debug) {
             this.getBoundingBox(this.aabb);
             vec3.transformMat4(this.tmp, pos, this.inverseTransform);
-            vec3.transformMat4(this.transformedRd, rd, this.inverseTransform);
-            if (qec.raybox.inbox(this.aabb, this.tmp, 0))
-                return this.getDist(pos, boundingBox, debug);
-            var t = qec.raybox.intersection(this.aabb, this.tmp, rd, debug);
+            vec3TransformMat4RotOnly(this.transformedRd, rd, this.inverseTransform);
+            qec.makeRay(this.transformedRay, this.tmp, this.transformedRd);
+            /*
+            if (raybox.inbox(this.aabb, this.tmp, 0))
+                return this.getDist(this.tmp, boundingBox, debug);
+            */
+            var t = qec.raybox.intersection(this.transformedRay, this.aabb, debug);
+            if (debug) {
+                console.log(vec3.str(this.transformedRay.origin));
+                console.log(vec3.str(this.transformedRay.direction));
+                console.log('tttt ' + t);
+            }
             if (t <= 0.01)
                 return this.getDist(pos, boundingBox, debug);
             return t;
@@ -5768,9 +5867,6 @@ var qec;
         };
         sdSphere.prototype.getInverseTransform = function (out) {
             mat4.copy(out, this.inverseTransform);
-        };
-        sdSphere.prototype.getBoundingBox = function (out) {
-            vec3.set(out, this.radius, this.radius, this.radius);
         };
         return sdSphere;
     }());
@@ -6415,6 +6511,15 @@ function mat4Identity() {
 function mat4Translate(x, y, z) {
     return mat4Array(mat4.fromTranslation(mat4.create(), vec3.fromValues(x, y, z)));
 }
+function vec3TransformMat4RotOnly(out, a, m) {
+    var x = a[0], y = a[1], z = a[2], w = m[3] * x + m[7] * y + m[11] * z + m[15];
+    w = w || 1.0;
+    out[0] = (m[0] * x + m[4] * y + m[8] * z /* + m[12]*/) / w;
+    out[1] = (m[1] * x + m[5] * y + m[9] * z /* + m[13]*/) / w;
+    out[2] = (m[2] * x + m[6] * y + m[10] * z /* + m[14]*/) / w;
+    return out;
+}
+;
 function float32ArrayToString(a) {
     var s = '' + a[0];
     for (var i = 1; i < a.length; ++i) {
@@ -7617,7 +7722,7 @@ var qec;
                     _this.renderer.setContainerAndSize(_this.element, 600, 600);
                     var scrend = _this.sc.get(function (o) { return o instanceof qec.scRenderer; }, 'render');
                     _this.renderSettings = scrend.settings;
-                    _this.renderSettings.shadows = false; //true; 
+                    _this.renderSettings.shadows = true;
                     _this.texturePacker = new qec.texturePacker();
                     _this.texturePacker.repackMode = 0;
                     _this.texturePacker.repackSdRec(_this.renderSettings.sd);

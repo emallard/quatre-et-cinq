@@ -72,7 +72,7 @@ module qec {
 
                     var scrend = this.sc.get<scRenderer>(o=>o instanceof scRenderer, 'render');
                     this.renderSettings = scrend.settings;
-                    this.renderSettings.shadows = false;//true; 
+                    this.renderSettings.shadows = true; 
                     
                     this.texturePacker = new texturePacker();
                     this.texturePacker.repackMode = 0;

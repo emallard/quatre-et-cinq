@@ -37,18 +37,36 @@ module qec {
                 mat4.invert(this.inverseTransform, new Float32Array(transform));
         }
 
+        getBoundingBox(out: Float32Array[])
+        {
+            vec3.set(out[0], -this.radius, -this.radius, -this.radius);
+            vec3.set(out[1], this.radius, this.radius, this.radius);
+        }
+
+        transformedRay = new Ray();
         transformedRd = vec3.create();
-        aabb = vec3.create();
+        aabb:Float32Array[] = [vec3.create(), vec3.create()];
+
         getDist2(pos: Float32Array, rd:Float32Array, boundingBox:boolean, debug:boolean):number
         {
             this.getBoundingBox(this.aabb);
             vec3.transformMat4(this.tmp, pos, this.inverseTransform);
-            vec3.transformMat4(this.transformedRd, rd, this.inverseTransform);
+            vec3TransformMat4RotOnly(this.transformedRd, rd, this.inverseTransform);
+            makeRay(this.transformedRay, this.tmp, this.transformedRd);
             
+            /*
             if (raybox.inbox(this.aabb, this.tmp, 0))
-                return this.getDist(pos, boundingBox, debug);
+                return this.getDist(this.tmp, boundingBox, debug);
+            */
 
-            var t = raybox.intersection(this.aabb, this.tmp, rd, debug);
+            var t = raybox.intersection(this.transformedRay, this.aabb, debug);
+            if (debug) 
+            {
+                console.log(vec3.str(this.transformedRay.origin));
+                console.log(vec3.str(this.transformedRay.direction));
+                console.log('tttt ' + t);
+            }
+
             if (t <= 0.01)
                 return this.getDist(pos, boundingBox, debug);
             
@@ -73,9 +91,5 @@ module qec {
             mat4.copy(out, this.inverseTransform);
         }
 
-        getBoundingBox(out: Float32Array)
-        {
-            vec3.set(out, this.radius, this.radius, this.radius);
-        }
     }
 }

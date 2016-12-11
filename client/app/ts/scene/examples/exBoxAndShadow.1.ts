@@ -30,13 +30,13 @@ module qec
 
         box : sdBoxDTO = {
             type: 'sdBoxDTO',
-            halfSize: [0.3, 0.3, 0.6],
+            halfSize: [0.3, 0.3, 0.4],
             //transform: [0, 0, 0.4],
             material : {
                 type:'materialDTO',
                 diffuse : [1, 0, 0] 
             },
-            transform : mat4Identity()
+            transform : mat4Translate(0, 0, 0.45)
         };
 
         union : sdUnionDTO = {

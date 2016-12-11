@@ -77,42 +77,6 @@ module qec {
                 out[1] = 0;
                 out[2] = 0;
                 out[3] = 1.0;
-                /*    
-                this.pos[0] = ro[0] + rd[0]*t;
-                this.pos[1] = ro[1] + rd[1]*t;
-                this.pos[2] = ro[2] + rd[2]*t;
-
-
-                this.pos2[0] = this.pos[0] - rd[0]*this.EPS_NORMAL_1;
-                this.pos2[1] = this.pos[1] - rd[1]*this.EPS_NORMAL_1;
-                this.pos2[2] = this.pos[2] - rd[2]*this.EPS_NORMAL_1;
-
-                this.getNormal(sd, this.pos2, this.normal);
-
-                // diffuse lighting
-                vec3.subtract(this.toLight, this.uLightPos, this.pos);
-                vec3.normalize(this.toLight, this.toLight);
-                var dot = vec3.dot(this.toLight, this.normal);
-
-                dot = Math.max(dot, 0);
-                
-
-                
-                var KA = 0.5;
-                var KD = 0.5;
-               
-                this.sd.getMaterial(this.pos).getColor(this.pos, out);
-                out[0] = KA*out[0] + KD*dot;
-                out[1] = KA*out[1] + KD*dot;
-                out[2] = KA*out[2] + KD*dot;
-
-  */
-  
-                /*
-                out[0] = Math.abs(this.normal[0]);
-                out[1] = Math.abs(this.normal[1]);
-                out[2] = Math.abs(this.normal[2]);
-                */
             }
             else
             {

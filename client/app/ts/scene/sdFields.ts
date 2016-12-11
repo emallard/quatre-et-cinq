@@ -113,30 +113,30 @@ module qec {
             //this.getDist(vec3.fromValues(0, 0, 0.05), true);
         }
         
-        getBoundingBox(out: Float32Array)
+        getBoundingBox(out: Float32Array[])
         {
             var sx = 0.5*(this.topBounds[2] - this.topBounds[0]);
             var sy = 0.5*(this.topBounds[3] - this.topBounds[1]);
             var sz = 0.5*(this.profileBounds[3] - this.profileBounds[1]);
-            vec3.set(out, sx, sy, sz);
+            vec3.set(out[0], sx, sy, sz);
+            vec3.set(out[1], -sx, -sy, -sz);
         }
 
+        transformedRay = new Ray();
         transformedRd = vec3.create();
-        aabb = vec3.create();
+        aabb:Float32Array[] = [vec3.create(), vec3.create()];
         dist2Pos = vec3.create();
         getDist2(pos: Float32Array, rd:Float32Array, boundingBox:boolean, debug:boolean):number
         {
             this.getBoundingBox(this.aabb);
             vec3.transformMat4(this.dist2Pos, pos, this.inverseTransform);
-            vec3.transformMat4(this.transformedRd, rd, this.inverseTransform);
+            vec3TransformMat4RotOnly(this.transformedRd, rd, this.inverseTransform);
             this.dist2Pos[2] -= 0.5*(this.profileBounds[3]+this.profileBounds[1]);
-         
-            if (raybox.inbox(this.aabb, this.dist2Pos, 0))
-                return this.getDist(pos, boundingBox, debug);
+            makeRay(this.transformedRay, this.dist2Pos, this.transformedRd);
 
-            var t = raybox.intersection(this.aabb, this.dist2Pos, rd, debug);
+            var t = raybox.intersection(this.transformedRay, this.aabb, debug);
             if (t <= 0.01)
-                return this.getDist(pos, boundingBox, debug);
+                return this.getDist(pos, boundingBox, false);
             
             return t;
         }

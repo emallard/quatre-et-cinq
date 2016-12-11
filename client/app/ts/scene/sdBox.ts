@@ -27,26 +27,31 @@ module qec {
             vec3.set(this.halfSize, sx, sy, sz);
         }
 
+        transformedRay = new Ray();
         transformedRd = vec3.create();
-        aabb = vec3.create();
+        aabb:Float32Array[] = [vec3.create(), vec3.create()];
+
         getDist2(pos: Float32Array, rd:Float32Array, boundingBox:boolean, debug:boolean):number
         {
             this.getBoundingBox(this.aabb);
+            // create a ray, from transformed position, and transformed direction
             vec3.transformMat4(this.tmp, pos, this.inverseTransform);
-            vec3.transformMat4(this.transformedRd, rd, this.inverseTransform);
+            vec3TransformMat4RotOnly(this.transformedRd, rd, this.inverseTransform);
+            makeRay(this.transformedRay, this.tmp, this.transformedRd);
 
-            if (raybox.inbox(this.aabb, this.tmp, 0))
-                return this.getDist(pos, boundingBox, debug);
-
-            var t = raybox.intersection(this.aabb, this.tmp, rd, debug);
+            var t = raybox.intersection(this.transformedRay, this.aabb, debug);
             if (debug) console.log('tttt ' + t);
             if (t <= 0.01)
                 return this.getDist(pos, boundingBox, debug);
 
             return t;
-            
         }
 
+        getBoundingBox(out: Float32Array[])
+        {
+            vec3.scale(out[0], this.halfSize, -1);
+            vec3.scale(out[1], this.halfSize, 1);
+        }
 
         getDist(pos: Float32Array, boundingBox:boolean, debug:boolean):number
         {
@@ -78,9 +83,5 @@ module qec {
             mat4.copy(out, this.inverseTransform);
         }
 
-        getBoundingBox(out: Float32Array)
-        {
-            vec3.copy(out, this.halfSize);
-        }
     }
 }
