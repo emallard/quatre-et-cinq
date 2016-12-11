@@ -117,9 +117,8 @@ module qec {
         {
             var sx = 0.5*(this.topBounds[2] - this.topBounds[0]);
             var sy = 0.5*(this.topBounds[3] - this.topBounds[1]);
-            var sz = 0.5*(this.profileBounds[3] - this.profileBounds[1]);
-            vec3.set(out[0], sx, sy, sz);
-            vec3.set(out[1], -sx, -sy, -sz);
+            vec3.set(out[0], sx, sy, this.profileBounds[1]);
+            vec3.set(out[1], -sx, -sy, this.profileBounds[3]);
         }
 
         transformedRay = new Ray();
@@ -131,7 +130,6 @@ module qec {
             this.getBoundingBox(this.aabb);
             vec3.transformMat4(this.dist2Pos, pos, this.inverseTransform);
             vec3TransformMat4RotOnly(this.transformedRd, rd, this.inverseTransform);
-            this.dist2Pos[2] -= 0.5*(this.profileBounds[3]+this.profileBounds[1]);
             makeRay(this.transformedRay, this.dist2Pos, this.transformedRd);
 
             var t = raybox.intersection(this.transformedRay, this.aabb, debug);

@@ -36,23 +36,26 @@ module qec {
             for (var i=hsdArray.length-1; i>=0; --i)
             {
                 shader += 'float getDist_' + i + '(vec3 pos);\n';
+                shader += 'float getDist2_' + i + '(vec3 pos, vec3 rd);\n';
             }
             shader += '\n';
 
             // implementations
             for (var i=hsdArray.length-1; i>=0; --i)
             {
-                shader += this.generateOneDistance(expl, packer, hsdArray[i]);
+                shader += this.generateOneDistance(expl, packer, hsdArray[i], false);
+                shader += '\n\n';
+                shader += this.generateOneDistance(expl, packer, hsdArray[i], true);
                 shader += '\n\n';
             }
                 
-            shader += 
-              'float getDist(vec3 pos) { return getDist_0(pos); }\n';
+            shader += 'float getDist(vec3 pos) { return getDist_0(pos); }\n';
+            shader += 'float getDist2(vec3 pos, vec3 rd) { return getDist2_0(pos, rd); }\n';
 
             return shader;
         }
 
-        generateOneDistance(expl: hardwareSignedDistanceExplorer, packer:texturePacker, hsd:hardwareSignedDistance)
+        generateOneDistance(expl: hardwareSignedDistanceExplorer, packer:texturePacker, hsd:hardwareSignedDistance, isDist2:boolean)
         {
             var sd = hsd.sd;
 
@@ -62,23 +65,16 @@ module qec {
             {
                 var m = mat4.create();
                 sd.getInverseTransform(m);
-                // TODO suppr
-                /*
-                return 'float getDist_' + hsd.index + '(vec3 pos) { '
-                +'\n  return sdFields_(pos,'
-                +'\n    u_topTextures['+hsd.sdFieldIndex+'],'
-                +'\n    u_profileTextures['+hsd.sdFieldIndex+'],'
-                +'\n    u_topBounds['+hsd.sdFieldIndex+'],'
-                +'\n    u_profileBounds['+hsd.sdFieldIndex+'],'
-                +'\n    u_inverseTransforms['+hsd.index+']'
-                +'\n  );}';
-                */
 
                 var topTextureIndex = packer.getTextureIndex(sd.topTexture);
                 var profileTextureIndex = packer.getTextureIndex(sd.profileTexture);
 
-                return 'float getDist_' + hsd.index + '(vec3 pos) { '
-                +'\n  return sdFieldsWithSprites_(pos,'
+                var text = this.getDistSignature(hsd.index, isDist2) + ' { ';
+                if (!isDist2)
+                    text += '\n  return sdFieldsWithSprites1_(pos,';
+                else
+                    text += '\n  return sdFieldsWithSprites2_(pos, rd,';
+                text += ''
                 +'\n    u_floatTextures['+topTextureIndex+'],'
                 +'\n    u_floatTextures['+profileTextureIndex+'],'
                 +'\n    u_topTextureSpriteBounds['+hsd.sdFieldIndex+'],'
@@ -88,38 +84,39 @@ module qec {
                 +'\n    u_inverseTransforms['+hsd.index+']'
                 +'\n  );}';
 
+                return text;
             }
             if (sd instanceof sdBox)
             {
-                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                return this.getDistSignature(hsd.index, isDist2) + ' { '
                 +'\n  return sdBox(pos, ' + vec3.str(sd.halfSize) + ');'
                 +'\n}';
             }
 
             if (sd instanceof sdSphere)
             {
-                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                return this.getDistSignature(hsd.index, isDist2) + ' { '
                 +'\n  return sdSphere(pos, ' + sd.radius + ', u_inverseTransforms[' + hsd.index + ']);'
                 +'\n}';
             }
             if (sd instanceof sdPlane)
             {
-                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                return this.getDistSignature(hsd.index, isDist2) + ' { '
                 +'\n  return sdPlane(pos, ' + vec3.str(sd.normal) + ');'
                 +'\n}';
             }
             if (sd instanceof sdGrid)
             {
-                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                return this.getDistSignature(hsd.index, isDist2) + ' { '
                 +'\n  return sdGrid(pos, ' + vec3.str(sd.size) + ', ' + sd.thickness + ');'
                 +'\n}';
             }
             if (sd instanceof sdBorder)
             {
                 var childHsd = expl.getHsd(sd.sd);
-                var concat = '\n  float d = getDist_' + childHsd.index + '(pos);';
+                var concat = '\n  float d = ' + this.getDistCall(childHsd.index, isDist2) + ';';
                 concat +=  '\n  return opBorder(d, ' + sd.borderIn + ');'
-                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                return this.getDistSignature(hsd.index, isDist2) + ' { '
                 + concat
                 +'\n}';
             }
@@ -130,10 +127,10 @@ module qec {
                 for (var j=0; j < array.length; ++j)
                 {
                     var childHsd = expl.getHsd(array[j]);
-                    concat += '  d = opU(d, getDist_' + childHsd.index  + '(pos));\n';
+                    concat += '  d = opU(d, ' + this.getDistCall(childHsd.index, isDist2) + ');\n';
                 }
 
-                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                return this.getDistSignature(hsd.index, isDist2) + ' { '
                 +'\n' + concat
                 +'  return d;'
                 +'\n}';
@@ -145,9 +142,9 @@ module qec {
                 
                 var childHsd0 = expl.getHsd(array[0]);
                 var childHsd1 = expl.getHsd(array[1]);
-                concat += '  d = opS(getDist_' + childHsd0.index  + '(pos), getDist_' + childHsd1.index  + '(pos));\n';
+                concat += '  d = opS(' + + this.getDistCall(childHsd0.index, isDist2) + ',' + + this.getDistCall(childHsd1.index, isDist2) + ');\n';
 
-                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                return this.getDistSignature(hsd.index, isDist2) + ' { '
                 +'\n' + concat
                 +'  return d;'
                 +'\n}';
@@ -159,16 +156,32 @@ module qec {
                 for (var j=0; j < array.length; ++j)
                 {
                     var childHsd = expl.getHsd(array[j]);
-                    concat += '  d = opI(d, getDist_' + childHsd.index  + '(pos));\n';
+                    concat += '  d = opI(d, ' + + this.getDistCall(childHsd.index, isDist2) + ');\n';
                 }
 
-                return 'float getDist_' + hsd.index + '(vec3 pos) { '
+                return this.getDistSignature(hsd.index, isDist2) + ' { '
                 +'\n' + concat
                 +'  return d;'
                 +'\n}';
             }
 
             return '';
+        }
+
+        getDistSignature(index:number, isDist2: boolean):string
+        {
+            if (!isDist2)
+                return 'float getDist_' +index + '(vec3 pos)';
+            else
+                return 'float getDist2_' +index + '(vec3 pos, vec3 rd)';
+        }
+
+        getDistCall(index:number, isDist2: boolean):string
+        {
+            if (!isDist2)
+                return 'getDist_' + index  + '(pos)';
+            else
+                return 'getDist2_' + index  + '(pos, rd)';
         }
 
         generateColor(expl: hardwareSignedDistanceExplorer):string

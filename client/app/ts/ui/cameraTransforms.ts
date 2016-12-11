@@ -79,15 +79,15 @@ module qec
             this.updateTransformMatrix();
         }
 
-        zoom(delta:number)
+        zoom(delta:number, multiplier)
         {
             if (delta < 0)
             {
-                this.zcam *= 1.1;
+                this.zcam *= multiplier;
             }
             else
             {
-                this.zcam *= 0.9;
+                this.zcam *= 1.0/multiplier;
             }
             this.updateTransformMatrix();
         }

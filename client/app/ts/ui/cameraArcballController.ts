@@ -55,7 +55,7 @@ module qec
                 var d = Math.max(-1, Math.min(1, (orig.deltaY)));
                 //console.log('mousewheel', orig.deltaY);
 
-                this.cameraTransforms.zoom(d);
+                this.cameraTransforms.zoom(d, 1.1);
                 this.cameraTransforms.updateCamera(this.editor.getCamera());
                 this.editor.setRenderFlag();
             }

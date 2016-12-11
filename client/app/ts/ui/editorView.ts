@@ -11,6 +11,7 @@ module qec
 
         //updateLoop:updateLoop = inject(updateLoop);
         controllerManager:controllerManager = inject(controllerManager);
+        cameraController:cameraArcballController = inject(cameraArcballController);
         selectController:selectController = inject(selectController);
         heightController:heightController = inject(heightController);
         importView:importView = inject(importView);
@@ -103,8 +104,9 @@ module qec
         private updateLoop()
         {
             this.controllerManager.updateLoop();
+            this.profileView.updateLoop();
+            this.animateLoop();
             this.editor.updateLoop();
-            this.profileView.updateLoop()
             requestAnimationFrame(()=>this.updateLoop());
         }
 
@@ -155,6 +157,28 @@ module qec
 
         toggleSoftwareHardware() {
             this.editor.toggleSimpleRenderer();
+        }
+
+        animRot = quat.create();
+        animIndex = 0;
+        doAnimate = false;
+        animate()
+        {
+            this.doAnimate = !this.doAnimate;
+        }
+        animateLoop() {
+            if (!this.doAnimate)
+                return;
+
+            var cameraTransforms = this.cameraController.cameraTransforms;
+            cameraTransforms.zoom(this.animIndex < 20 ? 1 : -1 , 1.05);
+            //cameraTransforms.getRotation(this.animRot);
+            //cameraTransforms.setRotation(this.tmpRotation);
+
+            this.animIndex = (this.animIndex + 1) % 40;
+
+            cameraTransforms.updateCamera(this.editor.getCamera());
+            this.editor.setRenderFlag();
         }
     }
 }

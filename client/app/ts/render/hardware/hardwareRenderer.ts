@@ -81,6 +81,7 @@ module qec {
 
             this.fragmentShader = ''
                 + resources.all['app/ts/render/hardware/10_sd.glsl']
+                + resources.all['app/ts/render/hardware/11_sdFields.glsl']
                 + generatedPart
                 + resources.all['app/ts/render/hardware/20_light.glsl']
                 + generatedLight
@@ -217,7 +218,7 @@ module qec {
         initTHREE() {
             // setup WebGL renderer
             this.gRenderer = new THREE.WebGLRenderer(
-                {preserveDrawingBuffer: true}
+                {/*preserveDrawingBuffer: true*/}
             );
             this.gRenderer.setSize(this.width, this.height);
             //gRenderer.setClearColorHex(0x000000, 1);
