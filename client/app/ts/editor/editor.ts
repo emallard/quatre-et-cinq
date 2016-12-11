@@ -226,7 +226,8 @@ module qec
                 document.body.appendChild(canvas2);
                 */
             });
-            this.texturePacker.repack2(textures);
+            this.texturePacker.repackMode = 3;
+            this.texturePacker.repack(textures);
         
             //this.texturePacker.debugInfoInBody(10000);
 
