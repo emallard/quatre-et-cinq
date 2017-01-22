@@ -1,0 +1,6 @@
+client/app/built/* linguist-vendored
+client/app/built/d.ts/* linguist-vendored
+client/libs/* linguist-vendored
+server/public/assets/* linguist-vendored
+server/typings/* linguist-vendored
+server/build/* linguist-vendored
