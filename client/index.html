@@ -1,95 +1,255 @@
 <html>
+	<head>
+		<title>SvgPrint3D - Print in 3D your own SVGs</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--[if lte IE 8]><script src="public/assets/js/ie/html5shiv.js"></script><![endif]-->
+		<link rel="stylesheet" href="public/assets/css/main.css" />
+		<!--[if lte IE 9]><link rel="stylesheet" href="public/assets/css/ie9.css" /><![endif]-->
+	</head>
+	<body>
+		<div id="page-wrapper">
 
-<head>
-    <title>4et5 - raycast debug</title>
+			<!-- Header -->
+				<div id="header-wrapper">
+					<header id="header" class="container">
+						<div class="row">
+							<div class="12u">
 
-    <script src="libs/jquery.3.1.1.min.js"></script>
-    <script src="libs/three.js"></script>
-    <script src="libs/gl-matrix.js"></script>
-    <script src="libs/knockout-3.4.1.js"></script>
-    <script src="app/built/built.js"></script>
+								<!-- Logo -->
+									<h1><a href="#" id="logo"><img src="public/assets/css/images/logo.svg" height="100"></a></h1>
 
-</head>
+								<!-- Nav -->
+									<nav id="nav">
+										<a href="/">Home</a>
+                    <!--{{!
+										<a href="threecolumn.html">Three Column</a>
+										<a href="twocolumn1.html">Two Column #1</a>
+										<a href="twocolumn2.html">Two Column #2</a>
+										<a href="onecolumn.html">One Column</a>
+                    }}-->
+									</nav>
 
-<body>
+							</div>
+						</div>
+					</header>
+					<div id="banner">
+						<div class="container">
+							<div class="row">
+								<div class="6u 12u(mobile)">
 
-    <input id='pickX'><input id='pickY'>
-    <button id='pickButton'>Pick</button>
-    <br/>
-    <button id='renderLoopButton'>renderLoop</button>
-    <br/>
-	<div id='root' style=display:inline-block>
-        
-    </div>
+									<!-- Banner Copy -->
+										<p><span style="font-weight:bold">SvgPrint3D</span><br/>Use your own SVG to create 3D models,<br>and print them.</p>
+										<a href="app.html" class="button-big">Try it online !</a>
 
-    <div class='debug' style='background-color:white'>
-    </div>
+								</div>
+								<div class="6u 12u(mobile)">
 
-    <script>
-        
-        if (getParameterByName('isHardware') == '1')
-        {
-            qec.resources.loadAll(onResourceLoaded);
-        }
-        else
-        {
-            onResourceLoaded();
-        }
+									<!-- Banner Image -->
+										<a href="#" class="bordered-feature-image"><img src="public/images/banner.jpg" alt="" /></a>
 
-        function onResourceLoaded()
-        {
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
 
-            //var p = getParameterByName('page')
-            //if (!p) p = 'index2';
+			<!-- Features -->
+				<div id="features-wrapper">
+					<div id="features">
+						<div class="container">
+							<div class="row">
+								<div class="3u 12u(mobile)">
 
-            //var p2 = eval('new qec.'+p+'()');
-            //var injector = new qec.injector();
-            //var p2 = injector.create(qec.index2());
-            var p2 = new qec.index2();
-            p2.isParallel = getParameterByName('isParallel') == '1';
-            p2.isHardware = getParameterByName('isHardware') == '1';
-            p2.renderSteps = getParameterByName('renderSteps') == '1';
-            p2.start(document.getElementById('root'))
-        
+									<!-- Feature #1 -->
+										<section>
+											<a href="#" class="bordered-feature-image"><img src="public/images/pic01.jpg" alt="" /></a>
+											<h2></h2>
+											<p>
+												
+											</p>
+										</section>
 
+								</div>
+								<div class="3u 12u(mobile)">
 
-            var pickClicked = false;    
-            var pickbutton = document.getElementById('pickButton');
-            var renderLoopButton = document.getElementById('renderLoopButton');
-            var root = document.getElementById('root');
-            
-            pickbutton.addEventListener("click", function(e)
-            {
-                pickClicked = true;
-            });
-            root.addEventListener("mousemove", function(e)
-            {
-                if (pickClicked) {
-                    document.getElementById('pickX').value = e.offsetX;
-                    document.getElementById('pickY').value = e.offsetY;
-                }
-            });
-            root.addEventListener("mousedown", function(e)
-            {
-                if (pickClicked)
-                {
-                    pickClicked = false;
-                    if (p2.debug)
-                    {
-                        var x = document.getElementById('pickX').value;
-                        var y = document.getElementById('pickY').value;
-                        p2.debug(parseFloat(x), parseFloat(y))
-                    }
-                }
-            });
+									<!-- Feature #2 -->
+										<section>
+											<a href="#" class="bordered-feature-image"><img src="public/images/pic01.jpg" alt="" /></a>
+											<h2></h2>
+											<p>
+												
+											</p>
+										</section>
 
-            renderLoopButton.addEventListener("click", function(e)
-            {
-                p2.startRenderLoop();
-            });
-        } 
+								</div>
+								<div class="3u 12u(mobile)">
 
-    </script>
-</body>
+									<!-- Feature #3 -->
+										<section>
+											<a href="#" class="bordered-feature-image"><img src="public/images/pic02.jpg" alt="" /></a>
+											<h2></h2>
+											<p>
+												
+											</p>
+										</section>
 
+								</div>
+								<div class="3u 12u(mobile)">
+
+									<!-- Feature #4 -->
+										<section>
+											<a href="#" class="bordered-feature-image"><img src="public/images/pic04.jpg" alt="" /></a>
+											<h2></h2>
+											<p>
+											</p>
+										</section>
+
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+			<!-- Content -->
+				<div id="content-wrapper">
+					<div id="content">
+						<div class="container">
+							<div class="row">
+								<div class="4u 12u(mobile)">
+
+									<!-- Box #1 -->
+										<section>
+											<header>
+												<h2>De la 2D à la 3D</h2>
+												<h3></h3>
+											</header>
+											<a href="#" class="feature-image"><img src="public/images/pic05.jpg" alt="" /></a>
+											<p>
+												La création 3D est désormais à portée de main.
+												En utilisant une composition d'image, puis en leur donnant un volume,
+												cela devient un jeu d'enfant.
+											</p>
+										</section>
+
+								</div>
+								<div class="4u 12u(mobile)">
+
+									<!-- Box #2 -->
+										<section>
+											<header>
+												<h2>Fonctionnalités</h2>
+												<h3></h3>
+											</header>
+											<ul class="check-list">
+												<li>Utilisez vos images</li>
+												<li>Apprenez avec les tutoriels</li>
+												<li>Partagez vos créations</li>
+												<li>Imprimez en 3D</li>
+												<li>Code open source</li>
+											</ul>
+										</section>
+
+								</div>
+								<div class="4u 12u(mobile)">
+
+									<!-- Box #3 -->
+										<section>
+											<header>
+												<h2>Ils ont aimé</h2>
+												<h3></h3>
+											</header>
+											<ul class="quote-list">
+												<li>
+													<img src="public/images/pic06.jpg" alt="" />
+													<p>"Neque nisidapibus mattis"</p>
+													<span>Jane Doe, CEO of UntitledCorp</span>
+												</li>
+												<li>
+													<img src="public/images/pic07.jpg" alt="" />
+													<p>"Lorem ipsum consequat!"</p>
+													<span>John Doe, President of FakeBiz</span>
+												</li>
+												<li>
+													<img src="public/images/pic08.jpg" alt="" />
+													<p>"Magna veroeros amet tempus"</p>
+													<span>Mary Smith, CFO of UntitledBiz</span>
+												</li>
+											</ul>
+										</section>
+
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+			<!-- Footer -->
+				<div id="footer-wrapper">
+					<footer id="footer" class="container">
+						<div class="row">
+							<div class="8u 12u(mobile)">
+
+								<!-- Links -->
+									<section>
+										<h2>Liens</h2>
+										<div>
+											<div class="row">
+												<div class="3u 12u(mobile)">
+													<ul class="link-list last-child">
+														<li><a href="#">Neque amet dapibus</a></li>
+													</ul>
+												</div>
+												<div class="3u 12u(mobile)">
+													<ul class="link-list last-child">
+														<li><a href="#">Neque amet dapibus</a></li>
+													</ul>
+												</div>
+												<div class="3u 12u(mobile)">
+													<ul class="link-list last-child">
+														<li><a href="#">Neque amet dapibus</a></li>
+													</ul>
+												</div>
+												<div class="3u 12u(mobile)">
+													<ul class="link-list last-child">
+														<li><a href="#">Neque amet dapibus</a></li>
+													</ul>
+												</div>
+											</div>
+										</div>
+									</section>
+
+							</div>
+							<!--
+							{{!
+							<div class="4u 12u(mobile)">
+									<section>
+										<h2>An Informative Text Blurb</h2>
+										<p>
+											Duis neque nisi, dapibus sed mattis quis, rutrum accumsan sed. Suspendisse eu
+										</p>
+									</section>
+
+							</div>
+							}}-->
+						</div>
+					</footer>
+				</div>
+
+			<!-- Copyright -->
+				<div id="copyright">
+					Design Credits: <a href="http://html5up.net">HTML5 UP</a>
+				</div>
+
+		</div>
+
+		<!-- Scripts -->
+			<script src="public/assets/js/jquery.min.js"></script>
+			<script src="public/assets/js/skel.min.js"></script>
+			<script src="public/assets/js/skel-viewport.min.js"></script>
+			<script src="public/assets/js/util.js"></script>
+			<!--[if lte IE 8]><script src="public/assets/js/ie/respond.min.js"></script><![endif]-->
+			<script src="public/assets/js/main.js"></script>
+
+	</body>
 </html>
