@@ -1,15 +1,13 @@
 module qec {
 
-    export class controllerManager
-    {
+    export class controllerManager {
         camActive = true;
         //cameraController:cameraController = inject(cameraController);
-        cameraController:cameraArcballController = inject(cameraArcballController);
-        
-        currentController:iController;
+        cameraController: cameraArcballController = inject(cameraArcballController);
 
-        afterInject()
-        {
+        currentController: iController;
+
+        afterInject() {
             this.cameraController.setButton(2);
             //this.cameraController.updateCamera();
         }
@@ -28,53 +26,62 @@ module qec {
         }*/
 
 
-        setController(c:iController)
-        {
+        setController(c: iController) {
             if (this.currentController != null)
                 this.currentController.unset();
-            
+
             this.currentController = c;
-            c.set();    
+            c.set();
         }
 
-        onMouseMove(e:Event)
-        {
+        onMouseMove(e: Event) {
             if (this.camActive)
-                this.cameraController.onMouseMove(<MouseEvent> e);
+                this.cameraController.onMouseMove(<MouseEvent>e);
 
             if (this.currentController != null)
-                this.currentController.onMouseMove(<MouseEvent> e);
+                this.currentController.onMouseMove(<MouseEvent>e);
         }
 
-        onMouseDown(e:Event)
-        {
+        onMouseDown(e: Event) {
             if (this.camActive)
-                this.cameraController.onMouseDown(<MouseEvent> e);
+                this.cameraController.onMouseDown(<MouseEvent>e);
 
             if (this.currentController != null)
-                this.currentController.onMouseDown(<MouseEvent> e);
+                this.currentController.onMouseDown(<MouseEvent>e);
         }
 
-        onMouseUp(e:Event)
-        {
+        onMouseUp(e: Event) {
             if (this.camActive)
-                this.cameraController.onMouseUp(<MouseEvent> e);
+                this.cameraController.onMouseUp(<MouseEvent>e);
 
             if (this.currentController != null)
-                this.currentController.onMouseUp(<MouseEvent> e);
+                this.currentController.onMouseUp(<MouseEvent>e);
         }
 
-        onMouseWheel(e:Event)
-        {
+        onMouseWheel(e: Event) {
             if (this.camActive)
-                this.cameraController.onMouseWheel(<WheelEvent> e);
+                this.cameraController.onMouseWheel(<WheelEvent>e);
 
             if (this.currentController != null)
-                this.currentController.onMouseWheel(<WheelEvent> e);
+                this.currentController.onMouseWheel(<WheelEvent>e);
         }
 
-        updateLoop()
-        {
+        onTouchStart(e: Event) {
+            if (this.camActive)
+                this.cameraController.onTouchStart(<TouchEvent>e);
+        }
+
+        onTouchMove(e: Event) {
+            if (this.camActive)
+                this.cameraController.onTouchMove(<TouchEvent>e);
+        }
+
+        onTouchEnd(e: Event) {
+            if (this.camActive)
+                this.cameraController.onTouchEnd(<TouchEvent>e);
+        }
+
+        updateLoop() {
             if (this.camActive)
                 this.cameraController.updateLoop();
 
@@ -84,14 +91,16 @@ module qec {
 
     }
 
-    export interface iController
-    {
+    export interface iController {
         set();
         unset();
-        onMouseMove(e:MouseEvent);
-        onMouseDown(e:MouseEvent);
-        onMouseUp(e:MouseEvent);
-        onMouseWheel(e:WheelEvent);
+        onMouseMove(e: MouseEvent);
+        onMouseDown(e: MouseEvent);
+        onMouseUp(e: MouseEvent);
+        onMouseWheel(e: WheelEvent);
+        onTouchStart(e: TouchEvent);
+        onTouchMove(e: TouchEvent);
+        onTouchEnd(e: TouchEvent);
         updateLoop();
     }
 }

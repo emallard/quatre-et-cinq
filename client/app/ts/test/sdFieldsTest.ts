@@ -6,11 +6,13 @@ module qec
         test()
         {
             this.distanceFieldSameSizeAsCanvas();
+            console.log(this.testName + ' : OK');
+
             this.distanceFieldSmallerThanCanvas();
+            console.log(this.testName + ' : OK');
 
             this.distanceFieldSameSizeAsCanvas_WithMargin();
-
-            console.log('done');
+            console.log(this.testName + ' : OK');
         }
 
         distanceFieldSameSizeAsCanvas()

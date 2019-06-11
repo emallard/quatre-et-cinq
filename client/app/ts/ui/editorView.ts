@@ -1,92 +1,95 @@
 declare var saveAs;
 
-module qec
-{
+module qec {
 
-    export class editorView
-    {
-        editor:editor = inject(editor);
-        saveWorkspace:saveWorkspace = inject(saveWorkspace);
-        loadWorkspace:loadWorkspace = inject(loadWorkspace);
+    export class editorView {
+        editor: editor = inject(editor);
+        saveWorkspace: saveWorkspace = inject(saveWorkspace);
+        loadWorkspace: loadWorkspace = inject(loadWorkspace);
 
         //updateLoop:updateLoop = inject(updateLoop);
-        controllerManager:controllerManager = inject(controllerManager);
-        cameraController:cameraArcballController = inject(cameraArcballController);
-        selectController:selectController = inject(selectController);
-        heightController:heightController = inject(heightController);
-        importView:importView = inject(importView);
-        profileView:profileView = inject(profileView);
-        materialView:materialView = inject(materialView);
-        shareView:shareView = inject(shareView);
-        printView:printView = inject(printView);
+        controllerManager: controllerManager = inject(controllerManager);
+        cameraController: cameraArcballController = inject(cameraArcballController);
+        selectController: selectController = inject(selectController);
+        heightController: heightController = inject(heightController);
+        importView: importView = inject(importView);
+        profileView: profileView = inject(profileView);
+        materialView: materialView = inject(materialView);
+        shareView: shareView = inject(shareView);
+        printView: printView = inject(printView);
+        transformObjectView: transformObjectView = inject(transformObjectView);
 
-        afterInject()
-        {
+        afterInject() {
             this.editor.setRenderFlag();
             this.updateLoop();
         }
 
-        initEditor(elt:HTMLElement)
-        {
+        initEditor(elt: HTMLElement) {
             this.editor.init(elt);
         }
 
-        menuNew()
-        {
+        menuNew() {
 
         }
 
-        menuSave()
-        {
+        menuSave() {
             this.saveWorkspace.saveJsonInLocalStorage(this.editor);
         }
 
-        menuOpen()
-        {
+        menuOpen() {
             this.loadWorkspace.loadFromLocalStorage(this.editor);
         }
 
-        onMouseMove(data:any, e:Event) { this.controllerManager.onMouseMove(e); }
-        onMouseDown(data:any, e:Event) { this.controllerManager.onMouseDown(e); }
-        onMouseUp(data:any, e:Event) { this.controllerManager.onMouseUp(e); }
-        onMouseWheel(data:any, e:Event) { this.controllerManager.onMouseWheel(e); }
+        onMouseMove(data: any, e: Event) { this.controllerManager.onMouseMove(e); }
+        onMouseDown(data: any, e: Event) { this.controllerManager.onMouseDown(e); }
+        onMouseUp(data: any, e: Event) { this.controllerManager.onMouseUp(e); }
+        onMouseWheel(data: any, e: Event) { this.controllerManager.onMouseWheel(e); }
 
-        setMoveController()
-        {
+        onTouchStart(data: any, e: Event) { this.controllerManager.onTouchStart(e); }
+        onTouchMove(data: any, e: Event) { this.controllerManager.onTouchMove(e); }
+        onTouchEnd(data: any, e: Event) { this.controllerManager.onTouchEnd(e); }
+
+        setMoveController() {
             this.heightController.isScaleMode = false;
             this.controllerManager.setController(this.heightController);
             this.setActiveController(this.isMoveControllerActive);
         }
 
-        setScaleController()
-        {
+        setScaleController() {
             this.heightController.isScaleMode = true;
             this.heightController.isScaleModeBottom = false;
             this.controllerManager.setController(this.heightController);
             this.setActiveController(this.isScaleControllerActive);
         }
 
-        setScaleBottomController()
-        {
+        setScaleBottomController() {
             this.heightController.isScaleMode = true;
             this.heightController.isScaleModeBottom = true;
             this.controllerManager.setController(this.heightController);
             this.setActiveController(this.isScaleBottomControllerActive);
         }
 
-        setSelectController()
-        {
+        setSelectController() {
             this.controllerManager.setController(this.selectController);
             this.setActiveController(this.isSelectControllerActive);
+            this.transformObjectViewVisible(true);
+            this.profileViewVisible(false);
+        }
+
+        setProfileController() {
+            this.transformObjectViewVisible(false);
+            this.profileViewVisible(true);
+        }
+        toggleProfileDebug() {
+            this.profileView.toggleDebug();
         }
 
         isSelectControllerActive = ko.observable(true);
         isMoveControllerActive = ko.observable(false);
         isScaleControllerActive = ko.observable(false);
         isScaleBottomControllerActive = ko.observable(false);
-        
-        setActiveController(c:KnockoutObservable<boolean>)
-        {
+
+        setActiveController(c: KnockoutObservable<boolean>) {
             this.isSelectControllerActive(false);
             this.isMoveControllerActive(false);
             this.isScaleControllerActive(false);
@@ -94,51 +97,50 @@ module qec
             c(true);
         }
 
-        setSelectedIndex(i: number)
-        {
+        setSelectedIndex(i: number) {
             this.editor.setSelectedIndex(i);
             this.profileView.setSelectedIndex(i);
-            this.materialView.setSelectedIndex(i);
+            //this.materialView.setSelectedIndex(i);
+            this.transformObjectView.setSelectedIndex(i);
         }
 
-        private updateLoop()
-        {
+        private updateLoop() {
             this.controllerManager.updateLoop();
             this.profileView.updateLoop();
             this.animateLoop();
             this.editor.updateLoop();
-            requestAnimationFrame(()=>this.updateLoop());
+            requestAnimationFrame(() => this.updateLoop());
         }
 
-        
+
         // toolbars
-        importToolbarVisible = ko.observable<boolean>(true);
+        importToolbarVisible = ko.observable<boolean>(false);
         modifyToolbarVisible = ko.observable<boolean>(false);
         environmentToolbarVisible = ko.observable<boolean>(false);
         photoToolbarVisible = ko.observable<boolean>(false);
         printToolbarVisible = ko.observable<boolean>(false);
+        transformObjectViewVisible = ko.observable<boolean>(false);
+        profileViewVisible = ko.observable<boolean>(false);
 
-        toolbarsVisible:KnockoutObservable<boolean>[] = [
-            this.importToolbarVisible, 
-            this.modifyToolbarVisible, 
+        toolbarsVisible: KnockoutObservable<boolean>[] = [
+            this.importToolbarVisible,
+            this.modifyToolbarVisible,
             this.environmentToolbarVisible,
             this.photoToolbarVisible,
             this.printToolbarVisible];
 
         showImportToolbar() { this.setToolbar(this.importToolbarVisible); }
-        showModifyToolbar() { this.setToolbar(this.modifyToolbarVisible);}
-        showEnvironmentToolbar() { this.setToolbar(this.environmentToolbarVisible);}
-        showPhotoToolbar() { this.setToolbar(this.photoToolbarVisible);}
-        showPrintToolbar() { this.setToolbar(this.printToolbarVisible);}
+        showModifyToolbar() { this.setToolbar(this.modifyToolbarVisible); }
+        showEnvironmentToolbar() { this.setToolbar(this.environmentToolbarVisible); }
+        showPhotoToolbar() { this.setToolbar(this.photoToolbarVisible); }
+        showPrintToolbar() { this.setToolbar(this.printToolbarVisible); }
 
-        setToolbar(selected:KnockoutObservable<boolean>)
-        {
+        setToolbar(selected: KnockoutObservable<boolean>) {
             this.toolbarsVisible.forEach(t => t(false));
             selected(true);
         }
 
-        light1()
-        {
+        light1() {
             var w = this.editor.workspace;
             w.keyLight.intensity = 0.8;
             w.fillLight.intensity = 0.2;
@@ -146,8 +148,7 @@ module qec
             this.editor.setRenderFlag();
         }
 
-        light2()
-        {
+        light2() {
             var w = this.editor.workspace;
             w.keyLight.intensity = 0;
             w.fillLight.intensity = 0.5;
@@ -162,8 +163,7 @@ module qec
         animRot = quat.create();
         animIndex = 0;
         doAnimate = false;
-        animate()
-        {
+        animate() {
             this.doAnimate = !this.doAnimate;
         }
         animateLoop() {
@@ -171,7 +171,7 @@ module qec
                 return;
 
             var cameraTransforms = this.cameraController.cameraTransforms;
-            cameraTransforms.zoom(this.animIndex < 20 ? 1 : -1 , 1.05);
+            cameraTransforms.zoom(this.animIndex < 20 ? 1 : -1, 1.05);
             //cameraTransforms.getRotation(this.animRot);
             //cameraTransforms.setRotation(this.tmpRotation);
 

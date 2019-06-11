@@ -1,6 +1,6 @@
 var qec;
 (function (qec) {
-    var bsplineDrawer = (function () {
+    var bsplineDrawer = /** @class */ (function () {
         function bsplineDrawer() {
         }
         bsplineDrawer.prototype.drawSpline = function (pts, canv) {
@@ -28,6 +28,7 @@ var qec;
             oldy = spline.calcAt(0)[1];
             ctx.lineTo(oldx, oldy);
             ctx.fill();
+            ctx.stroke();
             ctx.closePath();
         };
         return bsplineDrawer;
@@ -36,7 +37,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var editor = (function () {
+    var editor = /** @class */ (function () {
         function editor() {
             this.simpleRenderer = qec.injectNew(qec.simpleRenderer);
             this.hardwareRenderer = qec.injectNew(qec.hardwareRenderer);
@@ -59,13 +60,14 @@ var qec;
             this.firstImport = true;
         }
         editor.prototype.init = function (containerElt) {
-            var simple = false;
+            var isSimple = false;
             this.simpleRenderer = new qec.simpleRenderer();
             this.simpleRenderer.setContainerAndSize(containerElt, 300, 300);
             this.simpleRenderer.canvas.style.display = 'none';
             this.hardwareRenderer = new qec.hardwareRenderer();
-            this.hardwareRenderer.setContainerAndSize(containerElt, window.innerWidth - 402, window.innerHeight - 102);
-            this.setSimpleRenderer(simple);
+            this.hardwareRenderer.setContainerAndSize(containerElt, window.innerWidth, window.innerHeight - 102);
+            console.log("this.hardwareRenderer.height : " + this.hardwareRenderer.height);
+            this.setSimpleRenderer(isSimple);
             this.renderSettings.camera.setCam(vec3.fromValues(0, -1, 3), vec3.fromValues(0, 0, 0), vec3.fromValues(0, 0, 1));
             this.workspace.rimLight.createFrom({
                 type: 'spotLightDTO',
@@ -295,7 +297,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var editorObject = (function () {
+    var editorObject = /** @class */ (function () {
         function editorObject() {
             this.sd = new qec.sdFields();
             this.isHole = false;
@@ -433,7 +435,83 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var exportOBJ = (function () {
+    var lineDrawer = /** @class */ (function () {
+        function lineDrawer() {
+        }
+        lineDrawer.prototype.drawLine = function (pts, canv) {
+            var ctx = canv.getContext('2d');
+            //ctx.clearRect(0,0,canv.width,canv.height);
+            if (pts.length == 0) {
+                return;
+            }
+            ctx.beginPath();
+            ctx.moveTo(pts[0][0], pts[0][1]);
+            for (var i = 1; i < pts.length; i++) {
+                ctx.lineTo(pts[i][0], pts[i][1]);
+            }
+            ctx.lineTo(pts[0][0], pts[0][1]);
+            ctx.fill();
+            ctx.closePath();
+        };
+        return lineDrawer;
+    }());
+    qec.lineDrawer = lineDrawer;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var updateLoop = /** @class */ (function () {
+        function updateLoop() {
+            this.controllerManager = qec.inject(qec.controllerManager);
+            this.editor = qec.inject(qec.editor);
+        }
+        updateLoop.prototype.afterInject = function () {
+            this.loop();
+        };
+        updateLoop.prototype.loop = function () {
+            var _this = this;
+            this.controllerManager.updateLoop();
+            this.editor.updateLoop();
+            requestAnimationFrame(function () { return _this.loop(); });
+        };
+        return updateLoop;
+    }());
+    qec.updateLoop = updateLoop;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var workspace = /** @class */ (function () {
+        function workspace() {
+            this.svgRealSize = vec2.fromValues(1, 1);
+            this.editorObjects = [];
+            this.selectedIndex = -1;
+            this.rimLight = new qec.spotLight();
+            this.keyLight = new qec.spotLight();
+            this.fillLight = new qec.spotLight();
+            this.importedSvgs = [];
+            this.selectedSvgIndex = -1;
+            this.sculpteoUuids = [];
+        }
+        workspace.prototype.toDto = function () {
+            var dto = new qec.workspaceDto();
+            dto.editorObjects = this.editorObjects.map(function (o) { return o.toDto(); });
+            dto.importedSvgs = this.importedSvgs;
+            dto.selectedSvgIndex = this.selectedSvgIndex;
+            dto.sculpteoUuids = this.sculpteoUuids;
+            return dto;
+        };
+        workspace.prototype.pushObject = function (o) {
+            this.editorObjects.push(o);
+            o.needsTextureUpdate = true;
+            o.needsTransformUpdate = true;
+            o.needsMaterialUpdate = true;
+        };
+        return workspace;
+    }());
+    qec.workspace = workspace;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var exportOBJ = /** @class */ (function () {
         function exportOBJ() {
         }
         exportOBJ.prototype.getText = function (triangles, normals, colors) {
@@ -504,7 +582,7 @@ var qec;
 var qec;
 (function (qec) {
     // https://gist.githubusercontent.com/paulkaplan/6d5f0ab2c7e8fdc68a61/raw/6bde174e27ae21905d871af3ef9fa3143919079f/binary_stl_writer.js
-    var exportSTL = (function () {
+    var exportSTL = /** @class */ (function () {
         function exportSTL() {
         }
         exportSTL.prototype.getText = function (triangles, normals) {
@@ -567,10 +645,165 @@ var qec;
         return exportSTL;
     }());
     qec.exportSTL = exportSTL;
+    /*
+    
+        export class exportSTL_old
+        {
+            densities:Float32Array;
+            icount = 70;
+            jcount = 70;
+            kcount = 70;
+    
+            tmpVec1 = vec3.create();
+            tmpVec2 = vec3.create();
+            tmpVec3 = vec3.create();
+            tmpVecBary = vec3.create();
+            tmpVecCross = vec3.create();
+    
+            compute(sds:sdFields[]):string
+            {
+                this.densities = new Float32Array(this.icount*this.jcount*this.kcount);
+                //var diffuses = new Float32Array(3*100*100*50);
+    
+                var sdUni:sdUnion = new sdUnion();
+                sds.forEach(x=>sdUni.array.push(x));
+    
+                var pos = vec3.create();
+                var bounds = new Float32Array(6);
+                var diffuse = vec3.create();
+    
+                var tmpMat = mat4.create();
+                var min = vec3.create();
+                var max = vec3.create();
+    
+                for (var s=0; s < sds.length; ++s)
+                {
+                    var sd = sds[s];
+                    var bchs = sd.boundingCenterAndHalfSize;
+    
+                    sd.getInverseTransform(tmpMat);
+                    mat4.invert(tmpMat, tmpMat);
+                    
+                    vec3.set(min, bchs[0] - bchs[4], bchs[1]-bchs[4],  bchs[2]-bchs[5]);
+                    vec3.set(max, bchs[0] + bchs[4], bchs[1]+bchs[4],  bchs[2]+bchs[5]);
+                    
+                    vec3.transformMat4(min, min, tmpMat);
+                    vec3.transformMat4(max, max, tmpMat);
+    
+                    for (var b=0; b < 3; ++b)
+                    {
+                        bounds[b] = Math.min(min[b], bounds[b]);
+                        bounds[3+b] = Math.max(max[b], bounds[3+b]);
+                    }
+                }
+    
+                console.log('export bounding box : ' + float32ArrayToString(bounds));
+                //return "";
+                
+                for (var i=0; i < this.icount; ++i)
+                {
+                    console.log(''+i+'/'+(this.icount-1));
+                    var ri = i/(this.icount-1);
+                    for (var j=0; j < this.jcount; ++j)
+                    {
+                        var rj = j/(this.jcount-1);
+                        for (var k=0; k < this.kcount; ++k)
+                        {
+                            var rk = k/(this.kcount-1);
+    
+                            pos[0] = (1-ri) * bounds[0] + ri * bounds[3];
+                            pos[1] = (1-rj) * bounds[1] + rj * bounds[4];
+                            pos[2] = (1-rk) * bounds[2] + rk * bounds[5];
+    
+                            var d = sdUni.getDist(pos, false, false);
+                            //sd.getMaterial(pos).getColor(diffuse);
+    
+                            var q = this.getq(i,j,k);
+                            this.densities[q] = d;
+                        }
+                    }
+                }
+    
+                //console.log(densities[this.getq(5,5,5)] + '=' + d.toFixed(3));
+    
+                var stl = "solid blablabla\n";
+                var mc = new marchingCubes();
+                var nn = vec3.fromValues(1,0,0);
+    
+                var bsx = (bounds[3]-bounds[0]) / (this.icount-1);
+                var bsy = (bounds[4]-bounds[1]) / (this.jcount-1);
+                var bsz = (bounds[5]-bounds[2]) / (this.kcount-1);
+                
+                for (var i=0; i < this.icount-1; ++i)
+                {
+                    console.log(''+i+'/'+(this.icount-1));
+                    for (var j=0; j < this.jcount-1; ++j)
+                    {
+                        for (var k=0; k < this.kcount-1; ++k)
+                        {
+                            var q1 = this.getq(i,  j,  k);
+                            var q2 = this.getq(i+1,j,  k);
+                            var q3 = this.getq(i,  j+1,k);
+                            var q4 = this.getq(i+1,j+1,k);
+                            var q5 = this.getq(i,  j,  k+1);
+                            var q6 = this.getq(i+1,j,  k+1);
+                            var q7 = this.getq(i,  j+1,k+1);
+                            var q8 = this.getq(i+1,j+1,k+1);
+                            
+                            mc.polygonize(
+                                this.densities[q1], this.densities[q2], this.densities[q3], this.densities[q4],
+                                this.densities[q5], this.densities[q6], this.densities[q7], this.densities[q8],
+                                nn,nn,nn,nn,nn,nn,nn,nn,0);
+    
+                            for (var pi=0 ; pi < mc.posArrayLength ; )
+                            {
+                                vec3.set(this.tmpVec1, bsx*(i+mc.posArray[pi++]), bsy*(j+mc.posArray[pi++]), bsz*(k+mc.posArray[pi++]));
+                                vec3.set(this.tmpVec2, bsx*(i+mc.posArray[pi++]), bsy*(j+mc.posArray[pi++]), bsz*(k+mc.posArray[pi++]));
+                                vec3.set(this.tmpVec3, bsx*(i+mc.posArray[pi++]), bsy*(j+mc.posArray[pi++]), bsz*(k+mc.posArray[pi++]));
+    
+                                // http://buildaweso.me/project/2014/10/26/writing-binary-stl-files-from-threejs-objects
+                                // https://en.wikipedia.org/wiki/STL_(file_format)
+    
+                                // get material at barycentre
+                                //vec3.add(this.tmpVecBary, this.tmpVec2, this.tmpVec3);
+                                //vec3.add(this.tmpVecBary, this.tmpVecBary, this.tmpVec1);
+                                //vec3.scale(this.tmpVecBary, this.tmpVecBary, 1/3);
+                                //var diffuse = sd.getMaterial(this.tmpVecBary).diffuse;
+    
+                                var vertices = '';
+                                vertices += "vertex " + this.tmpVec1[0] + ' ' + this.tmpVec1[1] + ' ' + this.tmpVec1[2] + '\n';
+                                vertices += "vertex " + this.tmpVec2[0] + ' ' + this.tmpVec2[1] + ' ' + this.tmpVec2[2] + '\n';
+                                vertices += "vertex " + this.tmpVec3[0] + ' ' + this.tmpVec3[1] + ' ' + this.tmpVec3[2] + '\n';
+    
+                                vec3.subtract(this.tmpVec3, this.tmpVec3, this.tmpVec1);
+                                vec3.subtract(this.tmpVec2, this.tmpVec2, this.tmpVec1);
+                                vec3.cross(this.tmpVecCross, this.tmpVec2, this.tmpVec3);
+                                vec3.normalize(this.tmpVecCross, this.tmpVecCross);
+                                stl += 'facet normal ' + this.tmpVecCross[0] + ' ' + this.tmpVecCross[1] + ' ' +this.tmpVecCross[2] + '\n';
+                                stl += 'outer loop \n';
+                                stl += vertices;
+    
+                                stl += 'endloop \n';
+                                stl += 'endfacet \n';
+                            }
+                        }
+                    }
+                }
+                stl += "endsolid blablabla";
+                return stl;
+            }
+    
+    
+            getq(i:number, j:number, k:number)
+            {
+                return i + j*this.icount + k*this.icount*this.jcount;
+            }
+        }
+    */
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var indexedMesh = (function () {
+    var indexedMesh = /** @class */ (function () {
         function indexedMesh() {
         }
         return indexedMesh;
@@ -582,7 +815,7 @@ var qec;
     function lerp(a, b, t) {
         return a + (b - a) * t;
     }
-    var marchingCubes = (function () {
+    var marchingCubes = /** @class */ (function () {
         function marchingCubes() {
             this.posArray = new Float32Array(1000);
             this.posArrayLength = 0;
@@ -1025,7 +1258,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var signedDistanceToTriangles = (function () {
+    var signedDistanceToTriangles = /** @class */ (function () {
         function signedDistanceToTriangles() {
             this.icount = 100;
             this.jcount = 100;
@@ -1140,31 +1373,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var lineDrawer = (function () {
-        function lineDrawer() {
-        }
-        lineDrawer.prototype.drawLine = function (pts, canv) {
-            var ctx = canv.getContext('2d');
-            //ctx.clearRect(0,0,canv.width,canv.height);
-            if (pts.length == 0) {
-                return;
-            }
-            ctx.beginPath();
-            ctx.moveTo(pts[0][0], pts[0][1]);
-            for (var i = 1; i < pts.length; i++) {
-                ctx.lineTo(pts[i][0], pts[i][1]);
-            }
-            ctx.lineTo(pts[0][0], pts[0][1]);
-            ctx.fill();
-            ctx.closePath();
-        };
-        return lineDrawer;
-    }());
-    qec.lineDrawer = lineDrawer;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    var editorObjectDto = (function () {
+    var editorObjectDto = /** @class */ (function () {
         function editorObjectDto() {
             this.profilePoints = [];
         }
@@ -1174,7 +1383,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var loadWorkspace = (function () {
+    var loadWorkspace = /** @class */ (function () {
         function loadWorkspace() {
             this.svgHelper = qec.injectNew(qec.svgHelper);
         }
@@ -1227,7 +1436,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var saveWorkspace = (function () {
+    var saveWorkspace = /** @class */ (function () {
         function saveWorkspace() {
         }
         saveWorkspace.prototype.saveJson = function (editor) {
@@ -1253,9 +1462,10 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var workspaceDto = (function () {
+    var workspaceDto = /** @class */ (function () {
         function workspaceDto() {
             this.editorObjects = [];
+            //camera:cameraDTO[] = [];
         }
         return workspaceDto;
     }());
@@ -1263,7 +1473,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var svgAutoHeightHelper = (function () {
+    var svgAutoHeightHelper = /** @class */ (function () {
         function svgAutoHeightHelper() {
             this.svgHelper = new qec.svgHelper();
             this.valueForIds = {};
@@ -1331,7 +1541,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var svgHelper = (function () {
+    var svgHelper = /** @class */ (function () {
         function svgHelper() {
             this.canvas = document.createElement('canvas');
             this.canvas2 = document.createElement('canvas');
@@ -1458,6 +1668,7 @@ var qec;
                 var child = elt.childNodes[i];
                 if (child instanceof SVGGElement) {
                     foundList.push(child);
+                    //console.log('layer: ' + child.getAttribute('id'));
                 }
             }
             return foundList;
@@ -1467,6 +1678,7 @@ var qec;
                 var child = elt.childNodes[i];
                 if (child instanceof SVGElement) {
                     foundList.push(child);
+                    //console.log('drawable: ' + child.getAttribute('id'));
                 }
             }
         };
@@ -1489,7 +1701,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var svgImporter = (function () {
+    var svgImporter = /** @class */ (function () {
         function svgImporter() {
             this.svgAutoHeightHelper = qec.injectNew(qec.svgAutoHeightHelper);
             this.helper = qec.injectNew(qec.svgHelper);
@@ -1583,59 +1795,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var updateLoop = (function () {
-        function updateLoop() {
-            this.controllerManager = qec.inject(qec.controllerManager);
-            this.editor = qec.inject(qec.editor);
-        }
-        updateLoop.prototype.afterInject = function () {
-            this.loop();
-        };
-        updateLoop.prototype.loop = function () {
-            var _this = this;
-            this.controllerManager.updateLoop();
-            this.editor.updateLoop();
-            requestAnimationFrame(function () { return _this.loop(); });
-        };
-        return updateLoop;
-    }());
-    qec.updateLoop = updateLoop;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    var workspace = (function () {
-        function workspace() {
-            this.svgRealSize = vec2.fromValues(1, 1);
-            this.editorObjects = [];
-            this.selectedIndex = -1;
-            this.rimLight = new qec.spotLight();
-            this.keyLight = new qec.spotLight();
-            this.fillLight = new qec.spotLight();
-            this.importedSvgs = [];
-            this.selectedSvgIndex = -1;
-            this.sculpteoUuids = [];
-        }
-        workspace.prototype.toDto = function () {
-            var dto = new qec.workspaceDto();
-            dto.editorObjects = this.editorObjects.map(function (o) { return o.toDto(); });
-            dto.importedSvgs = this.importedSvgs;
-            dto.selectedSvgIndex = this.selectedSvgIndex;
-            dto.sculpteoUuids = this.sculpteoUuids;
-            return dto;
-        };
-        workspace.prototype.pushObject = function (o) {
-            this.editorObjects.push(o);
-            o.needsTextureUpdate = true;
-            o.needsTransformUpdate = true;
-            o.needsMaterialUpdate = true;
-        };
-        return workspace;
-    }());
-    qec.workspace = workspace;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    var cameraDTO = (function () {
+    var cameraDTO = /** @class */ (function () {
         function cameraDTO(position, target, up, fov) {
             if (position === void 0) { position = [1, 1, 1]; }
             if (target === void 0) { target = [0, 0, 0]; }
@@ -1650,7 +1810,7 @@ var qec;
         return cameraDTO;
     }());
     qec.cameraDTO = cameraDTO;
-    var camera = (function () {
+    var camera = /** @class */ (function () {
         function camera() {
             this.projMatrix = mat4.create();
             this.transformMatrix = mat4.create();
@@ -1660,6 +1820,8 @@ var qec;
             this.target = vec3.create();
             this.up = vec3.create();
             this.fov = Math.PI / 6;
+            this.tmpMatrix = mat4.create();
+            this.tmpVec3 = vec3.create();
             this.ray_eye = vec4.create();
             this.ray_clip = vec4.create();
             this.ray_wor = vec4.create();
@@ -1723,19 +1885,29 @@ var qec;
             vec3.set(ro, 0, 0, 0);
             vec3.transformMat4(ro, ro, this.inverseTransformMatrix);
         };
+        camera.prototype.getScreenPositionPreTransform = function (out, pos, transform) {
+            vec3.transformMat4(this.tmpVec3, pos, transform);
+            this.getScreenPosition(out, this.tmpVec3);
+        };
+        camera.prototype.getScreenPosition = function (out, pos) {
+            mat4.multiply(this.tmpMatrix, this.projMatrix, this.transformMatrix);
+            vec3.transformMat4(out, pos, this.tmpMatrix);
+            out[0] = (1 + out[0]) / 2 * this.canvasWidth;
+            out[1] = (-1 + out[1]) / -2 * this.canvasHeight;
+        };
         return camera;
     }());
     qec.camera = camera;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var directionalLightDTO = (function () {
+    var directionalLightDTO = /** @class */ (function () {
         function directionalLightDTO() {
         }
         return directionalLightDTO;
     }());
     qec.directionalLightDTO = directionalLightDTO;
-    var directionalLight = (function () {
+    var directionalLight = /** @class */ (function () {
         function directionalLight() {
             this.position = vec3.create();
             this.direction = vec3.create();
@@ -1753,7 +1925,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var distanceField = (function () {
+    var distanceField = /** @class */ (function () {
         function distanceField() {
             this.halfSize = vec2.create();
             this.xy = new Uint32Array(2);
@@ -1927,7 +2099,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var distanceFieldCanvas = (function () {
+    var distanceFieldCanvas = /** @class */ (function () {
         function distanceFieldCanvas() {
             this.srcLoaded = false;
             this.floatTexture = new qec.floatTexture();
@@ -2066,16 +2238,29 @@ var qec;
             img.onload = function () { callback(img); };
             img.src = src1;
         };
-        distanceFieldCanvas.prototype.loadImgs = function (src1, src2, callback) {
-            var img = new Image();
-            img.onload = function () {
-                var img2 = new Image();
-                img2.onload = function () {
-                    callback(img, img2);
-                };
-                img2.src = src2;
-            };
-            img.src = src1;
+        /*
+                private loadImgs(src1:string, src2:string, callback:(img1:HTMLImageElement, img2:HTMLImageElement)=>void)
+                {
+                    var img = new Image();
+                    img.onload = function()
+                    {
+                        var img2 = new Image();
+                        img2.onload = function()
+                        {
+                            callback(img, img2);
+                        }
+                        img2.src = src2;
+                    }
+                    img.src = src1;
+                }
+        */
+        distanceFieldCanvas.prototype.debugInfoInExistingCanvas = function (canvas) {
+            canvas.width = this.canvas.width;
+            canvas.height = this.canvas.height;
+            var ctx = canvas.getContext('2d');
+            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            this.distanceField.fillImageData(imageData.data, 2550);
+            ctx.putImageData(imageData, 0, 0, 0, 0, canvas.width, canvas.height);
         };
         distanceFieldCanvas.prototype.debugInfoInCanvas = function () {
             var ctx = this.canvas.getContext('2d');
@@ -2089,7 +2274,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var floatTexture = (function () {
+    var floatTexture = /** @class */ (function () {
         function floatTexture() {
         }
         return floatTexture;
@@ -2184,7 +2369,256 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var hardwareRenderer = (function () {
+    var pointLightDTO = /** @class */ (function () {
+        function pointLightDTO() {
+        }
+        return pointLightDTO;
+    }());
+    qec.pointLightDTO = pointLightDTO;
+    var pointLight = /** @class */ (function () {
+        function pointLight() {
+            this.position = vec3.create();
+        }
+        pointLight.prototype.createFrom = function (dto) {
+            vec3FromArray(this.position, dto.position);
+        };
+        return pointLight;
+    }());
+    qec.pointLight = pointLight;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var renderSettings = /** @class */ (function () {
+        function renderSettings() {
+            this.directionalLights = [];
+            this.spotLights = [];
+            this.camera = new qec.camera();
+        }
+        return renderSettings;
+    }());
+    qec.renderSettings = renderSettings;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var spotLightDTO = /** @class */ (function () {
+        function spotLightDTO() {
+        }
+        return spotLightDTO;
+    }());
+    qec.spotLightDTO = spotLightDTO;
+    var spotLight = /** @class */ (function () {
+        function spotLight() {
+            this.position = vec3.create();
+            this.direction = vec3.create();
+            this.intensity = 1;
+        }
+        spotLight.prototype.createFrom = function (dto) {
+            vec3FromArray(this.position, dto.position);
+            vec3FromArray(this.direction, dto.direction);
+            this.intensity = dto.intensity;
+            vec3.normalize(this.direction, this.direction);
+        };
+        return spotLight;
+    }());
+    qec.spotLight = spotLight;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var textureSprite = /** @class */ (function () {
+        function textureSprite() {
+            this.bounds = vec4.create(); // bounds between 0 and 1
+        }
+        return textureSprite;
+    }());
+    qec.textureSprite = textureSprite;
+    var texturePacker = /** @class */ (function () {
+        function texturePacker() {
+            this.allBigTextures = [];
+            this.allSprites = [];
+            this.repackMode = 3;
+        }
+        texturePacker.prototype.getSprite = function (texture) {
+            var found = this.allSprites.find(function (t) { return t.originalTexture == texture; });
+            return found;
+        };
+        texturePacker.prototype.getTextureIndex = function (texture) {
+            var found = this.allBigTextures.indexOf(texture);
+            return found;
+        };
+        texturePacker.prototype.repackSdRec = function (rootSignedDistance) {
+            var floatTextures = [];
+            var expl = new qec.hardwareSignedDistanceExplorer();
+            expl.explore(rootSignedDistance);
+            expl.array.forEach(function (hsd) {
+                var sd = hsd.sd;
+                if (sd instanceof qec.sdFields) {
+                    floatTextures.push(sd.topTexture, sd.profileTexture);
+                }
+            });
+            this.repack(floatTextures);
+        };
+        texturePacker.prototype.repack = function (floatTextures) {
+            if (this.repackMode == 0)
+                this.repack0(floatTextures);
+            else if (this.repackMode == 1)
+                this.repack1(floatTextures);
+            else if (this.repackMode == 2)
+                this.repack2(floatTextures);
+            else if (this.repackMode == 3)
+                this.repack3(floatTextures);
+        };
+        texturePacker.prototype.repack0 = function (floatTextures) {
+            this.allBigTextures = [];
+            this.allSprites = [];
+            for (var i = 0; i < floatTextures.length; ++i) {
+                var texture = floatTextures[i];
+                var sprite = new textureSprite();
+                sprite.originalTexture = texture;
+                sprite.bigTexture = texture;
+                vec4.set(sprite.bounds, 0, 0, 1, 1);
+                this.allSprites.push(sprite);
+                this.allBigTextures.push(texture);
+                console.log('sprite pushed #' + i + ' ' + vec4.str(sprite.bounds));
+            }
+        };
+        texturePacker.prototype.repack1 = function (floatTextures) {
+            console.log('repack mode 1 ' + floatTextures.length + ' textures');
+            this.allBigTextures = [];
+            this.allSprites = [];
+            for (var i = 0; i < floatTextures.length; ++i) {
+                var texture = floatTextures[i];
+                var bigTexture = new qec.floatTexture();
+                bigTexture.width = 400;
+                bigTexture.height = 400;
+                bigTexture.data = new Float32Array(bigTexture.width * bigTexture.height * 4);
+                for (var x = 0; x < texture.width; x++) {
+                    for (var y = 0; y < texture.height; y++) {
+                        var q = y * texture.width + x;
+                        var qb = y * (bigTexture.width) + x;
+                        bigTexture.data[4 * qb + 0] = texture.data[4 * q + 0];
+                        bigTexture.data[4 * qb + 1] = texture.data[4 * q + 1];
+                        bigTexture.data[4 * qb + 2] = texture.data[4 * q + 2];
+                        bigTexture.data[4 * qb + 3] = texture.data[4 * q + 3];
+                    }
+                }
+                var sprite = new textureSprite();
+                sprite.originalTexture = texture;
+                sprite.bigTexture = bigTexture;
+                var xMax = texture.width / bigTexture.width;
+                var yMax = texture.height / bigTexture.height;
+                var offsetX = 1 / bigTexture.width;
+                var offsetY = 1 / bigTexture.height;
+                vec4.set(sprite.bounds, 0, 0, xMax - offsetX, yMax - offsetY);
+                this.allSprites.push(sprite);
+                this.allBigTextures.push(bigTexture);
+                console.log('sprite pushed #' + i + ' ' + vec4.str(sprite.bounds));
+            }
+        };
+        texturePacker.prototype.repack2 = function (floatTextures) {
+            console.log('repack mode 2 ' + floatTextures.length + ' textures');
+            this.allBigTextures = [];
+            this.allSprites = [];
+            var w = 400; //floatTextures[0].width;
+            var h = 400; //floatTextures[0].height;
+            var bigTexture = new qec.floatTexture();
+            bigTexture.width = w * floatTextures.length;
+            bigTexture.height = h;
+            bigTexture.data = new Float32Array(bigTexture.width * bigTexture.height * 4);
+            for (var i = 0; i < floatTextures.length; ++i) {
+                var texture = floatTextures[i];
+                for (var x = 0; x < texture.width; x++) {
+                    for (var y = 0; y < texture.height; y++) {
+                        var q = y * texture.width + x;
+                        var qb = y * (bigTexture.width) + (i * w + x);
+                        bigTexture.data[4 * qb + 0] = texture.data[4 * q + 0];
+                        bigTexture.data[4 * qb + 1] = texture.data[4 * q + 1];
+                        bigTexture.data[4 * qb + 2] = texture.data[4 * q + 2];
+                        bigTexture.data[4 * qb + 3] = texture.data[4 * q + 3];
+                    }
+                }
+                var sprite = new textureSprite();
+                sprite.originalTexture = texture;
+                sprite.bigTexture = bigTexture;
+                // sprite bounds
+                var xMin = i / (floatTextures.length);
+                var yMin = 0;
+                var xMax = (i + (texture.width / 400)) / floatTextures.length;
+                var yMax = (texture.height / 400);
+                var offsetX = 1 / bigTexture.width;
+                var offsetY = 1 / bigTexture.height;
+                vec4.set(sprite.bounds, xMin + offsetX, yMin + offsetY, xMax - offsetX, yMax - offsetY);
+                this.allSprites.push(sprite);
+                //console.log('sprite pushed #' + i + ' ' + vec4.str(sprite.bounds));
+            }
+            this.allBigTextures.push(bigTexture);
+        };
+        texturePacker.prototype.repack3 = function (floatTextures) {
+            console.log('repack mode 3 ' + floatTextures.length + ' textures');
+            this.allBigTextures = [];
+            this.allSprites = [];
+            var w = 400; //floatTextures[0].width;
+            var h = 400; //floatTextures[0].height;
+            var indexInFloatTextures = 0;
+            var maxSpriteInBigTexture = 10;
+            while (indexInFloatTextures < floatTextures.length) {
+                var spriteCountInBigTexture = Math.min(maxSpriteInBigTexture, floatTextures.length - indexInFloatTextures);
+                var bigTexture = new qec.floatTexture();
+                bigTexture.width = w * spriteCountInBigTexture;
+                bigTexture.height = h;
+                bigTexture.data = new Float32Array(bigTexture.width * bigTexture.height * 4);
+                this.allBigTextures.push(bigTexture);
+                indexInFloatTextures += spriteCountInBigTexture;
+                console.log('bigTexture created for ' + spriteCountInBigTexture + ' sprites');
+            }
+            var bigTextureIndex = 0;
+            var spriteIndex = 0;
+            for (var i = 0; i < floatTextures.length; ++i) {
+                var texture = floatTextures[i];
+                var bigTexture = this.allBigTextures[bigTextureIndex];
+                for (var x = 0; x < texture.width; x++) {
+                    for (var y = 0; y < texture.height; y++) {
+                        var q = y * texture.width + x;
+                        var qb = y * (bigTexture.width) + (spriteIndex * w + x);
+                        bigTexture.data[4 * qb + 0] = texture.data[4 * q + 0];
+                        bigTexture.data[4 * qb + 1] = texture.data[4 * q + 1];
+                        bigTexture.data[4 * qb + 2] = texture.data[4 * q + 2];
+                        bigTexture.data[4 * qb + 3] = texture.data[4 * q + 3];
+                    }
+                }
+                var sprite = new textureSprite();
+                sprite.originalTexture = texture;
+                sprite.bigTexture = bigTexture;
+                // sprite bounds
+                var xMin = (spriteIndex * 400) / (bigTexture.width);
+                var yMin = 0;
+                var xMax = (spriteIndex * 400 + texture.width) / bigTexture.width;
+                var yMax = (texture.height / bigTexture.height);
+                var offsetX = 1 / bigTexture.width;
+                var offsetY = 1 / bigTexture.height;
+                vec4.set(sprite.bounds, xMin + offsetX, yMin + offsetY, xMax - offsetX, yMax - offsetY);
+                this.allSprites.push(sprite);
+                //console.log('sprite pushed #' + bigTextureIndex + '/' + spriteIndex + ' ' + vec4.str(sprite.bounds));
+                spriteIndex++;
+                if (spriteIndex >= maxSpriteInBigTexture) {
+                    spriteIndex = 0;
+                    bigTextureIndex++;
+                }
+            }
+        };
+        texturePacker.prototype.debugInfoInBody = function (scale) {
+            this.allBigTextures.forEach(function (t) {
+                var canvas = document.createElement('canvas');
+                qec.textureDebugInCanvas(t, 0, scale, canvas);
+                document.body.appendChild(canvas);
+            });
+        };
+        return texturePacker;
+    }());
+    qec.texturePacker = texturePacker;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var hardwareRenderer = /** @class */ (function () {
         function hardwareRenderer() {
             this.fragmentShader = '';
             this.fakePos = vec3.create();
@@ -2329,13 +2763,19 @@ var qec;
         };
         hardwareRenderer.prototype.initTHREE = function () {
             // setup WebGL renderer
-            this.gRenderer = new THREE.WebGLRenderer({});
+            //            this.gRenderer = new THREE.WebGLRenderer(
+            //                {/*preserveDrawingBuffer: true*/}
+            //            );
+            var canvas = document.createElement('canvas');
+            var context = canvas.getContext('webgl2');
+            this.gRenderer = new THREE.WebGLRenderer({ canvas: canvas, context: context });
             this.gRenderer.setSize(this.width, this.height);
             //gRenderer.setClearColorHex(0x000000, 1);
             this.gRenderer.setClearColor(0xffffff, 1);
             this.gRenderer.setPixelRatio(window.devicePixelRatio);
             //gRenderer.autoClear = false;
-            this.container.appendChild(this.gRenderer.domElement);
+            //this.container.appendChild(this.gRenderer.domElement);
+            this.container.appendChild(canvas);
             // camera to render, orthogonal (fov=0)
             this.gCamera = new THREE.OrthographicCamera(-.5, .5, .5, -.5, -1, 1);
             // scene for rendering
@@ -2377,7 +2817,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var hardwareShaderText = (function () {
+    var hardwareShaderText = /** @class */ (function () {
         function hardwareShaderText() {
         }
         hardwareShaderText.prototype.generateDistance = function (expl, packer) {
@@ -2569,12 +3009,14 @@ var qec;
                 var childHsd = expl.getHsd(sd.array[0]);
                 return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
                     + '\n' + 'return getColor_' + childHsd.index + '(pos);'
+                    //+'  return color;'
                     + '\n}';
             }
             else if (sd instanceof qec.sdBorder) {
                 var childHsd = expl.getHsd(sd.sd);
                 return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
                     + '\n' + 'return getColor_' + childHsd.index + '(pos);'
+                    //+'  return color;'
                     + '\n}';
             }
             else {
@@ -2599,14 +3041,14 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var hardwareSignedDistance = (function () {
+    var hardwareSignedDistance = /** @class */ (function () {
         function hardwareSignedDistance() {
             this.sdFieldIndex = -1;
         }
         return hardwareSignedDistance;
     }());
     qec.hardwareSignedDistance = hardwareSignedDistance;
-    var hardwareSignedDistanceExplorer = (function () {
+    var hardwareSignedDistanceExplorer = /** @class */ (function () {
         function hardwareSignedDistanceExplorer() {
             this.array = [];
         }
@@ -2669,7 +3111,7 @@ var qec;
             lineCount = 50;
         }
     */
-    var parallelRenderer = (function () {
+    var parallelRenderer = /** @class */ (function () {
         function parallelRenderer() {
             this.clients = [];
         }
@@ -2758,26 +3200,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var pointLightDTO = (function () {
-        function pointLightDTO() {
-        }
-        return pointLightDTO;
-    }());
-    qec.pointLightDTO = pointLightDTO;
-    var pointLight = (function () {
-        function pointLight() {
-            this.position = vec3.create();
-        }
-        pointLight.prototype.createFrom = function (dto) {
-            vec3FromArray(this.position, dto.position);
-        };
-        return pointLight;
-    }());
-    qec.pointLight = pointLight;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    var renderClient = (function () {
+    var renderClient = /** @class */ (function () {
         function renderClient(name, canvas, sharedRenderedData) {
             var _this = this;
             this.name = name;
@@ -2857,7 +3280,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var renderCollide = (function () {
+    var renderCollide = /** @class */ (function () {
         function renderCollide() {
             this.debug = false;
             this.pos = vec3.create();
@@ -2918,7 +3341,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var renderPixel = (function () {
+    var renderPixel = /** @class */ (function () {
         function renderPixel() {
             this.debug = false;
             this.out = vec4.create();
@@ -3106,11 +3529,11 @@ var qec;
                     dt = this.sd.getDist2(this.ssTmp, toLight, this.showBoundingBox, this.debug); // * this.c_fSmooth;
                 else
                     dt = this.sd.getDist(this.ssTmp, this.showBoundingBox, this.debug); // * c_fSmooth;
-                if (dt < this.EPS_INTERSECT)
+                if (dt < this.EPS_INTERSECT) // stop if intersect object
                     return 0.0;
                 //shadow = Math.min(shadow, this.SS_K*(dt/t));
                 t += dt;
-                if (t > lightDist)
+                if (t > lightDist) // stop if reach light
                     break;
             }
             return MathClamp(shadow, 0.0, 1.0);
@@ -3126,7 +3549,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var renderPixelStepCount = (function () {
+    var renderPixelStepCount = /** @class */ (function () {
         function renderPixelStepCount() {
             this.debug = false;
             this.out = vec4.create();
@@ -3246,19 +3669,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var renderSettings = (function () {
-        function renderSettings() {
-            this.directionalLights = [];
-            this.spotLights = [];
-            this.camera = new qec.camera();
-        }
-        return renderSettings;
-    }());
-    qec.renderSettings = renderSettings;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    var renderUnit = (function () {
+    var renderUnit = /** @class */ (function () {
         function renderUnit() {
             this.ro = vec3.create();
             this.rd = vec3.create();
@@ -3301,21 +3712,21 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var renderWorkerInitMessage = (function () {
+    var renderWorkerInitMessage = /** @class */ (function () {
         function renderWorkerInitMessage() {
             this.type = 'init';
         }
         return renderWorkerInitMessage;
     }());
     qec.renderWorkerInitMessage = renderWorkerInitMessage;
-    var renderWorkerInitDTOMessage = (function () {
+    var renderWorkerInitDTOMessage = /** @class */ (function () {
         function renderWorkerInitDTOMessage() {
             this.type = 'initDTO';
         }
         return renderWorkerInitDTOMessage;
     }());
     qec.renderWorkerInitDTOMessage = renderWorkerInitDTOMessage;
-    var renderWorkerInitDoneMessage = (function () {
+    var renderWorkerInitDoneMessage = /** @class */ (function () {
         function renderWorkerInitDoneMessage() {
             this.type = 'initDone';
         }
@@ -3323,7 +3734,7 @@ var qec;
         return renderWorkerInitDoneMessage;
     }());
     qec.renderWorkerInitDoneMessage = renderWorkerInitDoneMessage;
-    var renderWorkerPrepareRenderMessage = (function () {
+    var renderWorkerPrepareRenderMessage = /** @class */ (function () {
         function renderWorkerPrepareRenderMessage() {
             this.type = 'prepareRender';
         }
@@ -3331,7 +3742,7 @@ var qec;
         return renderWorkerPrepareRenderMessage;
     }());
     qec.renderWorkerPrepareRenderMessage = renderWorkerPrepareRenderMessage;
-    var renderWorkerPrepareRenderDoneMessage = (function () {
+    var renderWorkerPrepareRenderDoneMessage = /** @class */ (function () {
         function renderWorkerPrepareRenderDoneMessage() {
             this.type = 'prepareRenderDone';
         }
@@ -3339,7 +3750,7 @@ var qec;
         return renderWorkerPrepareRenderDoneMessage;
     }());
     qec.renderWorkerPrepareRenderDoneMessage = renderWorkerPrepareRenderDoneMessage;
-    var renderWorkerRenderMessage = (function () {
+    var renderWorkerRenderMessage = /** @class */ (function () {
         function renderWorkerRenderMessage() {
             this.type = 'render';
         }
@@ -3347,7 +3758,7 @@ var qec;
         return renderWorkerRenderMessage;
     }());
     qec.renderWorkerRenderMessage = renderWorkerRenderMessage;
-    var renderWorkerRenderDoneMessage = (function () {
+    var renderWorkerRenderDoneMessage = /** @class */ (function () {
         function renderWorkerRenderDoneMessage() {
             this.type = 'renderDone';
         }
@@ -3355,7 +3766,7 @@ var qec;
         return renderWorkerRenderDoneMessage;
     }());
     qec.renderWorkerRenderDoneMessage = renderWorkerRenderDoneMessage;
-    var renderWorker = (function () {
+    var renderWorker = /** @class */ (function () {
         function renderWorker() {
             this.camera = new qec.camera();
             this.renderUnit = new qec.renderUnit();
@@ -3428,7 +3839,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var simpleRenderer = (function () {
+    var simpleRenderer = /** @class */ (function () {
         function simpleRenderer() {
             this.renderUnit = new qec.renderUnit();
             this.rp = new qec.renderPixel();
@@ -3487,1351 +3898,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var spotLightDTO = (function () {
-        function spotLightDTO() {
-        }
-        return spotLightDTO;
-    }());
-    qec.spotLightDTO = spotLightDTO;
-    var spotLight = (function () {
-        function spotLight() {
-            this.position = vec3.create();
-            this.direction = vec3.create();
-            this.intensity = 1;
-        }
-        spotLight.prototype.createFrom = function (dto) {
-            vec3FromArray(this.position, dto.position);
-            vec3FromArray(this.direction, dto.direction);
-            this.intensity = dto.intensity;
-            vec3.normalize(this.direction, this.direction);
-        };
-        return spotLight;
-    }());
-    qec.spotLight = spotLight;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    var textureSprite = (function () {
-        function textureSprite() {
-            this.bounds = vec4.create(); // bounds between 0 and 1
-        }
-        return textureSprite;
-    }());
-    qec.textureSprite = textureSprite;
-    var texturePacker = (function () {
-        function texturePacker() {
-            this.allBigTextures = [];
-            this.allSprites = [];
-            this.repackMode = 3;
-        }
-        texturePacker.prototype.getSprite = function (texture) {
-            var found = this.allSprites.find(function (t) { return t.originalTexture == texture; });
-            return found;
-        };
-        texturePacker.prototype.getTextureIndex = function (texture) {
-            var found = this.allBigTextures.indexOf(texture);
-            return found;
-        };
-        texturePacker.prototype.repackSdRec = function (rootSignedDistance) {
-            var floatTextures = [];
-            var expl = new qec.hardwareSignedDistanceExplorer();
-            expl.explore(rootSignedDistance);
-            expl.array.forEach(function (hsd) {
-                var sd = hsd.sd;
-                if (sd instanceof qec.sdFields) {
-                    floatTextures.push(sd.topTexture, sd.profileTexture);
-                }
-            });
-            this.repack(floatTextures);
-        };
-        texturePacker.prototype.repack = function (floatTextures) {
-            if (this.repackMode == 0)
-                this.repack0(floatTextures);
-            else if (this.repackMode == 1)
-                this.repack1(floatTextures);
-            else if (this.repackMode == 2)
-                this.repack2(floatTextures);
-            else if (this.repackMode == 3)
-                this.repack3(floatTextures);
-        };
-        texturePacker.prototype.repack0 = function (floatTextures) {
-            this.allBigTextures = [];
-            this.allSprites = [];
-            for (var i = 0; i < floatTextures.length; ++i) {
-                var texture = floatTextures[i];
-                var sprite = new textureSprite();
-                sprite.originalTexture = texture;
-                sprite.bigTexture = texture;
-                vec4.set(sprite.bounds, 0, 0, 1, 1);
-                this.allSprites.push(sprite);
-                this.allBigTextures.push(texture);
-                console.log('sprite pushed #' + i + ' ' + vec4.str(sprite.bounds));
-            }
-        };
-        texturePacker.prototype.repack1 = function (floatTextures) {
-            console.log('repack mode 1 ' + floatTextures.length + ' textures');
-            this.allBigTextures = [];
-            this.allSprites = [];
-            for (var i = 0; i < floatTextures.length; ++i) {
-                var texture = floatTextures[i];
-                var bigTexture = new qec.floatTexture();
-                bigTexture.width = 400;
-                bigTexture.height = 400;
-                bigTexture.data = new Float32Array(bigTexture.width * bigTexture.height * 4);
-                for (var x = 0; x < texture.width; x++) {
-                    for (var y = 0; y < texture.height; y++) {
-                        var q = y * texture.width + x;
-                        var qb = y * (bigTexture.width) + x;
-                        bigTexture.data[4 * qb + 0] = texture.data[4 * q + 0];
-                        bigTexture.data[4 * qb + 1] = texture.data[4 * q + 1];
-                        bigTexture.data[4 * qb + 2] = texture.data[4 * q + 2];
-                        bigTexture.data[4 * qb + 3] = texture.data[4 * q + 3];
-                    }
-                }
-                var sprite = new textureSprite();
-                sprite.originalTexture = texture;
-                sprite.bigTexture = bigTexture;
-                var xMax = texture.width / bigTexture.width;
-                var yMax = texture.height / bigTexture.height;
-                var offsetX = 1 / bigTexture.width;
-                var offsetY = 1 / bigTexture.height;
-                vec4.set(sprite.bounds, 0, 0, xMax - offsetX, yMax - offsetY);
-                this.allSprites.push(sprite);
-                this.allBigTextures.push(bigTexture);
-                console.log('sprite pushed #' + i + ' ' + vec4.str(sprite.bounds));
-            }
-        };
-        texturePacker.prototype.repack2 = function (floatTextures) {
-            console.log('repack mode 2 ' + floatTextures.length + ' textures');
-            this.allBigTextures = [];
-            this.allSprites = [];
-            var w = 400; //floatTextures[0].width;
-            var h = 400; //floatTextures[0].height;
-            var bigTexture = new qec.floatTexture();
-            bigTexture.width = w * floatTextures.length;
-            bigTexture.height = h;
-            bigTexture.data = new Float32Array(bigTexture.width * bigTexture.height * 4);
-            for (var i = 0; i < floatTextures.length; ++i) {
-                var texture = floatTextures[i];
-                for (var x = 0; x < texture.width; x++) {
-                    for (var y = 0; y < texture.height; y++) {
-                        var q = y * texture.width + x;
-                        var qb = y * (bigTexture.width) + (i * w + x);
-                        bigTexture.data[4 * qb + 0] = texture.data[4 * q + 0];
-                        bigTexture.data[4 * qb + 1] = texture.data[4 * q + 1];
-                        bigTexture.data[4 * qb + 2] = texture.data[4 * q + 2];
-                        bigTexture.data[4 * qb + 3] = texture.data[4 * q + 3];
-                    }
-                }
-                var sprite = new textureSprite();
-                sprite.originalTexture = texture;
-                sprite.bigTexture = bigTexture;
-                // sprite bounds
-                var xMin = i / (floatTextures.length);
-                var yMin = 0;
-                var xMax = (i + (texture.width / 400)) / floatTextures.length;
-                var yMax = (texture.height / 400);
-                var offsetX = 1 / bigTexture.width;
-                var offsetY = 1 / bigTexture.height;
-                vec4.set(sprite.bounds, xMin + offsetX, yMin + offsetY, xMax - offsetX, yMax - offsetY);
-                this.allSprites.push(sprite);
-            }
-            this.allBigTextures.push(bigTexture);
-        };
-        texturePacker.prototype.repack3 = function (floatTextures) {
-            console.log('repack mode 3 ' + floatTextures.length + ' textures');
-            this.allBigTextures = [];
-            this.allSprites = [];
-            var w = 400; //floatTextures[0].width;
-            var h = 400; //floatTextures[0].height;
-            var indexInFloatTextures = 0;
-            var maxSpriteInBigTexture = 10;
-            while (indexInFloatTextures < floatTextures.length) {
-                var spriteCountInBigTexture = Math.min(maxSpriteInBigTexture, floatTextures.length - indexInFloatTextures);
-                var bigTexture = new qec.floatTexture();
-                bigTexture.width = w * spriteCountInBigTexture;
-                bigTexture.height = h;
-                bigTexture.data = new Float32Array(bigTexture.width * bigTexture.height * 4);
-                this.allBigTextures.push(bigTexture);
-                indexInFloatTextures += spriteCountInBigTexture;
-                console.log('bigTexture created for ' + spriteCountInBigTexture + ' sprites');
-            }
-            var bigTextureIndex = 0;
-            var spriteIndex = 0;
-            for (var i = 0; i < floatTextures.length; ++i) {
-                var texture = floatTextures[i];
-                var bigTexture = this.allBigTextures[bigTextureIndex];
-                for (var x = 0; x < texture.width; x++) {
-                    for (var y = 0; y < texture.height; y++) {
-                        var q = y * texture.width + x;
-                        var qb = y * (bigTexture.width) + (spriteIndex * w + x);
-                        bigTexture.data[4 * qb + 0] = texture.data[4 * q + 0];
-                        bigTexture.data[4 * qb + 1] = texture.data[4 * q + 1];
-                        bigTexture.data[4 * qb + 2] = texture.data[4 * q + 2];
-                        bigTexture.data[4 * qb + 3] = texture.data[4 * q + 3];
-                    }
-                }
-                var sprite = new textureSprite();
-                sprite.originalTexture = texture;
-                sprite.bigTexture = bigTexture;
-                // sprite bounds
-                var xMin = (spriteIndex * 400) / (bigTexture.width);
-                var yMin = 0;
-                var xMax = (spriteIndex * 400 + texture.width) / bigTexture.width;
-                var yMax = (texture.height / bigTexture.height);
-                var offsetX = 1 / bigTexture.width;
-                var offsetY = 1 / bigTexture.height;
-                vec4.set(sprite.bounds, xMin + offsetX, yMin + offsetY, xMax - offsetX, yMax - offsetY);
-                this.allSprites.push(sprite);
-                //console.log('sprite pushed #' + bigTextureIndex + '/' + spriteIndex + ' ' + vec4.str(sprite.bounds));
-                spriteIndex++;
-                if (spriteIndex >= maxSpriteInBigTexture) {
-                    spriteIndex = 0;
-                    bigTextureIndex++;
-                }
-            }
-        };
-        texturePacker.prototype.debugInfoInBody = function (scale) {
-            this.allBigTextures.forEach(function (t) {
-                var canvas = document.createElement('canvas');
-                qec.textureDebugInCanvas(t, 0, scale, canvas);
-                document.body.appendChild(canvas);
-            });
-        };
-        return texturePacker;
-    }());
-    qec.texturePacker = texturePacker;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    var allExamples = [];
-    function pushExample(title, f) {
-        allExamples.push({ title: title, create: f });
-    }
-    qec.pushExample = pushExample;
-    function getExamples() {
-        return allExamples;
-    }
-    qec.getExamples = getExamples;
-    function createExample(title) {
-        var found = allExamples.find(function (x) { return x.title === title; });
-        return found.create();
-    }
-    qec.createExample = createExample;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("Box", function () { return new exBox(); });
-    var exBox = (function () {
-        function exBox() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [-2, -4, 2],
-                direction: [2, 4, 2],
-                intensity: 1
-            };
-            this.box = {
-                type: 'sdBoxDTO',
-                halfSize: [0.5, 0.5, 0.5],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 1, 1]
-                },
-                transform: mat4Identity()
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.box,
-                camera: this.camera,
-            };
-        }
-        return exBox;
-    }());
-    qec.exBox = exBox;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("BoxAndShadow", function () { return new exBoxAndShadow(); });
-    var exBoxAndShadow = (function () {
-        function exBoxAndShadow() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -5, 2],
-                target: [0, 1, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [-1, -1, 2],
-                direction: [1, 1, 2],
-                intensity: 1
-            };
-            this.plane = {
-                type: 'sdPlaneDTO',
-                normal: [0, 0, 1],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 1, 1]
-                }
-            };
-            this.box = {
-                type: 'sdBoxDTO',
-                halfSize: [0.3, 0.3, 0.4],
-                //transform: [0, 0, 0.4],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 0, 0]
-                },
-                transform: mat4Translate(0, 0, 0.45)
-            };
-            this.union = {
-                type: 'sdUnionDTO',
-                a: this.plane,
-                b: this.box,
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.union,
-                camera: this.camera,
-            };
-        }
-        return exBoxAndShadow;
-    }());
-    qec.exBoxAndShadow = exBoxAndShadow;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("FieldsCube", function () { return new exFieldsCube(); });
-    var exFieldsCube = (function () {
-        function exFieldsCube() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [-2, -4, 2],
-                direction: [2, 4, 2],
-                intensity: 1
-            };
-            this.topCube = {
-                type: 'scImageDTO',
-                src: 'data/cubeTop.png'
-            };
-            this.profileCube = {
-                type: 'scImageDTO',
-                src: 'data/cubeProfile.png'
-            };
-            this.fieldsCube = {
-                type: 'sdFieldsDTO',
-                topImage: this.topCube,
-                topBounds: [-0.5, -0.5, 0.5, 0.5],
-                profileImage: this.profileCube,
-                profileBounds: [-0.5, -0.5, 0.5, 0.5],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 1, 1]
-                },
-                transform: mat4.identity(mat4.create())
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.fieldsCube,
-                camera: this.camera,
-            };
-        }
-        return exFieldsCube;
-    }());
-    qec.exFieldsCube = exFieldsCube;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("FieldsCubeProfileBounds", function () { return new exFieldsCubeProfileBounds(); });
-    var exFieldsCubeProfileBounds = (function () {
-        function exFieldsCubeProfileBounds() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [-2, -4, 2],
-                direction: [2, 4, 2],
-                intensity: 1
-            };
-            this.topCube = {
-                type: 'scImageDTO',
-                src: 'data/cubeTopWithBounds.png'
-            };
-            this.profileCube = {
-                type: 'scImageDTO',
-                src: 'data/cubeProfileWithBounds.png'
-            };
-            this.fieldsCube = {
-                type: 'sdFieldsDTO',
-                topImage: this.topCube,
-                topBounds: [-0.5, -0.25, 0.5, 0.25],
-                profileImage: this.profileCube,
-                profileBounds: [-0.5, -0.5, 0, 0.5],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 1, 1]
-                },
-                transform: mat4.identity(mat4.create())
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.fieldsCube,
-                camera: this.camera,
-            };
-        }
-        return exFieldsCubeProfileBounds;
-    }());
-    qec.exFieldsCubeProfileBounds = exFieldsCubeProfileBounds;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("FieldsFont", function () { return new exFieldsFont(); });
-    var exFieldsFont = (function () {
-        function exFieldsFont() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [-2, -4, 2],
-                direction: [2, 4, 2],
-                intensity: 1
-            };
-            this.topFont = {
-                type: 'scImageDTO',
-                src: 'data/font.png'
-            };
-            this.profileFont = {
-                type: 'scImageDTO',
-                src: 'data/cubeProfile.png'
-            };
-            this.fontFields = {
-                type: 'sdFieldsDTO',
-                topImage: this.topFont,
-                topBounds: [-0.5, -0.5, 0.5, 0.5],
-                profileImage: this.profileFont,
-                profileBounds: [-0.2, -0.2, 0.2, 0.2],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 1, 1]
-                },
-                transform: mat4.identity(mat4.create())
-            };
-            this.plane = {
-                type: 'sdPlaneDTO',
-                normal: [0, 0, 1],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 1, 1]
-                }
-            };
-            this.union = {
-                type: 'sdUnionDTO',
-                a: this.plane,
-                b: this.fontFields,
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.union,
-                camera: this.camera,
-            };
-        }
-        return exFieldsFont;
-    }());
-    qec.exFieldsFont = exFieldsFont;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("FieldsWithTransform", function () { return new exFieldsWithTransform(); });
-    var exFieldsWithTransform = (function () {
-        function exFieldsWithTransform() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [-2, -4, 2],
-                direction: [2, 4, 2],
-                intensity: 1
-            };
-            this.topCube = {
-                type: 'scImageDTO',
-                src: 'data/cubeTop.png'
-            };
-            this.profileCube = {
-                type: 'scImageDTO',
-                src: 'data/cubeProfile.png'
-            };
-            this.fieldsCube = {
-                type: 'sdFieldsDTO',
-                topImage: this.topCube,
-                topBounds: [-0.5, -0.5, 0.5, 0.5],
-                profileImage: this.profileCube,
-                profileBounds: [-0.5, -0.5, 0.5, 0.5],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 1, 1]
-                },
-                transform: mat4.fromTranslation(mat4.create(), vec3.fromValues(0, 0, -0.5))
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.fieldsCube,
-                camera: this.camera,
-            };
-        }
-        return exFieldsWithTransform;
-    }());
-    qec.exFieldsWithTransform = exFieldsWithTransform;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("Grid", function () { return new exGrid(); });
-    var exGrid = (function () {
-        function exGrid() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [2, -4, 2],
-                direction: [-2, 4, 2],
-                intensity: 1
-            };
-            this.grid = {
-                type: 'sdGridDTO',
-                size: 0.33,
-                thickness: 0.001,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 1, 0]
-                },
-            };
-            this.sphere = {
-                type: 'sdSphereDTO',
-                radius: 0.6,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 1, 0]
-                },
-                transform: mat4Identity()
-            };
-            this.intersection = {
-                type: 'sdIntersectionDTO',
-                a: this.sphere,
-                b: this.grid
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.intersection,
-                camera: this.camera,
-            };
-        }
-        return exGrid;
-    }());
-    qec.exGrid = exGrid;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("Grid2", function () { return new exGrid2(); });
-    var exGrid2 = (function () {
-        function exGrid2() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [2, -4, 2],
-                direction: [-2, 4, 2],
-                intensity: 1
-            };
-            this.grid = {
-                type: 'sdGrid2DTO',
-                size: 0.33,
-                thickness: 0.001,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 1, 0]
-                },
-            };
-            this.sphere = {
-                type: 'sdSphereDTO',
-                radius: 0.6,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 1, 0]
-                },
-                transform: mat4Identity()
-            };
-            this.intersection = {
-                type: 'sdIntersectionDTO',
-                a: this.sphere,
-                b: this.grid
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.intersection,
-                camera: this.camera,
-            };
-        }
-        return exGrid2;
-    }());
-    qec.exGrid2 = exGrid2;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("GridWithBorder", function () { return new exGridWithBorder(); });
-    var exGridWithBorder = (function () {
-        function exGridWithBorder() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [2, -4, 2],
-                direction: [-2, 4, 2],
-                intensity: 1
-            };
-            this.grid = {
-                type: 'sdGridDTO',
-                size: 0.33,
-                thickness: 0.01,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 1, 0]
-                },
-            };
-            this.sphere = {
-                type: 'sdSphereDTO',
-                radius: 0.6,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 1, 0]
-                },
-                transform: mat4Identity()
-            };
-            /*
-            box: sdBoxDTO = {
-                type: 'sdBoxDTO',
-                halfSize:[0.6,0.6,0.6],
-                material : {
-                    type:'materialDTO',
-                    diffuse : [0, 1, 0]
-                },
-                transform : mat4Identity()
-            };*/
-            this.border1 = {
-                type: 'sdBorderDTO',
-                sd: this.sphere,
-                borderIn: 0.0,
-                borderOut: 0
-            };
-            this.intersection = {
-                type: 'sdIntersectionDTO',
-                a: this.border1,
-                b: this.grid
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.intersection,
-                camera: this.camera,
-            };
-        }
-        return exGridWithBorder;
-    }());
-    qec.exGridWithBorder = exGridWithBorder;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("Intersection", function () { return new exIntersection(); });
-    var exIntersection = (function () {
-        function exIntersection() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [2, -4, 2],
-                direction: [-2, 4, 2],
-                intensity: 1
-            };
-            this.ground = {
-                type: 'sdBoxDTO',
-                halfSize: [0.5, 0.1, 0.25],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 1, 0]
-                },
-                transform: mat4Identity()
-            };
-            this.sphere = {
-                type: 'sdSphereDTO',
-                radius: 0.4,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 0, 1]
-                }
-            };
-            this.intersection = {
-                type: 'sdIntersectionDTO',
-                a: this.ground,
-                b: this.sphere
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.intersection,
-                camera: this.camera,
-            };
-        }
-        return exIntersection;
-    }());
-    qec.exIntersection = exIntersection;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("IntersectionWithBorder", function () { return new exIntersectionWithBorder(); });
-    var exIntersectionWithBorder = (function () {
-        function exIntersectionWithBorder() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [2, -4, 2],
-                direction: [-2, 4, 2],
-                intensity: 1
-            };
-            this.ground = {
-                type: 'sdBoxDTO',
-                halfSize: [0.5, 0.1, 0.25],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 1, 0]
-                },
-                transform: mat4Identity()
-            };
-            this.sphere = {
-                type: 'sdSphereDTO',
-                radius: 0.4,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 0, 1]
-                }
-            };
-            this.borderSphere = {
-                type: 'sdBorderDTO',
-                sd: this.sphere,
-                borderIn: 0.05,
-                borderOut: 0.0
-            };
-            this.intersection = {
-                type: 'sdIntersectionDTO',
-                a: this.ground,
-                b: this.borderSphere
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.intersection,
-                camera: this.camera,
-            };
-        }
-        return exIntersectionWithBorder;
-    }());
-    qec.exIntersectionWithBorder = exIntersectionWithBorder;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("Lighting1", function () { return new exLighting1(); });
-    var exLighting1 = (function () {
-        function exLighting1() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [0, -6, 2],
-                target: [0, 0, 0.5],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.keyLight = {
-                type: 'directionalLightDTO',
-                position: [-2, -2, 0],
-                direction: [1, 1, -2],
-                intensity: 0.8
-            };
-            this.fillLight = {
-                type: 'directionalLightDTO',
-                position: [2, -2, 0],
-                direction: [-1, 1, -1],
-                intensity: 0.2
-            };
-            this.rimLight = {
-                type: 'spotLightDTO',
-                position: [2, 2, 0.5],
-                direction: [-1, -1, 0.1],
-                intensity: 0.2
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                directionalLights: [this.keyLight, this.fillLight],
-                spotLights: [this.rimLight],
-                distance: null,
-                camera: this.camera,
-            };
-            this.plane = {
-                type: 'sdPlaneDTO',
-                normal: [0, 0, 1],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1.5, 1.5, 1.5]
-                }
-            };
-            var colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-            var n = 3;
-            var sd = new qec.sdUnion();
-            for (var i = 0; i < n; ++i) {
-                var r = i / (n - 1);
-                var box = {
-                    type: 'sdBoxDTO',
-                    halfSize: [0.25, 0.25, 0.5],
-                    material: {
-                        type: 'materialDTO',
-                        diffuse: colors[i]
-                    },
-                    transform: mat4Translate(-(n - 1) / 2 + i * 1, 0, 0.5)
-                };
-                var sdb = new qec.sdBox();
-                sdb.createFrom(box);
-                sd.array.push(sdb);
-            }
-            /*
-                        for (var i=0 ; i < n; ++i)
-                        {
-                            var r = i/(n-1);
-                            var box: sdBoxDTO = {
-                                type: 'sdBoxDTO',
-                                halfSize : [0.25, 0.25, 0.5],
-                                material : {
-                                    type:'materialDTO',
-                                    diffuse : [1, r, 1]
-                                },
-                                transform : mat4Translate(-(n-1)/2 + i*1, 1, 0.5)
-                            };
-                            var sdb =  new sdBox();
-                            sdb.createFrom(box);
-                            sd.array.push(sdb);
-                        }
-            */
-            for (var i = 0; i < n; ++i) {
-                var r = i / (n - 1);
-                var sphere = {
-                    type: 'sdBoxDTO',
-                    radius: 0.35,
-                    material: {
-                        type: 'materialDTO',
-                        diffuse: colors[i]
-                    },
-                    transform: mat4Translate(-(n - 1) / 2 + i * 1, 0, 0.5)
-                };
-                var sds = new qec.sdSphere();
-                sds.createFrom(sphere);
-                sd.array.push(sds);
-            }
-            var sdp = new qec.sdPlane();
-            sdp.createFrom(this.plane);
-            sd.array.push(sdp);
-            this.render.distance = {};
-            this.render.distance['__instance'] = sd;
-        }
-        return exLighting1;
-    }());
-    qec.exLighting1 = exLighting1;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("Owl", function () { return new exOwl(); });
-    var exOwl = (function () {
-        function exOwl() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [-2, -4, 2],
-                direction: [2, 4, 2],
-                intensity: 1
-            };
-            /*
-                    svg : scSvgDTO = {
-                        type: 'scSvgDTO'
-                        src: 'data/tuto-owl/cartoon-owl.svg'
-                    };
-            */
-            this.top1 = {
-                type: 'scImageDTO',
-                src: 'data/tuto-owl/top1.png'
-            };
-            this.profile1 = {
-                type: 'scImageDTO',
-                src: 'data/cubeProfile.png'
-            };
-            this.fields = {
-                type: 'sdFieldsDTO',
-                topImage: this.top1,
-                topBounds: [-0.5, -0.5, 0.5, 0.5],
-                profileImage: this.profile1,
-                profileBounds: [-0.5, -0.5, 0.5, 0.5],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 1, 1]
-                },
-                transform: mat4.identity(mat4.create())
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.fields,
-                camera: this.camera,
-            };
-        }
-        return exOwl;
-    }());
-    qec.exOwl = exOwl;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("Plane", function () { return new exPlane(); });
-    var exPlane = (function () {
-        function exPlane() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 1],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [0, 0, 1],
-                direction: [0, 0, -1],
-                intensity: 1
-            };
-            this.plane = {
-                type: 'sdPlaneDTO',
-                normal: [0, 0, 1],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 1, 1]
-                }
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.plane,
-                camera: this.camera,
-            };
-        }
-        return exPlane;
-    }());
-    qec.exPlane = exPlane;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("Repeat", function () { return new exRepeat(); });
-    var exRepeat = (function () {
-        function exRepeat() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [2, -4, 2],
-                direction: [-2, 4, 2],
-                intensity: 1
-            };
-            this.sphere = {
-                type: 'sdSphereDTO',
-                radius: 0.05,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 0, 1]
-                }
-            };
-            this.repeat = {
-                type: 'sdRepeatDTO',
-                sd: this.sphere,
-                box: [0.3, 0.3, 0.3]
-            };
-            this.box = {
-                type: 'sdBoxDTO',
-                halfSize: [0.6, 0.6, 0.6],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 1, 0]
-                },
-                transform: mat4Identity()
-            };
-            this.intersection = {
-                type: 'sdIntersectionDTO',
-                a: this.box,
-                b: this.repeat
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.intersection,
-                camera: this.camera,
-            };
-        }
-        return exRepeat;
-    }());
-    qec.exRepeat = exRepeat;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("Repeat2", function () { return new exRepeat2(); });
-    var exRepeat2 = (function () {
-        function exRepeat2() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [2, -4, 2],
-                direction: [-2, 4, 2],
-                intensity: 1
-            };
-            this.sphere = {
-                type: 'sdSphereDTO',
-                radius: 0.2,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 0, 1]
-                }
-            };
-            this.borderSphere = {
-                type: 'sdBorderDTO',
-                sd: this.sphere,
-                borderIn: 0.02,
-                borderOut: 0.0
-            };
-            this.repeat = {
-                type: 'sdRepeatDTO',
-                sd: this.borderSphere,
-                box: [0.4, 0.4, 0.4]
-            };
-            this.box = {
-                type: 'sdBoxDTO',
-                halfSize: [0.6, 0.6, 0.6],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 1, 0]
-                },
-                transform: mat4Array(mat4.rotateZ(mat4.create(), mat4.identity(mat4.create()), Math.PI / 6))
-            };
-            this.borderBox = {
-                type: 'sdBorderDTO',
-                sd: this.box,
-                borderIn: 0.02,
-                borderOut: 0.0
-            };
-            this.intersection = {
-                type: 'sdIntersectionDTO',
-                a: this.borderBox,
-                b: this.repeat
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.intersection,
-                camera: this.camera,
-            };
-        }
-        return exRepeat2;
-    }());
-    qec.exRepeat2 = exRepeat2;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("Sphere", function () { return new exSphere(); });
-    var exSphere = (function () {
-        function exSphere() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [-2, -4, 2],
-                direction: [2, 4, 2],
-                intensity: 1
-            };
-            this.sphere = {
-                type: 'sdSphereDTO',
-                radius: 0.4,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 1, 1]
-                }
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.sphere,
-                camera: this.camera,
-            };
-        }
-        return exSphere;
-    }());
-    qec.exSphere = exSphere;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("SphereAndShadow", function () { return new exSphereAndShadow(); });
-    var exSphereAndShadow = (function () {
-        function exSphereAndShadow() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -5, 2],
-                target: [0, 1, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [-1, -1, 2],
-                direction: [1, 1, 2],
-                intensity: 1
-            };
-            this.plane = {
-                type: 'sdPlaneDTO',
-                normal: [0, 0, 1],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 1, 0]
-                }
-            };
-            this.sphere = {
-                type: 'sdSphereDTO',
-                radius: 0.4,
-                transform: mat4Translate(0, 0, 0.4),
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [1, 0, 0]
-                }
-            };
-            this.union = {
-                type: 'sdUnionDTO',
-                a: this.plane,
-                b: this.sphere,
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.union,
-                camera: this.camera,
-            };
-        }
-        return exSphereAndShadow;
-    }());
-    qec.exSphereAndShadow = exSphereAndShadow;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("Subtraction", function () { return new exSubtraction(); });
-    var exSubtraction = (function () {
-        function exSubtraction() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [2, -4, 2],
-                direction: [-2, 4, 2],
-                intensity: 1
-            };
-            this.ground = {
-                type: 'sdBoxDTO',
-                halfSize: [0.5, 0.1, 0.25],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 1, 0]
-                },
-                transform: mat4Identity()
-            };
-            this.sphere = {
-                type: 'sdSphereDTO',
-                radius: 0.4,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 0, 1]
-                }
-            };
-            this.subtraction = {
-                type: 'sdSubtractionDTO',
-                a: this.ground,
-                b: this.sphere
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.subtraction,
-                camera: this.camera,
-            };
-        }
-        return exSubtraction;
-    }());
-    qec.exSubtraction = exSubtraction;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    qec.pushExample("Union", function () { return new exUnion(); });
-    var exUnion = (function () {
-        function exUnion() {
-            this.camera = {
-                type: 'cameraDTO',
-                position: [1, -3, 3],
-                target: [0, 0, 0],
-                up: [0, 0, 1],
-                fov: Math.PI / 6
-            };
-            this.light = {
-                type: 'spotLightDTO',
-                position: [2, -4, 2],
-                direction: [-2, 4, 2],
-                intensity: 1
-            };
-            this.ground = {
-                type: 'sdBoxDTO',
-                halfSize: [0.5, 0.1, 0.25],
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 1, 0]
-                },
-                transform: mat4Identity()
-            };
-            this.sphere = {
-                type: 'sdSphereDTO',
-                radius: 0.4,
-                material: {
-                    type: 'materialDTO',
-                    diffuse: [0, 0, 1]
-                }
-            };
-            this.union = {
-                type: 'sdUnionDTO',
-                a: this.ground,
-                b: this.sphere
-            };
-            this.render = {
-                type: 'scRendererDTO',
-                spotLights: [this.light],
-                directionalLights: [],
-                distance: this.union,
-                camera: this.camera,
-            };
-        }
-        return exUnion;
-    }());
-    qec.exUnion = exUnion;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
-    var material = (function () {
+    var material = /** @class */ (function () {
         function material() {
             this.diffuse = vec3.create();
         }
@@ -4850,7 +3917,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var Ray = (function () {
+    var Ray = /** @class */ (function () {
         function Ray() {
             this.origin = vec3.create();
             this.direction = vec3.create();
@@ -4871,7 +3938,7 @@ var qec;
         return ray;
     }
     qec.makeRay = makeRay;
-    var raybox = (function () {
+    var raybox = /** @class */ (function () {
         function raybox() {
         }
         raybox.intersection = function (ray, aabb, debug) {
@@ -4929,7 +3996,7 @@ var qec;
 var qec;
 (function (qec) {
     //https://tavianator.com/fast-branchless-raybounding-box-intersections/
-    var raybox_old = (function () {
+    var raybox_old = /** @class */ (function () {
         function raybox_old() {
         }
         raybox_old.intersection = function (b, ro, rd, debug) {
@@ -4941,6 +4008,7 @@ var qec;
                     var t2 = (b[i] - ro[i]) / rd[i]; /* b[0] = b.max.x*/
                     tmin = Math.max(tmin, Math.min(t1, t2));
                     tmax = Math.min(tmax, Math.max(t1, t2));
+                    //if (debug) console.log('rayboxintersection '+i+' '+ tmin + ' ' + tmax);
                 }
             if (debug)
                 console.log('rayboxintersection ' + 'tmin=' + tmin + 'tmax=' + tmax, 'box', b, 'ro', ro, 'rd', rd);
@@ -4959,13 +4027,13 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var scImageDTO = (function () {
+    var scImageDTO = /** @class */ (function () {
         function scImageDTO() {
         }
         return scImageDTO;
     }());
     qec.scImageDTO = scImageDTO;
-    var scImage = (function () {
+    var scImage = /** @class */ (function () {
         function scImage() {
         }
         scImage.prototype.createAsyncFrom = function (dto, done) {
@@ -4984,13 +4052,13 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var scRendererDTO = (function () {
+    var scRendererDTO = /** @class */ (function () {
         function scRendererDTO() {
         }
         return scRendererDTO;
     }());
     qec.scRendererDTO = scRendererDTO;
-    var scRenderer = (function () {
+    var scRenderer = /** @class */ (function () {
         function scRenderer() {
             this.settings = new qec.renderSettings();
         }
@@ -5010,7 +4078,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var scene = (function () {
+    var scene = /** @class */ (function () {
         function scene() {
             this.sceneBase = new qec.sceneBase();
             var s = this.sceneBase;
@@ -5089,7 +4157,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sceneBase = (function () {
+    var sceneBase = /** @class */ (function () {
         function sceneBase() {
             this.debugInfo = false;
             this.creators = [];
@@ -5097,7 +4165,8 @@ var qec;
         sceneBase.prototype.register = function (type, canCreate) {
             var c = {
                 predicate: function (o) { return o.type == type; },
-                instantiate: function (dto) { var n = new canCreate(); n.createFrom(dto); return n; } };
+                instantiate: function (dto) { var n = new canCreate(); n.createFrom(dto); return n; }
+            };
             this.creators.push(c);
         };
         sceneBase.prototype.register2 = function (predicate, canCreate) {
@@ -5140,6 +4209,7 @@ var qec;
                 this[key] = instance;
                 // register it as created in the 'scene' object
                 dto.__instance = instance;
+                //if (this.debugInfo) console.log('OK' , instance);
             }
         };
         sceneBase.prototype.replaceBySceneReferences = function (dto) {
@@ -5189,7 +4259,7 @@ var qec;
         return sceneBase;
     }());
     qec.sceneBase = sceneBase;
-    var creator = (function () {
+    var creator = /** @class */ (function () {
         function creator() {
         }
         return creator;
@@ -5198,13 +4268,13 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sdBorderDTO = (function () {
+    var sdBorderDTO = /** @class */ (function () {
         function sdBorderDTO() {
         }
         return sdBorderDTO;
     }());
     qec.sdBorderDTO = sdBorderDTO;
-    var sdBorder = (function () {
+    var sdBorder = /** @class */ (function () {
         function sdBorder() {
         }
         sdBorder.prototype.createFrom = function (dto) {
@@ -5227,10 +4297,12 @@ var qec;
         };
         sdBorder.prototype.getDist = function (pos, boundingBox, debug) {
             var d = this.sd.getDist(pos, boundingBox, debug);
-            if (d < 0) {
+            if (d < 0) //d < -this.borderIn)
+             {
                 return -d - this.borderIn;
             }
-            else {
+            else //if (d > this.borderOut)
+             {
                 return d - this.borderOut;
             }
             //return d - this.borderOut;
@@ -5250,14 +4322,14 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sdBoxDTO = (function () {
+    var sdBoxDTO = /** @class */ (function () {
         function sdBoxDTO() {
             this.type = 'sdBoxDTO';
         }
         return sdBoxDTO;
     }());
     qec.sdBoxDTO = sdBoxDTO;
-    var sdBox = (function () {
+    var sdBox = /** @class */ (function () {
         function sdBox() {
             this.halfSize = vec3.create();
             this.tmp = vec3.create();
@@ -5373,13 +4445,13 @@ var qec;
 }*/ 
 var qec;
 (function (qec) {
-    var sdFieldsDTO = (function () {
+    var sdFieldsDTO = /** @class */ (function () {
         function sdFieldsDTO() {
         }
         return sdFieldsDTO;
     }());
     qec.sdFieldsDTO = sdFieldsDTO;
-    var sdFields = (function () {
+    var sdFields = /** @class */ (function () {
         function sdFields() {
             this.topDfCanvas = new qec.distanceFieldCanvas();
             this.profileDfCanvas = new qec.distanceFieldCanvas();
@@ -5501,6 +4573,8 @@ var qec;
             v = Math.min(Math.max(v, 0), 1);
             qec.texture2D(field, u, v, this.color);
             if (this.debug) {
+                //console.log('uv : ' , u, v);
+                //console.log(this.color[0].toFixed(2) ,' at xy : [' +  (u * (field.width-1)).toFixed(1) + ',' + (v * (field.height-1)).toFixed(1));
             }
             return this.color[0];
         };
@@ -5523,7 +4597,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sdFillSphere = (function () {
+    var sdFillSphere = /** @class */ (function () {
         function sdFillSphere() {
             this.material = new qec.material();
             this.radius = 1;
@@ -5576,14 +4650,14 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sdGridDTO = (function () {
+    var sdGridDTO = /** @class */ (function () {
         function sdGridDTO() {
             this.type = 'sdGridDTO';
         }
         return sdGridDTO;
     }());
     qec.sdGridDTO = sdGridDTO;
-    var sdGrid = (function () {
+    var sdGrid = /** @class */ (function () {
         function sdGrid() {
             this.material = new qec.material();
             this.size = vec3.create();
@@ -5620,14 +4694,14 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sdGrid2DTO = (function () {
+    var sdGrid2DTO = /** @class */ (function () {
         function sdGrid2DTO() {
             this.type = 'sdGrid2DTO';
         }
         return sdGrid2DTO;
     }());
     qec.sdGrid2DTO = sdGrid2DTO;
-    var sdGrid2 = (function () {
+    var sdGrid2 = /** @class */ (function () {
         function sdGrid2() {
             this.material = new qec.material();
             this.d = vec3.create();
@@ -5670,13 +4744,13 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sdIntersectionDTO = (function () {
+    var sdIntersectionDTO = /** @class */ (function () {
         function sdIntersectionDTO() {
         }
         return sdIntersectionDTO;
     }());
     qec.sdIntersectionDTO = sdIntersectionDTO;
-    var sdIntersection = (function () {
+    var sdIntersection = /** @class */ (function () {
         function sdIntersection() {
             this.array = [];
         }
@@ -5723,14 +4797,14 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sdPlaneDTO = (function () {
+    var sdPlaneDTO = /** @class */ (function () {
         function sdPlaneDTO() {
             this.type = 'sdPlaneDTO';
         }
         return sdPlaneDTO;
     }());
     qec.sdPlaneDTO = sdPlaneDTO;
-    var sdPlane = (function () {
+    var sdPlane = /** @class */ (function () {
         function sdPlane() {
             this.material = new qec.material();
             this.normal = vec3.set(vec3.create(), 0, 0, 1);
@@ -5777,13 +4851,13 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sdRepeatDTO = (function () {
+    var sdRepeatDTO = /** @class */ (function () {
         function sdRepeatDTO() {
         }
         return sdRepeatDTO;
     }());
     qec.sdRepeatDTO = sdRepeatDTO;
-    var sdRepeat = (function () {
+    var sdRepeat = /** @class */ (function () {
         function sdRepeat() {
             this.box = vec3.create();
             this.q = vec3.create();
@@ -5824,7 +4898,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sdSphere = (function () {
+    var sdSphere = /** @class */ (function () {
         function sdSphere() {
             this.material = new qec.material();
             this.radius = 1;
@@ -5882,13 +4956,13 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sdSubtractionDTO = (function () {
+    var sdSubtractionDTO = /** @class */ (function () {
         function sdSubtractionDTO() {
         }
         return sdSubtractionDTO;
     }());
     qec.sdSubtractionDTO = sdSubtractionDTO;
-    var sdSubtraction = (function () {
+    var sdSubtraction = /** @class */ (function () {
         function sdSubtraction() {
             this.array = [];
         }
@@ -5937,13 +5011,13 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sdUnionDTO = (function () {
+    var sdUnionDTO = /** @class */ (function () {
         function sdUnionDTO() {
         }
         return sdUnionDTO;
     }());
     qec.sdUnionDTO = sdUnionDTO;
-    var sdUnion = (function () {
+    var sdUnion = /** @class */ (function () {
         function sdUnion() {
             this.array = [];
             this.inverseTransform = mat4.identity(mat4.create());
@@ -5993,15 +5067,1144 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var sdFieldsTest = (function () {
+    var allExamples = [];
+    function pushExample(title, f) {
+        allExamples.push({ title: title, create: f });
+    }
+    qec.pushExample = pushExample;
+    function getExamples() {
+        return allExamples;
+    }
+    qec.getExamples = getExamples;
+    function createExample(title) {
+        var found = allExamples.find(function (x) { return x.title === title; });
+        return found.create();
+    }
+    qec.createExample = createExample;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Box", function () { return new exBox(); });
+    var exBox = /** @class */ (function () {
+        function exBox() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [-2, -4, 2],
+                direction: [2, 4, 2],
+                intensity: 1
+            };
+            this.box = {
+                type: 'sdBoxDTO',
+                halfSize: [0.5, 0.5, 0.5],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 1, 1]
+                },
+                transform: mat4Identity()
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.box,
+                camera: this.camera,
+            };
+        }
+        return exBox;
+    }());
+    qec.exBox = exBox;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("BoxAndShadow", function () { return new exBoxAndShadow(); });
+    var exBoxAndShadow = /** @class */ (function () {
+        function exBoxAndShadow() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -5, 2],
+                target: [0, 1, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [-1, -1, 2],
+                direction: [1, 1, 2],
+                intensity: 1
+            };
+            this.plane = {
+                type: 'sdPlaneDTO',
+                normal: [0, 0, 1],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 1, 1]
+                }
+            };
+            this.box = {
+                type: 'sdBoxDTO',
+                halfSize: [0.3, 0.3, 0.4],
+                //transform: [0, 0, 0.4],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 0, 0]
+                },
+                transform: mat4Translate(0, 0, 0.45)
+            };
+            this.union = {
+                type: 'sdUnionDTO',
+                a: this.plane,
+                b: this.box,
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.union,
+                camera: this.camera,
+            };
+        }
+        return exBoxAndShadow;
+    }());
+    qec.exBoxAndShadow = exBoxAndShadow;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("FieldsCube", function () { return new exFieldsCube(); });
+    var exFieldsCube = /** @class */ (function () {
+        function exFieldsCube() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [-2, -4, 2],
+                direction: [2, 4, 2],
+                intensity: 1
+            };
+            this.topCube = {
+                type: 'scImageDTO',
+                src: 'data/cubeTop.png'
+            };
+            this.profileCube = {
+                type: 'scImageDTO',
+                src: 'data/cubeProfile.png'
+            };
+            this.fieldsCube = {
+                type: 'sdFieldsDTO',
+                topImage: this.topCube,
+                topBounds: [-0.5, -0.5, 0.5, 0.5],
+                profileImage: this.profileCube,
+                profileBounds: [-0.5, -0.5, 0.5, 0.5],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 1, 1]
+                },
+                transform: mat4.identity(mat4.create())
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.fieldsCube,
+                camera: this.camera,
+            };
+        }
+        return exFieldsCube;
+    }());
+    qec.exFieldsCube = exFieldsCube;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("FieldsCubeProfileBounds", function () { return new exFieldsCubeProfileBounds(); });
+    var exFieldsCubeProfileBounds = /** @class */ (function () {
+        function exFieldsCubeProfileBounds() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [-2, -4, 2],
+                direction: [2, 4, 2],
+                intensity: 1
+            };
+            this.topCube = {
+                type: 'scImageDTO',
+                src: 'data/cubeTopWithBounds.png'
+            };
+            this.profileCube = {
+                type: 'scImageDTO',
+                src: 'data/cubeProfileWithBounds.png'
+            };
+            this.fieldsCube = {
+                type: 'sdFieldsDTO',
+                topImage: this.topCube,
+                topBounds: [-0.5, -0.25, 0.5, 0.25],
+                profileImage: this.profileCube,
+                profileBounds: [-0.5, -0.5, 0, 0.5],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 1, 1]
+                },
+                transform: mat4.identity(mat4.create())
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.fieldsCube,
+                camera: this.camera,
+            };
+        }
+        return exFieldsCubeProfileBounds;
+    }());
+    qec.exFieldsCubeProfileBounds = exFieldsCubeProfileBounds;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("FieldsFont", function () { return new exFieldsFont(); });
+    var exFieldsFont = /** @class */ (function () {
+        function exFieldsFont() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [-2, -4, 2],
+                direction: [2, 4, 2],
+                intensity: 1
+            };
+            this.topFont = {
+                type: 'scImageDTO',
+                src: 'data/font.png'
+            };
+            this.profileFont = {
+                type: 'scImageDTO',
+                src: 'data/cubeProfile.png'
+            };
+            this.fontFields = {
+                type: 'sdFieldsDTO',
+                topImage: this.topFont,
+                topBounds: [-0.5, -0.5, 0.5, 0.5],
+                profileImage: this.profileFont,
+                profileBounds: [-0.2, -0.2, 0.2, 0.2],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 1, 1]
+                },
+                transform: mat4.identity(mat4.create())
+            };
+            this.plane = {
+                type: 'sdPlaneDTO',
+                normal: [0, 0, 1],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 1, 1]
+                }
+            };
+            this.union = {
+                type: 'sdUnionDTO',
+                a: this.plane,
+                b: this.fontFields,
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.union,
+                camera: this.camera,
+            };
+        }
+        return exFieldsFont;
+    }());
+    qec.exFieldsFont = exFieldsFont;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("FieldsWithTransform", function () { return new exFieldsWithTransform(); });
+    var exFieldsWithTransform = /** @class */ (function () {
+        function exFieldsWithTransform() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [-2, -4, 2],
+                direction: [2, 4, 2],
+                intensity: 1
+            };
+            this.topCube = {
+                type: 'scImageDTO',
+                src: 'data/cubeTop.png'
+            };
+            this.profileCube = {
+                type: 'scImageDTO',
+                src: 'data/cubeProfile.png'
+            };
+            this.fieldsCube = {
+                type: 'sdFieldsDTO',
+                topImage: this.topCube,
+                topBounds: [-0.5, -0.5, 0.5, 0.5],
+                profileImage: this.profileCube,
+                profileBounds: [-0.5, -0.5, 0.5, 0.5],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 1, 1]
+                },
+                transform: mat4.fromTranslation(mat4.create(), vec3.fromValues(0, 0, -0.5))
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.fieldsCube,
+                camera: this.camera,
+            };
+        }
+        return exFieldsWithTransform;
+    }());
+    qec.exFieldsWithTransform = exFieldsWithTransform;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Grid", function () { return new exGrid(); });
+    var exGrid = /** @class */ (function () {
+        function exGrid() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.grid = {
+                type: 'sdGridDTO',
+                size: 0.33,
+                thickness: 0.001,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.6,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.sphere,
+                b: this.grid
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exGrid;
+    }());
+    qec.exGrid = exGrid;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Grid2", function () { return new exGrid2(); });
+    var exGrid2 = /** @class */ (function () {
+        function exGrid2() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.grid = {
+                type: 'sdGrid2DTO',
+                size: 0.33,
+                thickness: 0.001,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.6,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.sphere,
+                b: this.grid
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exGrid2;
+    }());
+    qec.exGrid2 = exGrid2;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("GridWithBorder", function () { return new exGridWithBorder(); });
+    var exGridWithBorder = /** @class */ (function () {
+        function exGridWithBorder() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.grid = {
+                type: 'sdGridDTO',
+                size: 0.33,
+                thickness: 0.01,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.6,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            /*
+            box: sdBoxDTO = {
+                type: 'sdBoxDTO',
+                halfSize:[0.6,0.6,0.6],
+                material : {
+                    type:'materialDTO',
+                    diffuse : [0, 1, 0]
+                },
+                transform : mat4Identity()
+            };*/
+            this.border1 = {
+                type: 'sdBorderDTO',
+                sd: this.sphere,
+                borderIn: 0.0,
+                borderOut: 0
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.border1,
+                b: this.grid
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exGridWithBorder;
+    }());
+    qec.exGridWithBorder = exGridWithBorder;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Intersection", function () { return new exIntersection(); });
+    var exIntersection = /** @class */ (function () {
+        function exIntersection() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.ground = {
+                type: 'sdBoxDTO',
+                halfSize: [0.5, 0.1, 0.25],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.4,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 0, 1]
+                }
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.ground,
+                b: this.sphere
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exIntersection;
+    }());
+    qec.exIntersection = exIntersection;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("IntersectionWithBorder", function () { return new exIntersectionWithBorder(); });
+    var exIntersectionWithBorder = /** @class */ (function () {
+        function exIntersectionWithBorder() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.ground = {
+                type: 'sdBoxDTO',
+                halfSize: [0.5, 0.1, 0.25],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.4,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 0, 1]
+                }
+            };
+            this.borderSphere = {
+                type: 'sdBorderDTO',
+                sd: this.sphere,
+                borderIn: 0.05,
+                borderOut: 0.0
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.ground,
+                b: this.borderSphere
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exIntersectionWithBorder;
+    }());
+    qec.exIntersectionWithBorder = exIntersectionWithBorder;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Lighting1", function () { return new exLighting1(); });
+    var exLighting1 = /** @class */ (function () {
+        function exLighting1() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [0, -6, 2],
+                target: [0, 0, 0.5],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.keyLight = {
+                type: 'directionalLightDTO',
+                position: [-2, -2, 0],
+                direction: [1, 1, -2],
+                intensity: 0.8
+            };
+            this.fillLight = {
+                type: 'directionalLightDTO',
+                position: [2, -2, 0],
+                direction: [-1, 1, -1],
+                intensity: 0.2
+            };
+            this.rimLight = {
+                type: 'spotLightDTO',
+                position: [2, 2, 0.5],
+                direction: [-1, -1, 0.1],
+                intensity: 0.2
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                directionalLights: [this.keyLight, this.fillLight],
+                spotLights: [this.rimLight],
+                distance: null,
+                camera: this.camera,
+            };
+            this.plane = {
+                type: 'sdPlaneDTO',
+                normal: [0, 0, 1],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1.5, 1.5, 1.5]
+                }
+            };
+            var colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+            var n = 3;
+            var sd = new qec.sdUnion();
+            for (var i = 0; i < n; ++i) {
+                var r = i / (n - 1);
+                var box = {
+                    type: 'sdBoxDTO',
+                    halfSize: [0.25, 0.25, 0.5],
+                    material: {
+                        type: 'materialDTO',
+                        diffuse: colors[i]
+                    },
+                    transform: mat4Translate(-(n - 1) / 2 + i * 1, 0, 0.5)
+                };
+                var sdb = new qec.sdBox();
+                sdb.createFrom(box);
+                sd.array.push(sdb);
+            }
+            /*
+                        for (var i=0 ; i < n; ++i)
+                        {
+                            var r = i/(n-1);
+                            var box: sdBoxDTO = {
+                                type: 'sdBoxDTO',
+                                halfSize : [0.25, 0.25, 0.5],
+                                material : {
+                                    type:'materialDTO',
+                                    diffuse : [1, r, 1]
+                                },
+                                transform : mat4Translate(-(n-1)/2 + i*1, 1, 0.5)
+                            };
+                            var sdb =  new sdBox();
+                            sdb.createFrom(box);
+                            sd.array.push(sdb);
+                        }
+            */
+            for (var i = 0; i < n; ++i) {
+                var r = i / (n - 1);
+                var sphere = {
+                    type: 'sdBoxDTO',
+                    radius: 0.35,
+                    material: {
+                        type: 'materialDTO',
+                        diffuse: colors[i]
+                    },
+                    transform: mat4Translate(-(n - 1) / 2 + i * 1, 0, 0.5)
+                };
+                var sds = new qec.sdSphere();
+                sds.createFrom(sphere);
+                sd.array.push(sds);
+            }
+            var sdp = new qec.sdPlane();
+            sdp.createFrom(this.plane);
+            sd.array.push(sdp);
+            this.render.distance = {};
+            this.render.distance['__instance'] = sd;
+        }
+        return exLighting1;
+    }());
+    qec.exLighting1 = exLighting1;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Owl", function () { return new exOwl(); });
+    var exOwl = /** @class */ (function () {
+        function exOwl() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [-2, -4, 2],
+                direction: [2, 4, 2],
+                intensity: 1
+            };
+            /*
+                    svg : scSvgDTO = {
+                        type: 'scSvgDTO'
+                        src: 'data/tuto-owl/cartoon-owl.svg'
+                    };
+            */
+            this.top1 = {
+                type: 'scImageDTO',
+                src: 'data/tuto-owl/top1.png'
+            };
+            this.profile1 = {
+                type: 'scImageDTO',
+                src: 'data/cubeProfile.png'
+            };
+            this.fields = {
+                type: 'sdFieldsDTO',
+                topImage: this.top1,
+                topBounds: [-0.5, -0.5, 0.5, 0.5],
+                profileImage: this.profile1,
+                profileBounds: [-0.5, -0.5, 0.5, 0.5],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 1, 1]
+                },
+                transform: mat4.identity(mat4.create())
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.fields,
+                camera: this.camera,
+            };
+        }
+        return exOwl;
+    }());
+    qec.exOwl = exOwl;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Plane", function () { return new exPlane(); });
+    var exPlane = /** @class */ (function () {
+        function exPlane() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 1],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [0, 0, 1],
+                direction: [0, 0, -1],
+                intensity: 1
+            };
+            this.plane = {
+                type: 'sdPlaneDTO',
+                normal: [0, 0, 1],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 1, 1]
+                }
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.plane,
+                camera: this.camera,
+            };
+        }
+        return exPlane;
+    }());
+    qec.exPlane = exPlane;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Repeat", function () { return new exRepeat(); });
+    var exRepeat = /** @class */ (function () {
+        function exRepeat() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.05,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 0, 1]
+                }
+            };
+            this.repeat = {
+                type: 'sdRepeatDTO',
+                sd: this.sphere,
+                box: [0.3, 0.3, 0.3]
+            };
+            this.box = {
+                type: 'sdBoxDTO',
+                halfSize: [0.6, 0.6, 0.6],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.box,
+                b: this.repeat
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exRepeat;
+    }());
+    qec.exRepeat = exRepeat;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Repeat2", function () { return new exRepeat2(); });
+    var exRepeat2 = /** @class */ (function () {
+        function exRepeat2() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.2,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 0, 1]
+                }
+            };
+            this.borderSphere = {
+                type: 'sdBorderDTO',
+                sd: this.sphere,
+                borderIn: 0.02,
+                borderOut: 0.0
+            };
+            this.repeat = {
+                type: 'sdRepeatDTO',
+                sd: this.borderSphere,
+                box: [0.4, 0.4, 0.4]
+            };
+            this.box = {
+                type: 'sdBoxDTO',
+                halfSize: [0.6, 0.6, 0.6],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Array(mat4.rotateZ(mat4.create(), mat4.identity(mat4.create()), Math.PI / 6))
+            };
+            this.borderBox = {
+                type: 'sdBorderDTO',
+                sd: this.box,
+                borderIn: 0.02,
+                borderOut: 0.0
+            };
+            this.intersection = {
+                type: 'sdIntersectionDTO',
+                a: this.borderBox,
+                b: this.repeat
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.intersection,
+                camera: this.camera,
+            };
+        }
+        return exRepeat2;
+    }());
+    qec.exRepeat2 = exRepeat2;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Sphere", function () { return new exSphere(); });
+    var exSphere = /** @class */ (function () {
+        function exSphere() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [-2, -4, 2],
+                direction: [2, 4, 2],
+                intensity: 1
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.4,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 1, 1]
+                }
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.sphere,
+                camera: this.camera,
+            };
+        }
+        return exSphere;
+    }());
+    qec.exSphere = exSphere;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("SphereAndShadow", function () { return new exSphereAndShadow(); });
+    var exSphereAndShadow = /** @class */ (function () {
+        function exSphereAndShadow() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -5, 2],
+                target: [0, 1, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [-1, -1, 2],
+                direction: [1, 1, 2],
+                intensity: 1
+            };
+            this.plane = {
+                type: 'sdPlaneDTO',
+                normal: [0, 0, 1],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 1, 0]
+                }
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.4,
+                transform: mat4Translate(0, 0, 0.4),
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [1, 0, 0]
+                }
+            };
+            this.union = {
+                type: 'sdUnionDTO',
+                a: this.plane,
+                b: this.sphere,
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.union,
+                camera: this.camera,
+            };
+        }
+        return exSphereAndShadow;
+    }());
+    qec.exSphereAndShadow = exSphereAndShadow;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Subtraction", function () { return new exSubtraction(); });
+    var exSubtraction = /** @class */ (function () {
+        function exSubtraction() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.ground = {
+                type: 'sdBoxDTO',
+                halfSize: [0.5, 0.1, 0.25],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.4,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 0, 1]
+                }
+            };
+            this.subtraction = {
+                type: 'sdSubtractionDTO',
+                a: this.ground,
+                b: this.sphere
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.subtraction,
+                camera: this.camera,
+            };
+        }
+        return exSubtraction;
+    }());
+    qec.exSubtraction = exSubtraction;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    qec.pushExample("Union", function () { return new exUnion(); });
+    var exUnion = /** @class */ (function () {
+        function exUnion() {
+            this.camera = {
+                type: 'cameraDTO',
+                position: [1, -3, 3],
+                target: [0, 0, 0],
+                up: [0, 0, 1],
+                fov: Math.PI / 6
+            };
+            this.light = {
+                type: 'spotLightDTO',
+                position: [2, -4, 2],
+                direction: [-2, 4, 2],
+                intensity: 1
+            };
+            this.ground = {
+                type: 'sdBoxDTO',
+                halfSize: [0.5, 0.1, 0.25],
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 1, 0]
+                },
+                transform: mat4Identity()
+            };
+            this.sphere = {
+                type: 'sdSphereDTO',
+                radius: 0.4,
+                material: {
+                    type: 'materialDTO',
+                    diffuse: [0, 0, 1]
+                }
+            };
+            this.union = {
+                type: 'sdUnionDTO',
+                a: this.ground,
+                b: this.sphere
+            };
+            this.render = {
+                type: 'scRendererDTO',
+                spotLights: [this.light],
+                directionalLights: [],
+                distance: this.union,
+                camera: this.camera,
+            };
+        }
+        return exUnion;
+    }());
+    qec.exUnion = exUnion;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var sdFieldsTest = /** @class */ (function () {
         function sdFieldsTest() {
             this.testName = "";
         }
         sdFieldsTest.prototype.test = function () {
             this.distanceFieldSameSizeAsCanvas();
+            console.log(this.testName + ' : OK');
             this.distanceFieldSmallerThanCanvas();
+            console.log(this.testName + ' : OK');
             this.distanceFieldSameSizeAsCanvas_WithMargin();
-            console.log('done');
+            console.log(this.testName + ' : OK');
         };
         sdFieldsTest.prototype.distanceFieldSameSizeAsCanvas = function () {
             this.testName = 'DistanceFieldSameSizeAsCanvas';
@@ -6083,7 +6286,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var texturePackerTest = (function () {
+    var texturePackerTest = /** @class */ (function () {
         function texturePackerTest() {
         }
         texturePackerTest.prototype.test = function () {
@@ -6102,6 +6305,11 @@ var qec;
                 dfCanvas.computeDistanceField(img, 1, img.height / img.width);
                 dfCanvas.update();
                 allDfCanvas.push(dfCanvas);
+                //document.body.appendChild(dfCanvas.canvas);
+                //dfCanvas.debugInfoInCanvas();
+                //var canvas = document.createElement('canvas');
+                //textureDebugInCanvas(dfCanvas.floatTexture ,0 ,128, canvas);
+                //document.body.appendChild(canvas);
             }
             packer.repack(allDfCanvas.map(function (c) { return c.floatTexture; }));
             packer.debugInfoInBody(255);
@@ -6112,7 +6320,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var bspline = (function () {
+    var bspline = /** @class */ (function () {
         function bspline() {
         }
         bspline.prototype.setPoints = function (points, degree, copy) {
@@ -6267,7 +6475,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var createdDTO = (function () {
+    var createdDTO = /** @class */ (function () {
         function createdDTO() {
         }
         return createdDTO;
@@ -6316,7 +6524,7 @@ var qec;
         return i;
     }
     qec.injectNew = injectNew;
-    var injector = (function () {
+    var injector = /** @class */ (function () {
         function injector() {
             this.doLog = false;
             this.singleInstances2 = [];
@@ -6402,14 +6610,14 @@ var qec;
         return injector;
     }());
     qec.injector = injector;
-    var testA = (function () {
+    var testA = /** @class */ (function () {
         function testA() {
             this.id = testA.idCount++;
         }
         testA.idCount = 0;
         return testA;
     }());
-    var testB1 = (function () {
+    var testB1 = /** @class */ (function () {
         function testB1() {
             this.singleInstanceA = inject(testA);
             this.createa = injectFunc(testA);
@@ -6422,7 +6630,7 @@ var qec;
         };
         return testB1;
     }());
-    var testB2 = (function () {
+    var testB2 = /** @class */ (function () {
         function testB2() {
         }
         testB2.prototype.log = function () {
@@ -6430,7 +6638,7 @@ var qec;
         };
         return testB2;
     }());
-    var injector2Test = (function () {
+    var injector2Test = /** @class */ (function () {
         function injector2Test() {
         }
         injector2Test.prototype.doTestSingleInstanceAndInjectFunc = function () {
@@ -6547,7 +6755,7 @@ function mix(x, y, a) {
 }
 var qec;
 (function (qec) {
-    var resources = (function () {
+    var resources = /** @class */ (function () {
         function resources() {
         }
         resources.loadAll = function (done) {
@@ -6604,7 +6812,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var runAll = (function () {
+    var runAll = /** @class */ (function () {
         function runAll() {
             this.all = [];
         }
@@ -6661,7 +6869,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var styleAttribute = (function () {
+    var styleAttribute = /** @class */ (function () {
         function styleAttribute() {
         }
         styleAttribute.setField = function (styleStr, key, value) {
@@ -6706,7 +6914,7 @@ var qec;
 // File Version: 5.0.1 (2010/10/01)
 var qec;
 (function (qec) {
-    var wm5DistLine3Line3 = (function () {
+    var wm5DistLine3Line3 = /** @class */ (function () {
         function wm5DistLine3Line3() {
             this.mLine0Origin = vec3.create();
             this.mLine0Direction = vec3.create();
@@ -6798,7 +7006,7 @@ var qec;
 // File Version: 5.0.0 (2010/01/01)
 var qec;
 (function (qec) {
-    var wm5Line3 = (function () {
+    var wm5Line3 = /** @class */ (function () {
         function wm5Line3() {
             this.origin = vec3.create();
             this.direction = vec3.create();
@@ -6828,7 +7036,7 @@ var qec;
 // http://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
 var qec;
 (function (qec) {
-    var arcball = (function () {
+    var arcball = /** @class */ (function () {
         function arcball() {
             this.perp = vec3.create();
             this.tmpPt1 = vec3.create();
@@ -6850,12 +7058,15 @@ var qec;
                 result[0] = dx / length * sphereRadiusInPixels;
                 result[1] = dy / length * sphereRadiusInPixels;
                 result[2] = 0.0;
+                //console.log("not sphere");
             }
+            //Else it's on the inside
             else {
                 //Return a vector to a point mapped inside the sphere
                 result[0] = dx;
                 result[1] = dy;
                 result[2] = Math.sqrt(sphereRadiusInPixels * sphereRadiusInPixels - (dx * dx + dy * dy));
+                //console.log("sphere");
             }
         };
         //return quaternion equivalent to rotation between 2 3D points
@@ -6863,7 +7074,8 @@ var qec;
             var perp = this.perp;
             vec3.cross(perp, startPoint, endPoint);
             //Compute the length of the perpendicular vector
-            if (vec3.length(perp) > 0.00001) {
+            if (vec3.length(perp) > 0.00001) //if its non-zero
+             {
                 // http://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
                 //
                 // Quaternion q;
@@ -6890,9 +7102,10 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var cameraArcballController = (function () {
+    var cameraArcballController = /** @class */ (function () {
         function cameraArcballController() {
             this.editor = qec.inject(qec.editor);
+            this.transformObjectView = qec.inject(qec.transformObjectView);
             this.arcball = new qec.arcball();
             this.cameraTransforms = qec.injectNew(qec.cameraTransforms);
             this.collide = qec.injectNew(qec.renderCollide);
@@ -6935,6 +7148,7 @@ var qec;
                 this.cameraTransforms.zoom(d, 1.1);
                 this.cameraTransforms.updateCamera(this.editor.getCamera());
                 this.editor.setRenderFlag();
+                this.transformObjectView.draw();
             }
         };
         cameraArcballController.prototype.setDisabledAll = function (b) {
@@ -6974,6 +7188,8 @@ var qec;
             if (this.isRotateEnabled) {
                 if (this.isMouseDown && this.isRightClick && !this.isShiftKey) {
                     if (false && this.collide.hasCollided) {
+                        // Proj*Pan*Rot*LocalPicked = (x1,y1) => permet de déduire localpicked
+                        // Proj*Pan*Rot*DeltaRot*LocalPicked = (x2,y2) => permet de déduire DeltaRot
                     }
                     else {
                         var sphereRadius = 0.5 * Math.min(this.viewportWidth, this.viewportHeight);
@@ -6983,6 +7199,7 @@ var qec;
                     this.cameraTransforms.setRotation(this.tmpRotation);
                     this.cameraTransforms.updateCamera(this.editor.getCamera());
                     this.editor.setRenderFlag();
+                    this.transformObjectView.draw();
                 }
             }
             if (this.isPanEnabled) {
@@ -6994,13 +7211,38 @@ var qec;
                 }
             }
         };
+        cameraArcballController.prototype.onTouchStart = function (e) {
+            this.isRightClick = true;
+            this.isLeftClick = false;
+            this.isMiddleClick = false;
+            this.isShiftKey = false;
+            this.isMouseDown = true;
+            // copy start state
+            vec2.set(this.startXY, e.touches[0].clientX, e.touches[0].clientY);
+            quat.copy(this.startQuat, this.cameraTransforms.rotation);
+            mat4.copy(this.startPan, this.cameraTransforms.panTranslation);
+            this.viewportWidth = this.editor.getViewportWidth();
+            this.viewportHeight = this.editor.getViewportHeight();
+            // pick point in 3D
+            this.editor.getCamera().getRay(e.touches[0].clientX, e.touches[0].clientY, this.ro, this.rd);
+            this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
+            if (this.collide.hasCollided) {
+            }
+        };
+        cameraArcballController.prototype.onTouchMove = function (e) {
+            vec2.set(this.currentMouseXY, e.touches[0].clientX, e.touches[0].clientY);
+            this.hasMouseMoved = true;
+        };
+        cameraArcballController.prototype.onTouchEnd = function (e) {
+            this.isMouseDown = false;
+        };
         return cameraArcballController;
     }());
     qec.cameraArcballController = cameraArcballController;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var cameraController = (function () {
+    var cameraController = /** @class */ (function () {
         function cameraController() {
             this.editor = qec.inject(qec.editor);
             this.minZoom = 0;
@@ -7087,6 +7329,7 @@ var qec;
                 this.rotateLeft(2 * Math.PI * dx / 1000); /*rotateDelta.x / element.clientWidth * scope.rotateSpeed );*/
                 // rotating up and down along whole screen attempts to go 360, but limited to 180
                 this.rotateUp(2 * Math.PI * dy / 1000); // / element.clientHeight * scope.rotateSpeed );
+                //this.update();
             }
         };
         cameraController.prototype.onMouseDown = function (e) {
@@ -7113,13 +7356,19 @@ var qec;
             this.spherical.radius *= 1 - d * 0.1;
             this.updateFlag = true;
         };
+        cameraController.prototype.onTouchStart = function (e) {
+        };
+        cameraController.prototype.onTouchMove = function (e) {
+        };
+        cameraController.prototype.onTouchEnd = function (e) {
+        };
         return cameraController;
     }());
     qec.cameraController = cameraController;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var cameraTransforms = (function () {
+    var cameraTransforms = /** @class */ (function () {
         function cameraTransforms() {
             this.transformMatrix = mat4.create();
             this.rotation = quat.fromValues(0, 0, 0, -1);
@@ -7131,6 +7380,76 @@ var qec;
             this.tmpVec3 = vec3.create();
             this.up = vec3.create();
             this.right = vec3.create();
+            /*
+            tmpMat4 = mat4.create();
+            rotCpy = mat4.create();
+            vecx = vec3.createFrom(1,0,0);
+            vecy = vec3.createFrom(0,1,0);
+            vecz = vec3.createFrom(0,0,1);
+            tmpQuat = quat4.create();
+            tmpVec = vec3.create();
+            tmpRotAxis = vec3.create();
+    
+            getPitch(quat:Float32Array)
+            {
+                var x = quat[0];
+                var y = quat[1]
+                var z = quat[2]
+                var w = quat[3]
+                return Math.atan2(2*x*w - 2*y*z, 1 - 2*x*x - 2*z*z);
+            }
+    
+            getYaw(quat:Float32Array)
+            {
+                var x = quat[0];
+                var y = quat[1]
+                var z = quat[2]
+                var w = quat[3]
+                return Math.asin(2*x*y + 2*z*w);
+            }
+    
+            rotateRight()
+            {
+                quat4.fromAngleAxis(3.14/20, this.vecz, this.tmpQuat);
+                quat4.multiply(this.tmpQuat, this.rotation, this.rotation);
+    
+                this.updateTransformMatrix();
+            }
+    
+            rotateLeft()
+            {
+                //quat4.fromAngleAxis(-3.14/20, this.vecy, this.tmpQuat);
+                //quat4.multiply(this.rotation, this.tmpQuat, this.rotation);
+                quat4.fromAngleAxis(-3.14/20, this.vecz, this.tmpQuat);
+                quat4.multiply(this.tmpQuat, this.rotation, this.rotation);
+                this.updateTransformMatrix();
+            }
+    
+            rotateUp()
+            {
+    
+                quat4.multiplyVec3(this.rotation, this.vecz, this.tmpVec);
+                //console.log(vec3.str(this.tmpVec));
+    
+                vec3.cross(this.vecz, this.tmpVec, this.tmpRotAxis);
+                vec3.normalize(this.tmpRotAxis);
+    
+                quat4.fromAngleAxis(-3.14/20, this.tmpRotAxis, this.tmpQuat);
+                quat4.multiply(this.tmpQuat, this.rotation, this.rotation);
+    
+                // quat4.fromAngleAxis(3.14/20, this.vecx, this.tmpQuat);
+                //quat4.multiply(this.rotation, this.tmpQuat, this.rotation);
+                this.updateTransformMatrix();
+    
+            }
+    
+            rotateDown()
+            {
+                quat4.fromAngleAxis(-3.14/20, this.vecx, this.tmpQuat);
+                quat4.multiply(this.rotation, this.tmpQuat, this.rotation);
+                this.updateTransformMatrix();
+            }
+            */
         }
         cameraTransforms.prototype.afterInject = function () {
             quat.normalize(this.rotation, this.rotation);
@@ -7203,7 +7522,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var controllerManager = (function () {
+    var controllerManager = /** @class */ (function () {
         function controllerManager() {
             this.camActive = true;
             //cameraController:cameraController = inject(cameraController);
@@ -7256,6 +7575,18 @@ var qec;
             if (this.currentController != null)
                 this.currentController.onMouseWheel(e);
         };
+        controllerManager.prototype.onTouchStart = function (e) {
+            if (this.camActive)
+                this.cameraController.onTouchStart(e);
+        };
+        controllerManager.prototype.onTouchMove = function (e) {
+            if (this.camActive)
+                this.cameraController.onTouchMove(e);
+        };
+        controllerManager.prototype.onTouchEnd = function (e) {
+            if (this.camActive)
+                this.cameraController.onTouchEnd(e);
+        };
         controllerManager.prototype.updateLoop = function () {
             if (this.camActive)
                 this.cameraController.updateLoop();
@@ -7269,7 +7600,7 @@ var qec;
 var qec;
 (function (qec) {
     // http://www.williammalone.com/articles/create-html5-canvas-javascript-drawing-app
-    var drawInCanvas = (function () {
+    var drawInCanvas = /** @class */ (function () {
         function drawInCanvas() {
             this.paint = false;
             this.clickX = new Array();
@@ -7349,7 +7680,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var editorView = (function () {
+    var editorView = /** @class */ (function () {
         function editorView() {
             this.editor = qec.inject(qec.editor);
             this.saveWorkspace = qec.inject(qec.saveWorkspace);
@@ -7364,22 +7695,26 @@ var qec;
             this.materialView = qec.inject(qec.materialView);
             this.shareView = qec.inject(qec.shareView);
             this.printView = qec.inject(qec.printView);
+            this.transformObjectView = qec.inject(qec.transformObjectView);
             this.isSelectControllerActive = ko.observable(true);
             this.isMoveControllerActive = ko.observable(false);
             this.isScaleControllerActive = ko.observable(false);
             this.isScaleBottomControllerActive = ko.observable(false);
             // toolbars
-            this.importToolbarVisible = ko.observable(true);
+            this.importToolbarVisible = ko.observable(false);
             this.modifyToolbarVisible = ko.observable(false);
             this.environmentToolbarVisible = ko.observable(false);
             this.photoToolbarVisible = ko.observable(false);
             this.printToolbarVisible = ko.observable(false);
+            this.transformObjectViewVisible = ko.observable(false);
+            this.profileViewVisible = ko.observable(false);
             this.toolbarsVisible = [
                 this.importToolbarVisible,
                 this.modifyToolbarVisible,
                 this.environmentToolbarVisible,
                 this.photoToolbarVisible,
-                this.printToolbarVisible];
+                this.printToolbarVisible
+            ];
             this.animRot = quat.create();
             this.animIndex = 0;
             this.doAnimate = false;
@@ -7403,6 +7738,9 @@ var qec;
         editorView.prototype.onMouseDown = function (data, e) { this.controllerManager.onMouseDown(e); };
         editorView.prototype.onMouseUp = function (data, e) { this.controllerManager.onMouseUp(e); };
         editorView.prototype.onMouseWheel = function (data, e) { this.controllerManager.onMouseWheel(e); };
+        editorView.prototype.onTouchStart = function (data, e) { this.controllerManager.onTouchStart(e); };
+        editorView.prototype.onTouchMove = function (data, e) { this.controllerManager.onTouchMove(e); };
+        editorView.prototype.onTouchEnd = function (data, e) { this.controllerManager.onTouchEnd(e); };
         editorView.prototype.setMoveController = function () {
             this.heightController.isScaleMode = false;
             this.controllerManager.setController(this.heightController);
@@ -7423,6 +7761,15 @@ var qec;
         editorView.prototype.setSelectController = function () {
             this.controllerManager.setController(this.selectController);
             this.setActiveController(this.isSelectControllerActive);
+            this.transformObjectViewVisible(true);
+            this.profileViewVisible(false);
+        };
+        editorView.prototype.setProfileController = function () {
+            this.transformObjectViewVisible(false);
+            this.profileViewVisible(true);
+        };
+        editorView.prototype.toggleProfileDebug = function () {
+            this.profileView.toggleDebug();
         };
         editorView.prototype.setActiveController = function (c) {
             this.isSelectControllerActive(false);
@@ -7434,7 +7781,8 @@ var qec;
         editorView.prototype.setSelectedIndex = function (i) {
             this.editor.setSelectedIndex(i);
             this.profileView.setSelectedIndex(i);
-            this.materialView.setSelectedIndex(i);
+            //this.materialView.setSelectedIndex(i);
+            this.transformObjectView.setSelectedIndex(i);
         };
         editorView.prototype.updateLoop = function () {
             var _this = this;
@@ -7490,7 +7838,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var heightController = (function () {
+    var heightController = /** @class */ (function () {
         function heightController() {
             this.editor = qec.inject(qec.editor);
             this.editorView = qec.inject(qec.editorView);
@@ -7599,13 +7947,19 @@ var qec;
         };
         heightController.prototype.onMouseWheel = function (e) {
         };
+        heightController.prototype.onTouchStart = function (e) {
+        };
+        heightController.prototype.onTouchMove = function (e) {
+        };
+        heightController.prototype.onTouchEnd = function (e) {
+        };
         return heightController;
     }());
     qec.heightController = heightController;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var importView = (function () {
+    var importView = /** @class */ (function () {
         function importView() {
             this.editor = qec.inject(qec.editor);
             this.importedSvgs = ko.observableArray();
@@ -7641,12 +7995,13 @@ var qec;
                     ()=>{}//this.editor.setSelectedIndex(0)
                 );
                 */
+                var readerResult = reader.result;
                 var newSvg = _this.createImportedSvg();
                 newSvg.importView = _this;
-                newSvg.src("data:image/svg+xml;base64," + btoa(reader.result));
-                newSvg.content = reader.result;
+                newSvg.src("data:image/svg+xml;base64," + btoa(readerResult));
+                newSvg.content = readerResult;
                 _this.importedSvgs.push(newSvg);
-                _this.editor.addSvg(reader.result);
+                _this.editor.addSvg(readerResult);
                 //if (this.importedSvgs.length == 1)
                 _this.select(newSvg);
             };
@@ -7672,7 +8027,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var importedSvg = (function () {
+    var importedSvg = /** @class */ (function () {
         function importedSvg() {
             this.src = ko.observable('');
             this.content = '';
@@ -7691,7 +8046,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var index2 = (function () {
+    var index2 = /** @class */ (function () {
         function index2() {
             /*
             sd:signedDistance;
@@ -7818,7 +8173,7 @@ ko.bindingHandlers['setElement'] =
     };
 var qec;
 (function (qec) {
-    var materialView = (function () {
+    var materialView = /** @class */ (function () {
         function materialView() {
             this.editor = qec.inject(qec.editor);
             this.selectedIndex = -1;
@@ -7868,7 +8223,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var printView = (function () {
+    var printView = /** @class */ (function () {
         function printView() {
             /*
             allDesignsUrl = ko.observableArray<string>();
@@ -7906,6 +8261,8 @@ var qec;
                             _this.sculpteoDesignUrl('https://www.sculpteo.com/gallery/design/ext/' + uuid);
                             _this.allPrintUrl.push(_this.sculpteoDesignUrl());
                             $('#modalSculpteo').modal('show');
+                            //$('.sculpteoFrame').attr('width', $('.screen').width());
+                            //$('.sculpteoFrame').attr('height', $('.screen').height());
                         }
                     }
                     else {
@@ -7932,13 +8289,31 @@ var qec;
             var blob = new Blob([longInt8View], {type: 'application/octet-stream'});
             */
         };
+        printView.prototype.exportSTL = function () {
+            var isStl = false;
+            //var blob:Blob;
+            if (!isStl) {
+                /*
+                var obj = this.editor.computeOBJ();
+                var blob = new Blob([obj], {type: 'text/plain'});
+                saveAs(blob, 'download.obj');
+                */
+                this.editor.computeOBJAsZip(50, 50, 50, 1, function (content) { return saveAs(content, 'a.obj.zip'); });
+            }
+            else {
+                //var stl = this.editor.computeTextSTL();
+                var stl = this.editor.computeBinarySTL(50, 50, 50, 1);
+                var blob = new Blob([stl], { type: 'application//octet-binary' });
+                saveAs(blob, 'download.stl');
+            }
+        };
         return printView;
     }());
     qec.printView = printView;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var profileExample = (function () {
+    var profileExample = /** @class */ (function () {
         function profileExample() {
             this.profileView = qec.inject(qec.profileView);
             this.editor = qec.inject(qec.editor);
@@ -7988,7 +8363,7 @@ var qec;
         return profileExample;
     }());
     qec.profileExample = profileExample;
-    var profileExamples = (function () {
+    var profileExamples = /** @class */ (function () {
         function profileExamples() {
             this.examples = [];
             this.createExample = qec.injectFunc(profileExample);
@@ -8016,7 +8391,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var profileView = (function () {
+    var profileView = /** @class */ (function () {
         function profileView() {
             this.editor = qec.inject(qec.editor);
             this.bsplineDrawer = new qec.bsplineDrawer();
@@ -8035,8 +8410,13 @@ var qec;
         }
         profileView.prototype.init = function (elt) {
             var _this = this;
+            this.debugCanvas = document.createElement('canvas');
+            elt.appendChild(this.debugCanvas);
+            this.debugCanvas.style.display = 'none';
+            this.maxCanvasWidth = window.innerWidth;
+            this.maxCanvasHeight = window.innerHeight - 142;
             this.canvas = document.createElement('canvas');
-            this.canvas.style.border = 'solid 1px red';
+            this.canvas.style.border = 'solid 1px green';
             elt.appendChild(this.canvas);
             this.canvas.width = this.maxCanvasWidth;
             this.canvas.height = this.maxCanvasHeight;
@@ -8080,9 +8460,9 @@ var qec;
             var canvasWidth = this.maxCanvasWidth;
             var canvasHeight = this.maxCanvasHeight;
             if (boundH > boundW)
-                canvasWidth = canvasHeight * boundW / boundH;
+                canvasWidth = Math.min(this.maxCanvasWidth, canvasHeight * boundW / boundH);
             else
-                canvasHeight = canvasWidth * boundH / boundW;
+                canvasHeight = Math.min(this.maxCanvasHeight, canvasWidth * boundH / boundW);
             this.canvas.width = canvasWidth;
             this.canvas.height = canvasHeight;
             // convert points in pixels
@@ -8105,8 +8485,8 @@ var qec;
         profileView.prototype.updateEditor = function () {
             if (this.selectedIndex < 0)
                 return;
-            var l = this.editor.workspace.editorObjects[this.selectedIndex];
-            var profileBounds = l.profileBounds;
+            var selected = this.editor.workspace.editorObjects[this.selectedIndex];
+            var profileBounds = selected.profileBounds;
             // convert points to real coordinates
             var profilePoints = [];
             for (var j = 0; j < this.points.length; ++j) {
@@ -8121,9 +8501,11 @@ var qec;
                 y *= -1;
                 profilePoints.push([x, y]);
             }
-            l.setProfilePoints(profilePoints);
-            this.editor.renderer.updateFloatTextures(l.sd);
+            selected.setProfilePoints(profilePoints);
+            //this.editor.updateSignedDistance(selected);
+            this.editor.renderer.updateFloatTextures(selected.sd);
             this.editor.setRenderFlag();
+            this.editor.setUpdateFlag();
         };
         profileView.prototype.draw = function () {
             if (this.selectedIndex < 0)
@@ -8132,7 +8514,7 @@ var qec;
             var ctx = this.canvas.getContext('2d');
             ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             ctx.strokeStyle = "rgba(0,0,0,1)";
-            ctx.fillStyle = "rgba(0,0,0,1)";
+            ctx.fillStyle = "rgba(0,0,0,0.3)";
             if (l.profileSmooth)
                 this.bsplineDrawer.drawSpline(this.points, this.canvas);
             else
@@ -8147,12 +8529,14 @@ var qec;
             ctx.closePath();
             // draw points        
             for (var i = 0; i < this.points.length; i++) {
-                ctx.fillStyle = "rgba(0,255,0,1)";
+                ctx.strokeStyle = "rgba(0,255,0,1)";
+                ctx.fillStyle = "rgba(0,255,0,0.3)";
                 if (this.pointIndex == i)
-                    ctx.fillStyle = "rgba(255,0,0,1)";
+                    ctx.fillStyle = "rgba(255,0,0,0.3)";
                 ctx.beginPath();
                 ctx.arc(this.points[i][0], this.points[i][1], 5, 0, Math.PI * 2, false);
                 ctx.fill();
+                ctx.stroke();
                 ctx.closePath();
             }
         };
@@ -8188,13 +8572,25 @@ var qec;
                 this.updateEditor();
             }
         };
+        profileView.prototype.toggleDebug = function () {
+            if (this.canvas.style.display == 'none') {
+                this.canvas.style.display = 'block';
+                this.debugCanvas.style.display = 'none';
+            }
+            else {
+                var l = this.editor.workspace.editorObjects[this.selectedIndex];
+                l.profile.debugInfoInExistingCanvas(this.debugCanvas);
+                this.canvas.style.display = 'none';
+                this.debugCanvas.style.display = 'block';
+            }
+        };
         return profileView;
     }());
     qec.profileView = profileView;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var selectController = (function () {
+    var selectController = /** @class */ (function () {
         function selectController() {
             this.collide = new qec.renderCollide();
             this.editor = qec.inject(qec.editor);
@@ -8240,10 +8636,18 @@ var qec;
             }
             if (iMin > -1) {
                 this.editorView.setSelectedIndex(iMin);
+                //console.log(iMin);
+                //this.vm.layers[iMin].sd.material.setDiffuse(1,0,0);
             }
             //this.vm.setUpdateFlag();;
         };
         selectController.prototype.onMouseWheel = function (e) {
+        };
+        selectController.prototype.onTouchStart = function (e) {
+        };
+        selectController.prototype.onTouchMove = function (e) {
+        };
+        selectController.prototype.onTouchEnd = function (e) {
         };
         return selectController;
     }());
@@ -8251,7 +8655,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var shareView = (function () {
+    var shareView = /** @class */ (function () {
         function shareView() {
             this.editor = qec.inject(qec.editor);
             this.uploadedUrl = ko.observable('');
@@ -8311,7 +8715,7 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var topView = (function () {
+    var topView = /** @class */ (function () {
         function topView() {
         }
         topView.prototype.setElement = function (elt) {
@@ -8339,5 +8743,136 @@ var qec;
         return topView;
     }());
     qec.topView = topView;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var transformObjectView = /** @class */ (function () {
+        function transformObjectView() {
+            this.editor = qec.inject(qec.editor);
+            this.points = [];
+            this.pointIndex = -1;
+            this.doUpdate = false;
+            this.selectedIndex = -1;
+            this.tmpObjectTransform = mat4.create();
+        }
+        transformObjectView.prototype.init = function (elt) {
+            this.canvas = document.createElement('canvas');
+            this.canvas.style.border = 'solid 1px red';
+            elt.appendChild(this.canvas);
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight - 102;
+            console.log("this.canvas.height : " + this.canvas.height);
+            /*
+            this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(<MouseEvent>e));
+            this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(<MouseEvent>e))
+            this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(<MouseEvent>e))
+
+
+            this.points = [[0, 0], [295, 0], [295, 295], [0, 295]];
+            */
+            this.draw();
+        };
+        transformObjectView.prototype.setSelectedIndex = function (i) {
+            this.selectedIndex = i;
+            if (i < 0)
+                return;
+            var l = this.editor.workspace.editorObjects[i];
+            this.draw();
+        };
+        transformObjectView.prototype.updateEditor = function () {
+            if (this.selectedIndex < 0)
+                return;
+            var l = this.editor.workspace.editorObjects[this.selectedIndex];
+            var profileBounds = l.profileBounds;
+            /*
+            // convert points to real coordinates
+            var profilePoints = [];
+            for (var j = 0; j < this.points.length; ++j) {
+                var px = this.points[j][0];
+                var py = this.points[j][1];
+                px -= this.offsetX;
+                py -= this.offsetY;
+
+                var drawWidth = this.canvas.width - 2 * this.offsetX;
+                var drawHeight = this.canvas.height - 2 * this.offsetY;
+
+                var x = (px / drawWidth) * (profileBounds[2] - profileBounds[0]) + profileBounds[0];
+                var y = (py - drawHeight) / drawHeight * (profileBounds[3] - profileBounds[1]) + profileBounds[1];
+                y *= -1;
+                profilePoints.push([x, y]);
+            }
+
+            l.setProfilePoints(profilePoints);
+            this.editor.renderer.updateFloatTextures(l.sd);
+            this.editor.setRenderFlag();
+            */
+        };
+        transformObjectView.prototype.draw = function () {
+            if (this.selectedIndex < 0)
+                return;
+            var l = this.editor.workspace.editorObjects[this.selectedIndex];
+            var bounds = l.top.totalBounds;
+            mat4.invert(this.tmpObjectTransform, l.inverseTransform);
+            var camera = this.editor.getCamera();
+            var screenPosition1 = vec3.fromValues(bounds[0], bounds[1], 0);
+            var screenPosition2 = vec3.fromValues(bounds[0], bounds[3], 0);
+            var screenPosition3 = vec3.fromValues(bounds[2], bounds[3], 0);
+            var screenPosition4 = vec3.fromValues(bounds[2], bounds[1], 0);
+            var center = vec3.fromValues(0.5 * (bounds[2] + bounds[0]), 0.5 * (bounds[3] + bounds[1]), 0.5 * (l.profileBounds[3] + l.profileBounds[1]));
+            var centerUp = vec3.fromValues(center[0], center[1], l.profileBounds[3]);
+            var centerDown = vec3.fromValues(center[0], center[1], l.profileBounds[1]);
+            camera.getScreenPositionPreTransform(screenPosition1, screenPosition1, this.tmpObjectTransform);
+            camera.getScreenPositionPreTransform(screenPosition2, screenPosition2, this.tmpObjectTransform);
+            camera.getScreenPositionPreTransform(screenPosition3, screenPosition3, this.tmpObjectTransform);
+            camera.getScreenPositionPreTransform(screenPosition4, screenPosition4, this.tmpObjectTransform);
+            camera.getScreenPositionPreTransform(center, center, this.tmpObjectTransform);
+            camera.getScreenPositionPreTransform(centerUp, centerUp, this.tmpObjectTransform);
+            camera.getScreenPositionPreTransform(centerDown, centerDown, this.tmpObjectTransform);
+            var ctx = this.canvas.getContext('2d');
+            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            var rw = 10;
+            ctx.strokeStyle = "rgba(0,255,0,1)";
+            ctx.fillStyle = "rgba(0,255,0,1)";
+            ctx.strokeRect(center[0] - 0.5 * rw, center[1] - 0.5 * rw, rw, rw);
+            ctx.strokeStyle = "rgba(0,0,255,1)";
+            ctx.fillStyle = "rgba(0,255,0,1)";
+            ctx.strokeRect(centerUp[0] - 0.5 * rw, centerUp[1] - 0.5 * rw, rw, rw);
+            ctx.strokeStyle = "rgba(0,0,255,1)";
+            ctx.fillStyle = "rgba(0,255,0,1)";
+            ctx.strokeRect(centerDown[0] - 0.5 * rw, centerDown[1] - 0.5 * rw, rw, rw);
+            ctx.strokeStyle = "rgba(128,128,128,1)";
+            ctx.beginPath();
+            ctx.moveTo(centerDown[0], centerDown[1]);
+            ctx.lineTo(centerUp[0], centerUp[1]);
+            ctx.stroke();
+            ctx.closePath();
+            this.points = [screenPosition1, screenPosition2, screenPosition3, screenPosition4];
+            ctx.strokeStyle = "rgba(128,128,128,1)";
+            ctx.beginPath();
+            ctx.moveTo(this.points[0][0], this.points[0][1]);
+            for (var i = 0; i < this.points.length; i++) {
+                ctx.lineTo(this.points[i][0], this.points[i][1]);
+            }
+            ctx.lineTo(this.points[0][0], this.points[0][1]);
+            ctx.stroke();
+            ctx.closePath();
+            /*
+            
+                        // draw points
+                        for (var i = 0; i < this.points.length; i++) {
+                            ctx.fillStyle = "rgba(0,255,0,1)";
+                            if (this.pointIndex == i)
+                                ctx.fillStyle = "rgba(255,0,0,1)";
+            
+                            ctx.beginPath();
+                            ctx.arc(this.points[i][0], this.points[i][1], 5, 0, Math.PI * 2, false);
+                            ctx.fill();
+                            ctx.closePath();
+                        }
+                        */
+        };
+        return transformObjectView;
+    }());
+    qec.transformObjectView = transformObjectView;
 })(qec || (qec = {}));
 //# sourceMappingURL=built.js.map

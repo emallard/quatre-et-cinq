@@ -2,6 +2,8 @@
 
 <head>
     <title>svgprint3d</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <script src="libs/three.js"></script>
     <script src="libs/jquery.3.1.1.min.js"></script>
@@ -18,16 +20,22 @@
     <link rel="stylesheet" href="libs/bootstrap/bootstrap.css">
     <link rel="stylesheet" href="libs/font-awesome/css/font-awesome.min.css">
     <link rel="stylesheet" href="css/app.css">
-    
+
 </head>
 
 
 <body>
+    <div class="titlebar">
+        <div class="title">Svg Print 3D</div>
+        <div class="menu"><i class="fa fa-bars"></i></div>
+    </div>
+
     <div id="header-wrapper">
-        
+
         <div class="toolbar">
             <nav>
                 <ul>
+                    <!--
                     <li><a>File</a>
                     <ul>
                         <li><a data-bind="click: menuSave">Save</a></li>
@@ -35,14 +43,20 @@
                         <li><a data-bind="click: menuOpen">Open</a></li>
                     </ul>        
                     </li>
-                    <li><a data-bind="click: showImportToolbar, css: {active: importToolbarVisible}" >2D</a></li>
-                    <li><a data-bind="click: showModifyToolbar, css: {active: modifyToolbarVisible}">Edit</a></li>
-                    <li><a data-bind="click: showEnvironmentToolbar, css: {active: environmentToolbarVisible}">Scene</a></li>
-                    <li><a data-bind="click: showPhotoToolbar, css: {active: photoToolbarVisible}">Share</a></li>
-                    <li><a data-bind="click: showPrintToolbar, css: {active: printToolbarVisible}">Print</a></li>
+                    -->
+                    <li><a data-bind="click: showImportToolbar, css: {active: importToolbarVisible}">
+                            <i class="fa fa-image"></i></a></li>
+                    <li><a data-bind="click: showModifyToolbar, css: {active: modifyToolbarVisible}">
+                            <i class="fa fa-cubes"></i></a></li>
+                    <!--<li><a data-bind="click: showEnvironmentToolbar, css: {active: environmentToolbarVisible}">Scene</a></li>-->
+
+                    <li><a data-bind="click: showPhotoToolbar, css: {active: photoToolbarVisible}"><i
+                                class="fa fa-share-alt"></i></a></li>
+                    <li><a class="btn btn-primary"
+                            data-bind="click: showPrintToolbar, css: {active: printToolbarVisible}">Print</a>
+                    </li>
                 </ul>
             </nav>
-            <img src="css/images/logo.svg" height="60" style='float:right; margin-top:-50px; margin-right:40px;'>
         </div>
 
         <div id="banner">
@@ -50,136 +64,157 @@
             </div>
         </div>
     </div>
-                
+
     <div class='screen'>
 
         <div class='renderPanel'>
-            <div class='renderContainer' 
-                 data-bind="setElement: initEditor, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }"></div>
+            <div class='renderContainer'
+                data-bind="setElement: initEditor, event: { touchstart: onTouchStart, touchmove: onTouchMove, touchend: onTouchEnd, mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }">
+            </div>
+        </div>
+
+        <div class="transformObjectViewContainer"
+            data-bind="with: transformObjectView, visible: transformObjectViewVisible">
+            <div class="transformObjectView" data-bind="setElement: init">
+            </div>
+        </div>
+
+
+        <div class="profileViewContainer" data-bind="with: profileView, visible: profileViewVisible">
+            <div class="profileView" data-bind="setElement: init">
+                <a data-bind="click: toggleDebug">Debug</a>
+            </div>
         </div>
 
         <div class="debug"></div>
 
-        <div class="secondToolbar"> <!--data-bind="visible: modifyToolbarVisible"-->
-            <a data-bind="click: setSelectController, css : {active : isSelectControllerActive}" ><img src="css/images/mouse-cursor.svg"></a>
-            <a data-bind="click: setMoveController, css : {active : isMoveControllerActive}" ><img src="css/images/mouse-move.svg"></a>
-            <a data-bind="click: setScaleController, css : {active : isScaleControllerActive}"><img src="css/images/mouse-scale.svg"></a>
-            <a data-bind="click: setScaleBottomController, css : {active : isScaleBottomControllerActive}"><img src="css/images/mouse-scale-bottom.svg"></a>    
-        </div>
+    </div>
 
-        <div class="selectedToolWrapper">
-        </div>
 
-        <div class="selectedTool">
-            
-            <div data-bind="visible: modifyToolbarVisible">
-                <h2>Edit</h2>
-                
-                
+
+    <div class="selectedTool">
+
+        <div class="modifyToolbar" data-bind="visible: modifyToolbarVisible">
+            <a data-bind="click: setSelectController, css : {active : isSelectControllerActive}"><img
+                    src="css/images/mouse-cursor.svg"></a>
+            <!--
+            <a data-bind="click: setMoveController, css : {active : isMoveControllerActive}"><img
+                    src="css/images/mouse-move.svg"></a>
+            <a data-bind="click: setScaleController, css : {active : isScaleControllerActive}"><img
+                    src="css/images/mouse-scale.svg"></a>
+            <a data-bind="click: setScaleBottomController, css : {active : isScaleBottomControllerActive}"><img
+                    src="css/images/mouse-scale-bottom.svg"></a>
+            -->
+            <a data-bind="click: setProfileController, css : {active : profileViewVisible}"><img
+                    src="css/images/profile.svg" width="30"></a>
+
+
+            <!--
                 <div class='materialView' data-bind="with: materialView">
-                    
+
                     <input type="checkbox" data-bind="checked: isHole, event: {change: changeIsHole}">Is a hole
-                    
+
                     <input data-bind="setElement: setElement" value="#B6BD79" />
                 </div>
 
                 <div data-bind="with: profileView">
                     <div data-bind="setElement: init">
                     </div>
-                    
+
                     <input type="radio" data-bind="checked: isLines, event: {change: setAsLines}">Lines
-                    <input style="margin-left:20px" type="radio" data-bind="checked: isSmooth, event: {change: setAsSmooth}">Curves<br>
-                    
-                    <!--<button data-bind="click: setAsLines">Lines</button><br/>-->
-                    <!--<button data-bind="click: setAsSmooth">Curves</button><br/>-->
+                    <input style="margin-left:20px" type="radio"
+                        data-bind="checked: isSmooth, event: {change: setAsSmooth}">Curves<br>
+
                     <div data-bind="with: profileExamples">
-                        <button data-bind="click: toggleVisible">Examples</button><br/>
+                        <button data-bind="click: toggleVisible">Examples</button><br />
                         <div data-bind="visible: visible">
                             <div data-bind="foreach : examples">
-                                <button data-bind="setElement: setContainer, click:click" style="padding:0px;display:inline-block"></button>
+                                <button data-bind="setElement: setContainer, click:click"
+                                    style="padding:0px;display:inline-block"></button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div data-bind="with: importView, visible:importToolbarVisible">
-                <h2>2D</h2>
-                 Select an SVG file
-                 <br/>
-                 <input class="btnImport" type="file" name="importFile" 
-                        data-bind="event: { change: function() { $data.readImage($element.files[0]) } }">
-                 Or Drop below :
-                 <div class="dropZone" data-bind="setElement: setElement">
-                     Drop Zone
-                 </div>
-                 Imported SVGs:
-                 <div data-bind='foreach: importedSvgs'>
-                     <button style="margin:5px" class="btn btn-default" data-bind="css : { 'btn-active-border': isActive }, click: onClick">
-                        <div style="float:left">
-                            <!--<input type="radio" ____data-bind="checked: isActive , event : { change: onClick }">-->
-                            <img style="max-width:100px;max-height:100px" data-bind="attr: {src: src}">
-                        </div>
-                        <!--
+                -->
+        </div>
+
+        <div class="importToolbar" data-bind="with: importView, visible:importToolbarVisible">
+            <input class="inputfile" type="file" name="importFile" id="importFile"
+                data-bind="event: { change: function() { $data.readImage($element.files[0]) } }">
+            <label for="importFile" class="btn btn-default">Add<br />SVG</label>
+
+            <!--
+                Or Drop below :
+                <div class="dropZone" data-bind="setElement: setElement">
+                    Drop Zone
+                </div>
+                -->
+            <div data-bind='foreach: importedSvgs'>
+                <button style="margin:5px" class="btn btn-default"
+                    data-bind="css : { 'btn-active-border': isActive }, click: onClick">
+                    <div style="float:left">
+                        <!--<input type="radio" ____data-bind="checked: isActive , event : { change: onClick }">-->
+                        <img style="max-width:100px;max-height:100px" data-bind="attr: {src: src}">
+                    </div>
+                    <!--
                         <div style="float:right">
                             <button class="fa fa-trash-o" data-bind="click: remove"></button>
                             <br/>
                         </div>
                         <div style="clear: both"></div>
                         -->
-                    </button>
-                 </div>
+                </button>
             </div>
+        </div>
 
 
-            <div data-bind="visible: environmentToolbarVisible">
-                <div data-bind="with: editor">
-                    <button data-bind="click: toggleShadows">Shadows</button>
-                </div>
-                <div>
-                    <button data-bind="click: light1">Light1</button><br/>
-                    <button data-bind="click: light2">Light2</button><br/>
-                </div>
-                <button class='btnGroundOrientation'>Ground Orientation</button><br/>
-                <button class='btnBoundingBox'>BoundingBox</button><br/>
-                <button data-bind="click: toggleSoftwareHardware">Hardware/Software Renderer</button><br/>
-                <button data-bind="click: animate">Animation</button><br/>
+        <div data-bind="visible: environmentToolbarVisible">
+            <div data-bind="with: editor">
+                <button data-bind="click: toggleShadows">Shadows</button>
             </div>
+            <div>
+                <button data-bind="click: light1">Light1</button><br />
+                <button data-bind="click: light2">Light2</button><br />
+            </div>
+            <button class='btnGroundOrientation'>Ground Orientation</button><br />
+            <button class='btnBoundingBox'>BoundingBox</button><br />
+            <button data-bind="click: toggleSoftwareHardware">Hardware/Software Renderer</button><br />
+            <button data-bind="click: animate">Animation</button><br />
+        </div>
 
-            <div data-bind="visible: photoToolbarVisible">
-                <div data-bind="with:shareView">
-                    <button data-bind="click: savePhoto" style="width:100%">Download Photo</button>
-                    <button data-bind="click: exportSTL" style="width:100%">Download STL File</button>
-                    <button data-bind="click: uploadPhoto" style="width:100%">Share Photo</button>
-                    <br/>
-                    Shared :
-                    <div data-bind="foreach: allPhotoUrl">
-                        <a target="_blank" data-bind="attr : { href: $data }, text: $data" ></a>    
-                    </div>
+        <div data-bind="visible: photoToolbarVisible">
+            <div data-bind="with:shareView">
+                <button data-bind="click: savePhoto" style="width:100%">Download Photo</button>
+                <button data-bind="click: uploadPhoto" style="width:100%">Share Photo</button>
+                <br />
+                Shared :
+                <div data-bind="foreach: allPhotoUrl">
+                    <a target="_blank" data-bind="attr : { href: $data }, text: $data"></a>
                 </div>
-            </div>        
+            </div>
+        </div>
 
-            <div data-bind="visible: printToolbarVisible">
-                <div data-bind="with:printView">
-                    <!--
+        <div data-bind="visible: printToolbarVisible">
+            <div data-bind="with:printView">
+                <!--
                     Design name :
                     <input _data-bind="value: sculpteoDesignName"></input>
                     <br/>
                     -->
-                    <button data-bind="click: sendToSculpteo" style="width:100%">Print this design</button>
-                    <br/>
-                    <span data-bind="text: sculpteoState"></span>
-                    Available to print :
-                    <div data-bind="foreach: allPrintUrl">
-                        <a target="_blank" data-bind="attr : { href: $data }, text: $data" ></a>    
-                    </div>
-                </div>    
+                <button data-bind="click: exportSTL" style="width:100%">Download STL File</button>
+                <button data-bind="click: sendToSculpteo" style="width:100%">Print this design</button>
+                <br />
+                <span data-bind="text: sculpteoState"></span>
+                Available to print :
+                <div data-bind="foreach: allPrintUrl">
+                    <a target="_blank" data-bind="attr : { href: $data }, text: $data"></a>
+                </div>
             </div>
-            
         </div>
-        
-        
-<!--
+
+
+
+        <!--
             Toolbar : Objets / Environnement / Share(Photo)
 
             <div class='environnement'>
@@ -196,42 +231,41 @@
     </div>
 
     <div class="modal fade" id="modalSculpteo" tabindex="-1" role="dialog" aria-labelledby="sculpteoModalLabel">
-    <div class="modal-dialog modal-dialog-sculpteo" role="document">
-        <div class="modal-content modal-content-sculpteo"
-             data-bind="with:printView">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="myModalLabel">3D printing</h4>
-            </div>
-            <div class="modal-body">
-                This design is available at:
-                <input readonly data-bind="value: sculpteoDesignUrl" style="width:500px"><br/>
-                <iframe class="sculpteoFrame" type="text/html" frameborder="0"
-                    width="1000" height="700"
-                    data-bind="attr : { src: sculpteoFrameSrc }"></iframe>
-            </div>
-        </div>
-    </div>
-    </div>
-    
-
-    <div class="modal fade" id="modalPhoto" tabindex="-1" role="dialog" aria-labelledby="photoModalLabel">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content"
-             data-bind="with:shareView">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="photoModalLabel">Photo</h4>
-            </div>
-            <div class="modal-body">
-                This photo is available at:
-                <input readonly data-bind="value: uploadedUrl" style="width:100%"><br/>
-                <div style="text-align:center">
-                    <img data-bind="attr : { src: uploadedSrc }" style="max-width:500px; max-height:500px">
+        <div class="modal-dialog modal-dialog-sculpteo" role="document">
+            <div class="modal-content modal-content-sculpteo" data-bind="with:printView">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">3D printing</h4>
+                </div>
+                <div class="modal-body">
+                    This design is available at:
+                    <input readonly data-bind="value: sculpteoDesignUrl" style="width:500px"><br />
+                    <iframe class="sculpteoFrame" type="text/html" frameborder="0" width="1000" height="700"
+                        data-bind="attr : { src: sculpteoFrameSrc }"></iframe>
                 </div>
             </div>
         </div>
     </div>
+
+
+    <div class="modal fade" id="modalPhoto" tabindex="-1" role="dialog" aria-labelledby="photoModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content" data-bind="with:shareView">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="photoModalLabel">Photo</h4>
+                </div>
+                <div class="modal-body">
+                    This photo is available at:
+                    <input readonly data-bind="value: uploadedUrl" style="width:100%"><br />
+                    <div style="text-align:center">
+                        <img data-bind="attr : { src: uploadedSrc }" style="max-width:500px; max-height:500px">
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -246,13 +280,12 @@
         }
         //$('#myModal').modal();
         */
-        function onResourceLoaded()
-        {
+        function onResourceLoaded() {
             var injector = new qec.injector();
             var editorView = injector.create(qec.editorView);
             ko.applyBindings(editorView);
 
-            $( ".renderContainer canvas" ).contextmenu(function() {return false});
+            $(".renderContainer canvas").contextmenu(function () { return false });
 
         }
     </script>

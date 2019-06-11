@@ -1,0 +1,269 @@
+@import url("https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400,300,200");
+
+
+body {
+	background: #D4D9DD url("images/bg03.jpg");
+	color: #474f51;
+	font-size: 13.5pt;
+	font-family: 'Yanone Kaffeesatz';
+	line-height: 1.85em;
+	font-weight: 300;
+	margin:0;
+}
+
+a:hover,
+a:focus {
+  text-decoration: none;
+}
+
+#header-wrapper {
+	background: #3B4346 url("images/bg01.jpg");
+	border-bottom: solid 1px #272d30;
+	box-shadow: inset 0px -1px 0px 0px #51575a;
+	text-shadow: -1px -1px 1px rgba(0, 0, 0, 0.75);
+	padding-top:20px;
+	height:100px;
+}
+
+nav {
+	margin-left:30px;
+	margin-top:15px;
+    display: block;
+}
+
+nav ul {
+	z-index:10;
+	padding: 0;
+    margin: 0;
+	list-style: none;
+	position: relative;
+	}
+	
+nav ul li {
+	display:inline-block;
+}
+
+nav a {
+	display:block;
+    font-weight: 200;
+	font-size:1.5em;
+	padding:5px 20px 10px 20px;
+	color:#bbb;
+	cursor:pointer;
+}
+
+nav a:hover { 
+	color:#bbb;
+	border-bottom: solid 1px #bbb; 
+}
+
+nav a.active {
+	border-bottom: solid 1px white;
+}
+
+
+/* Hide Dropdowns by Default */
+nav ul ul {
+	background: #3B4346 url("images/bg02.jpg");
+	border: solid 1px white;
+	display: none;
+	position: absolute; 
+	top: 47px; /* the height of the main nav */
+	-webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+	-moz-box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+	
+/* Display Dropdowns on Hover */
+nav ul li:hover > ul {
+	display:inherit;
+}
+	
+/* Fisrt Tier Dropdown */
+nav ul ul li {
+	width:170px;
+	float:none;
+	display:list-item;
+	position: relative;
+}
+
+
+.hide {
+	display:none;
+}
+
+.screen {
+	/*background: #3B4346 url("images/bg02.jpg");
+	*/position:absolute;
+	left:0px;
+	right:0px;
+	top:100px;
+	bottom:0px;
+}
+
+.screenContent {
+	position:relative;
+	left:0px;
+	top:0px;
+}
+
+.selectedToolWrapper
+{
+	position:absolute;
+	top:0px;
+	left:0px;
+	bottom:0px;
+	width:400px;
+	background: #3B4346 url("images/bg02.jpg");
+}
+
+.selectedTool
+{
+	position:absolute;
+	top:20px;
+	left:20px;
+	width:360px;
+	background: #fff;
+	padding: 40px 30px 45px 30px;
+	box-shadow: 2px 2px 2px 1px rgba(128, 128, 128, 0.1);
+	margin: 0 0 10% 0;
+}
+
+.selectedTool h2
+{
+	font-size: 1.8em;
+	color: #373f42;
+	margin: 0 0 0.25em 0;
+}
+
+.secondToolbar
+{
+	position:absolute;
+	top:20px;
+	left:420px;
+	background: #fff;
+	padding: 5px;
+	box-shadow: 2px 2px 2px 1px rgba(128, 128, 128, 0.1);
+	margin: 0;
+	line-height:0px;
+}
+
+.secondToolbar a
+{
+	border:solid 1px black;
+	border-radius: 4px;
+	/*height:50px;*/
+	display:inline-block;
+	padding:4px;
+	margin: 0px 2px 0 2px;
+}
+.secondToolbar a.active
+{
+	border-color: #f00;
+}
+
+.renderPanel
+{
+	position:absolute;
+	top:1px;
+	left:401px;
+}
+
+.printPanel
+{
+	position:absolute;
+	top:1px;
+	left:401px;
+}
+
+.materialView
+{
+	vertical-align: top;
+}
+
+.profileView
+{
+	border:black solid 1px;
+}
+
+.dropZone
+{
+	border: 2px dashed #bbb;
+	border-radius: 5px;
+	padding: 25px;
+	text-align: center;
+	font: 20pt bold 'Vollkorn';
+	color: #bbb;
+}
+.paper
+{
+	width:100%;
+	height:100%;
+	position: relative;
+	padding: 10px;
+	margin: 0 auto;
+	background-color: #fff;
+	-webkit-box-shadow: 0 0 4px rgba(0, 0, 0, 0.2), inset 0 0 0px rgba(0, 0, 0, 0.1);
+	-moz-box-shadow: 0 0 4px rgba(0, 0, 0, 0.2), inset 0 0 0px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 0 5px rgba(0, 0, 0, 0.2), inset 0 0 0px rgba(0, 0, 0, 0.1);
+}
+
+
+.paper:before
+{
+	position: absolute;
+	width: 40%;
+	height: 10px;
+	content: ' ';
+	left: 12px;
+	bottom: 12px;
+	background: transparent;
+	-webkit-transform: skew(-5deg) rotate(-5deg);
+	-moz-transform: skew(-5deg) rotate(-5deg);
+	-ms-transform: skew(-5deg) rotate(-5deg);
+	-o-transform: skew(-5deg) rotate(-5deg);
+	transform: skew(-5deg) rotate(-5deg);
+	-webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+	-moz-box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+	z-index: -1;
+} 
+
+.paper:after
+{
+	left: auto;
+	right: 12px;
+	-webkit-transform: skew(5deg) rotate(5deg);
+	-moz-transform: skew(5deg) rotate(5deg);
+	-ms-transform: skew(5deg) rotate(5deg);
+	-o-transform: skew(5deg) rotate(5deg);
+	transform: skew(5deg) rotate(5deg);
+}
+
+.sp-picker-container
+{
+	width:150px;
+}
+
+.btn-active-border, .btn-active-border:hover
+{
+	border-color:orange;
+}
+
+
+.modal-dialog-full {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.modal-content-full {
+  height: auto;
+  min-height: 100%;
+  border-radius: 0;
+}
+
+.modal-dialog-sculpteo {
+  width: 1020px;
+}

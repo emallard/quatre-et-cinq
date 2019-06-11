@@ -1,9 +1,7 @@
-module qec 
-{
-    export class cameraTransforms
-    {
+module qec {
+    export class cameraTransforms {
         transformMatrix = mat4.create();
-        rotation = quat.fromValues(0,0,0,-1);
+        rotation = quat.fromValues(0, 0, 0, -1);
         rotationMat = mat4.create();
         panTranslation = mat4.identity(mat4.create());
         zTranslation = mat4.create();
@@ -14,20 +12,17 @@ module qec
         up = vec3.create();
         right = vec3.create();
 
-        afterInject()
-        {
+        afterInject() {
             quat.normalize(this.rotation, this.rotation);
         }
 
-        updateCamera(cam:camera)
-        {
+        updateCamera(cam: camera) {
             mat4.copy(cam.transformMatrix, this.transformMatrix);
             mat4.invert(cam.inverseTransformMatrix, this.transformMatrix);
         }
 
 
-        updateTransformMatrix()
-        {
+        updateTransformMatrix() {
             mat4.fromQuat(this.rotationMat, this.rotation);
             mat4.multiply(this.transformMatrix, this.rotationMat, this.panTranslation);
 
@@ -38,63 +33,53 @@ module qec
         }
 
 
-        reset():void
-        {
+        reset(): void {
             //var angleFromVertical = 3.14/8;
             var angleFromVertical = 0;
-            quat.setAxisAngle(this.rotation, vec3.fromValues(1,0,0), angleFromVertical);
-            mat4.identity(this.panTranslation );
+            quat.setAxisAngle(this.rotation, vec3.fromValues(1, 0, 0), angleFromVertical);
+            mat4.identity(this.panTranslation);
             this.zcam = -3;
             this.updateTransformMatrix();
         }
 
-        getCenter(dest:Float32Array)
-        {
+        getCenter(dest: Float32Array) {
             mat4.getTranslation(dest, this.panTranslation);
             vec3.scale(dest, dest, -1);
         }
 
-        setCenter(center:Float32Array)
-        {
+        setCenter(center: Float32Array) {
             mat4.identity(this.panTranslation);
             vec3.scale(this.tmpVec3, center, -1);
             mat4.translate(this.panTranslation, this.panTranslation, this.tmpVec3);
             this.updateTransformMatrix();
         }
 
-        getRotation(dest:Float32Array)
-        {
+        getRotation(dest: Float32Array) {
             quat.copy(dest, this.rotation);
         }
 
-        setRotation(rot:Float32Array)
-        {
+        setRotation(rot: Float32Array) {
             quat.copy(this.rotation, rot);
             this.updateTransformMatrix();
         }
 
-        setZcam(z:number)
-        {
+        setZcam(z: number) {
             this.zcam = z;
             this.updateTransformMatrix();
         }
 
-        zoom(delta:number, multiplier)
-        {
-            if (delta < 0)
-            {
+        zoom(delta: number, multiplier) {
+            if (delta < 0) {
                 this.zcam *= multiplier;
             }
-            else
-            {
-                this.zcam *= 1.0/multiplier;
+            else {
+                this.zcam *= 1.0 / multiplier;
             }
             this.updateTransformMatrix();
         }
 
 
-        pan(dx:number, dy:number)
-        {
+        pan(dx: number, dy: number) {
             this.up[0] = this.rotationMat[1];
             this.up[1] = this.rotationMat[5];
             this.up[2] = this.rotationMat[9];
@@ -183,5 +168,5 @@ module qec
         }
         */
     }
-        
+
 }

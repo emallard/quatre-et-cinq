@@ -13,6 +13,15 @@
         var t = new qec.sdFieldsTest();
         t.test();
     </script>
+
+    <canvas id="myCanvas"></canvas>
+
+    <script>
+        var canvas = document.getElementById('myCanvas');
+        var gl = canvas.getContext('webgl2');
+        //var ext = gl.getExtension('OES_texture_float');
+        alert(gl);
+    </script>
 </body>
 
 </html>

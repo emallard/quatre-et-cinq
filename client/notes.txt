@@ -18,3 +18,10 @@ http://designmodo.com/accordion-css3/
 // borders and shadows
 https://designshack.net/articles/css/4-fun-css-image-effects-you-can-copy-and-paste/
 
+
+
+menu (burger)
+2d (picture, image)
+scene (lumière)
+share (3 boules)
+print (3d printer)
