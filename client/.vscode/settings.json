@@ -1,13 +1,20 @@
 // Placez vos paramètres dans ce fichier pour remplacer les paramètres par défaut et les paramètres utilisateur.
 {
-   "files.exclude": {
+    "files.exclude": {
         "**/.git": true,
         "**/.svn": true,
         "**/.hg": true,
         "**/.DS_Store": true,
         "**/built": true,
         "**/d.ts": true,
-        "**/node_modules":true,
-        "**/typings":false
+        "**/node_modules": true,
+        "**/typings": false,
+        "**/_site": true,
+        "**/vendor": true
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/_site": true
     }
 }

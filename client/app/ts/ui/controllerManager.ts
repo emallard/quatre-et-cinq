@@ -2,7 +2,6 @@ module qec {
 
     export class controllerManager {
         camActive = true;
-        //cameraController:cameraController = inject(cameraController);
         cameraController: cameraArcballController = inject(cameraArcballController);
 
         currentController: iController;
@@ -31,7 +30,8 @@ module qec {
                 this.currentController.unset();
 
             this.currentController = c;
-            c.set();
+            if (c != null)
+                c.set();
         }
 
         onMouseMove(e: Event) {

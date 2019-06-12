@@ -12,6 +12,7 @@ module qec {
         cameraController: cameraArcballController = inject(cameraArcballController);
         selectController: selectController = inject(selectController);
         heightController: heightController = inject(heightController);
+        transformObjectController: transformObjectController = inject(transformObjectController);
         importView: importView = inject(importView);
         profileView: profileView = inject(profileView);
         materialView: materialView = inject(materialView);
@@ -70,16 +71,22 @@ module qec {
         }
 
         setSelectController() {
-            this.controllerManager.setController(this.selectController);
+            this.controllerManager.setController(this.transformObjectController);
             this.setActiveController(this.isSelectControllerActive);
             this.transformObjectViewVisible(true);
             this.profileViewVisible(false);
         }
 
-        setProfileController() {
-            this.transformObjectViewVisible(false);
-            this.profileViewVisible(true);
+        toggleProfileView() {
+            if (this.profileViewVisible()) {
+                this.profileViewVisible(false);
+                this.transformObjectViewVisible(true);
+            }
+            else {
+                this.profileViewVisible(true);
+            }
         }
+
         toggleProfileDebug() {
             this.profileView.toggleDebug();
         }
@@ -130,14 +137,33 @@ module qec {
             this.printToolbarVisible];
 
         showImportToolbar() { this.setToolbar(this.importToolbarVisible); }
-        showModifyToolbar() { this.setToolbar(this.modifyToolbarVisible); }
+
+        showModifyToolbar() {
+            if (!this.modifyToolbarVisible()) {
+                this.setToolbar(this.modifyToolbarVisible);
+                this.transformObjectViewVisible(true);
+                this.setSelectController();
+            }
+            else {
+                this.setToolbar(this.modifyToolbarVisible);
+            }
+        }
+
+
         showEnvironmentToolbar() { this.setToolbar(this.environmentToolbarVisible); }
         showPhotoToolbar() { this.setToolbar(this.photoToolbarVisible); }
         showPrintToolbar() { this.setToolbar(this.printToolbarVisible); }
 
         setToolbar(selected: KnockoutObservable<boolean>) {
+            this.transformObjectViewVisible(false);
+            this.profileViewVisible(false);
+            this.controllerManager.setController(null);
+
+
+            var oldValue = selected();
             this.toolbarsVisible.forEach(t => t(false));
-            selected(true);
+            //selected(true);
+            selected(!oldValue);
         }
 
         light1() {

@@ -34,10 +34,6 @@ module qec {
 
         setSelectedIndex(i: number) {
             this.selectedIndex = i;
-            if (i < 0)
-                return;
-
-            var l = this.editor.workspace.editorObjects[i];
             this.draw();
         }
 
@@ -74,6 +70,9 @@ module qec {
 
         draw() {
 
+            var ctx = this.canvas.getContext('2d');
+            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
             if (this.selectedIndex < 0)
                 return;
 
@@ -99,8 +98,6 @@ module qec {
             camera.getScreenPositionPreTransform(centerUp, centerUp, this.tmpObjectTransform);
             camera.getScreenPositionPreTransform(centerDown, centerDown, this.tmpObjectTransform);
 
-            var ctx = this.canvas.getContext('2d');
-            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
             var rw = 10;
 

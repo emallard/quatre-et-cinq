@@ -1,0 +1,7 @@
+- height controller
+- zoom buttons, zoom on object, zoom to see all
+- pan
+- file load/save => in zip file
+- save svg / reload svg
+- bounding box with some lines hidden
+- await/async

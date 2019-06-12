@@ -202,14 +202,6 @@ var qec;
             var textures = [];
             this.workspace.editorObjects.forEach(function (o) {
                 textures.push(o.top.floatTexture, o.profile.floatTexture);
-                /*
-                var canvas1 = document.createElement('canvas');
-                textureDebugInCanvas(o.top.floatTexture ,0 ,10000, canvas1);
-                document.body.appendChild(canvas1);
-                var canvas2 = document.createElement('canvas');
-                textureDebugInCanvas(o.profile.floatTexture ,0 ,10000, canvas2);
-                document.body.appendChild(canvas2);
-                */
             });
             this.texturePacker.repackMode = 3;
             this.texturePacker.repack(textures);
@@ -305,6 +297,7 @@ var qec;
             this.profile = new qec.distanceFieldCanvas();
             this.diffuseColor = vec3.create();
             this.inverseTransform = mat4.create();
+            this.tmpTransform = mat4.create();
             this.bsplineDrawer = new qec.bsplineDrawer();
             this.lineDrawer = new qec.lineDrawer();
             this.profilePoints = [];
@@ -429,6 +422,12 @@ var qec;
         editorObject.prototype.setIsHole = function (isHole) {
             this.isHole = isHole;
         };
+        editorObject.prototype.getAbsoluteCenter = function (out) {
+            var bounds = this.top.totalBounds;
+            mat4.invert(this.tmpTransform, this.inverseTransform);
+            vec3.set(out, 0.5 * (bounds[2] + bounds[0]), 0.5 * (bounds[3] + bounds[1]), 0.5 * (this.profileBounds[3] + this.profileBounds[1]));
+            vec3.transformMat4(out, out, this.tmpTransform);
+        };
         return editorObject;
     }());
     qec.editorObject = editorObject;
@@ -504,6 +503,11 @@ var qec;
             o.needsTextureUpdate = true;
             o.needsTransformUpdate = true;
             o.needsMaterialUpdate = true;
+        };
+        workspace.prototype.selectedObject = function () {
+            if (this.selectedIndex == -1)
+                return null;
+            return this.editorObjects[this.selectedIndex];
         };
         return workspace;
     }());
@@ -1562,7 +1566,7 @@ var qec;
             img.onload = function () {
                 _this.imgWidth = img.width;
                 _this.imgHeight = img.height;
-                console.log(_this.imgWidth, _this.imgHeight);
+                console.log("img dimension : " + _this.imgWidth + "," + _this.imgHeight);
                 done();
             };
             img.src = "data:image/svg+xml;base64," + btoa(this.contentSvg);
@@ -2670,7 +2674,7 @@ var qec;
                 + qec.resources.all['app/ts/render/hardware/20_light.glsl']
                 + generatedLight
                 + qec.resources.all['app/ts/render/hardware/30_renderPixel.glsl'];
-            console.log(generatedPart);
+            //console.log(generatedPart);
             //console.log(generatedLight);
             this.gViewQuad.material.fragmentShader = this.fragmentShader;
             this.gViewQuad.material.needsUpdate = true;
@@ -7242,132 +7246,6 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var cameraController = /** @class */ (function () {
-        function cameraController() {
-            this.editor = qec.inject(qec.editor);
-            this.minZoom = 0;
-            this.maxZoom = 100;
-            // left right
-            this.minTheta = -Math.PI; // radians
-            this.maxTheta = Math.PI; // radians
-            // top - bottom
-            this.minPhi = -Math.PI; // radians
-            this.maxPhi = Math.PI; // radians
-            // current position in spherical coordinates
-            this.spherical = new THREE.Spherical();
-            this.sphericalDelta = new THREE.Spherical();
-            this.rotateStart = vec2.create();
-            this.rotateEnd = vec2.create();
-            this.isMouseDown = false;
-            this.updateFlag = false;
-            this.button = 1;
-            this.spherical.radius = 3;
-            this.spherical.theta = -Math.PI / 2;
-            this.spherical.phi = Math.PI * 2 / 5;
-        }
-        cameraController.prototype.setButton = function (button) {
-            this.button = button;
-        };
-        cameraController.prototype.set = function () {
-        };
-        cameraController.prototype.unset = function () {
-        };
-        cameraController.prototype.rotateLeft = function (angle) {
-            this.sphericalDelta.theta = -angle;
-            // restrict theta to be between desired limits
-            //this.sphericalDelta.theta = Math.max( this.minTheta, Math.min( this.maxTheta, this.sphericalDelta.theta ) );
-        };
-        cameraController.prototype.rotateUp = function (angle) {
-            this.sphericalDelta.phi = angle;
-            // restrict phi to be between desired limits
-            //this.sphericalDelta.phi = Math.max( this.minPhi, Math.min( this.maxPhi, this.sphericalDelta.phi ) );
-        };
-        cameraController.prototype.updateLoop = function () {
-            if (this.updateFlag) {
-                this.updateFlag = false;
-                this.updateCamera();
-            }
-        };
-        cameraController.prototype.updateCamera = function () {
-            var theta = this.spherical.theta + this.sphericalDelta.theta;
-            var phi = this.spherical.phi + this.sphericalDelta.phi;
-            var radius = this.spherical.radius;
-            //console.log('angles ' + s.theta + ', ' + s.phi)
-            var sinTheta = Math.sin(theta);
-            var x = radius * Math.cos(phi) * Math.cos(theta);
-            var y = radius * Math.cos(phi) * Math.sin(theta);
-            var z = radius * Math.sin(phi);
-            //console.log(x, y, z);
-            this.editor.getCamera().setPosition(vec3.fromValues(x, y, z));
-            this.editor.setRenderFlag();
-        };
-        cameraController.prototype.setFromVector3 = function (p) {
-            /*
-            this.radius = vec3.length();
-
-            if ( this.radius === 0 ) {
-
-                this.theta = 0;
-                this.phi = 0;
-
-            } else
-            */
-            {
-                var radius = 2;
-                this.spherical.theta = Math.atan2(vec3[0], vec3[1]); // equator angle around y-up axis
-                this.spherical.phi = Math.asin(THREE.Math.clamp(p[2] / radius, -1, 1)); // polar angle
-            }
-        };
-        ;
-        cameraController.prototype.onMouseMove = function (e) {
-            if (this.isMouseDown) {
-                this.updateFlag = true;
-                vec2.set(this.rotateEnd, e.offsetX, e.offsetY);
-                var dx = this.rotateEnd[0] - this.rotateStart[0];
-                var dy = this.rotateEnd[1] - this.rotateStart[1];
-                // rotating across whole screen goes 360 degrees around
-                this.rotateLeft(2 * Math.PI * dx / 1000); /*rotateDelta.x / element.clientWidth * scope.rotateSpeed );*/
-                // rotating up and down along whole screen attempts to go 360, but limited to 180
-                this.rotateUp(2 * Math.PI * dy / 1000); // / element.clientHeight * scope.rotateSpeed );
-                //this.update();
-            }
-        };
-        cameraController.prototype.onMouseDown = function (e) {
-            if (e.button == this.button) {
-                this.spherical.theta += this.sphericalDelta.theta;
-                this.spherical.phi += this.sphericalDelta.phi;
-                vec2.set(this.rotateStart, e.offsetX, e.offsetY);
-                vec2.set(this.rotateEnd, e.offsetX, e.offsetY);
-                this.sphericalDelta.theta = 0;
-                this.sphericalDelta.phi = 0;
-                this.isMouseDown = true;
-            }
-            // wheel
-            if (e.button == this.button) {
-            }
-        };
-        cameraController.prototype.onMouseUp = function (e) {
-            this.isMouseDown = false;
-        };
-        cameraController.prototype.onMouseWheel = function (e) {
-            var orig = e.originalEvent;
-            var d = Math.max(-1, Math.min(1, (orig.deltaY)));
-            //console.log('mousewheel', orig.deltaY);
-            this.spherical.radius *= 1 - d * 0.1;
-            this.updateFlag = true;
-        };
-        cameraController.prototype.onTouchStart = function (e) {
-        };
-        cameraController.prototype.onTouchMove = function (e) {
-        };
-        cameraController.prototype.onTouchEnd = function (e) {
-        };
-        return cameraController;
-    }());
-    qec.cameraController = cameraController;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
     var cameraTransforms = /** @class */ (function () {
         function cameraTransforms() {
             this.transformMatrix = mat4.create();
@@ -7525,7 +7403,6 @@ var qec;
     var controllerManager = /** @class */ (function () {
         function controllerManager() {
             this.camActive = true;
-            //cameraController:cameraController = inject(cameraController);
             this.cameraController = qec.inject(qec.cameraArcballController);
         }
         controllerManager.prototype.afterInject = function () {
@@ -7549,7 +7426,8 @@ var qec;
             if (this.currentController != null)
                 this.currentController.unset();
             this.currentController = c;
-            c.set();
+            if (c != null)
+                c.set();
         };
         controllerManager.prototype.onMouseMove = function (e) {
             if (this.camActive)
@@ -7690,6 +7568,7 @@ var qec;
             this.cameraController = qec.inject(qec.cameraArcballController);
             this.selectController = qec.inject(qec.selectController);
             this.heightController = qec.inject(qec.heightController);
+            this.transformObjectController = qec.inject(qec.transformObjectController);
             this.importView = qec.inject(qec.importView);
             this.profileView = qec.inject(qec.profileView);
             this.materialView = qec.inject(qec.materialView);
@@ -7759,14 +7638,19 @@ var qec;
             this.setActiveController(this.isScaleBottomControllerActive);
         };
         editorView.prototype.setSelectController = function () {
-            this.controllerManager.setController(this.selectController);
+            this.controllerManager.setController(this.transformObjectController);
             this.setActiveController(this.isSelectControllerActive);
             this.transformObjectViewVisible(true);
             this.profileViewVisible(false);
         };
-        editorView.prototype.setProfileController = function () {
-            this.transformObjectViewVisible(false);
-            this.profileViewVisible(true);
+        editorView.prototype.toggleProfileView = function () {
+            if (this.profileViewVisible()) {
+                this.profileViewVisible(false);
+                this.transformObjectViewVisible(true);
+            }
+            else {
+                this.profileViewVisible(true);
+            }
         };
         editorView.prototype.toggleProfileDebug = function () {
             this.profileView.toggleDebug();
@@ -7793,13 +7677,27 @@ var qec;
             requestAnimationFrame(function () { return _this.updateLoop(); });
         };
         editorView.prototype.showImportToolbar = function () { this.setToolbar(this.importToolbarVisible); };
-        editorView.prototype.showModifyToolbar = function () { this.setToolbar(this.modifyToolbarVisible); };
+        editorView.prototype.showModifyToolbar = function () {
+            if (!this.modifyToolbarVisible()) {
+                this.setToolbar(this.modifyToolbarVisible);
+                this.transformObjectViewVisible(true);
+                this.setSelectController();
+            }
+            else {
+                this.setToolbar(this.modifyToolbarVisible);
+            }
+        };
         editorView.prototype.showEnvironmentToolbar = function () { this.setToolbar(this.environmentToolbarVisible); };
         editorView.prototype.showPhotoToolbar = function () { this.setToolbar(this.photoToolbarVisible); };
         editorView.prototype.showPrintToolbar = function () { this.setToolbar(this.printToolbarVisible); };
         editorView.prototype.setToolbar = function (selected) {
+            this.transformObjectViewVisible(false);
+            this.profileViewVisible(false);
+            this.controllerManager.setController(null);
+            var oldValue = selected();
             this.toolbarsVisible.forEach(function (t) { return t(false); });
-            selected(true);
+            //selected(true);
+            selected(!oldValue);
         };
         editorView.prototype.light1 = function () {
             var w = this.editor.workspace;
@@ -7963,6 +7861,8 @@ var qec;
         function importView() {
             this.editor = qec.inject(qec.editor);
             this.importedSvgs = ko.observableArray();
+            this.noPicture = ko.observable(true);
+            this.atLeastOnePicture = ko.observable(false);
             this.createImportedSvg = qec.injectFunc(qec.importedSvg);
         }
         importView.prototype.set = function () {
@@ -8004,6 +7904,8 @@ var qec;
                 _this.editor.addSvg(readerResult);
                 //if (this.importedSvgs.length == 1)
                 _this.select(newSvg);
+                _this.atLeastOnePicture(true);
+                _this.noPicture(false);
             };
             // when the file is read it triggers the onload event above.
             if (file) {
@@ -8502,7 +8404,6 @@ var qec;
                 profilePoints.push([x, y]);
             }
             selected.setProfilePoints(profilePoints);
-            //this.editor.updateSignedDistance(selected);
             this.editor.renderer.updateFloatTextures(selected.sd);
             this.editor.setRenderFlag();
             this.editor.setUpdateFlag();
@@ -8628,7 +8529,6 @@ var qec;
                 this.collide.collide(this.editor.workspace.editorObjects[i].sd, this.ro, this.rd);
                 //console.log(this.collide.pos);
                 //console.log(this.collide.minDist);
-                //this.vm.layers[i].sd.material.setDiffuse(0,1,0);
                 if (this.collide.hasCollided && this.collide.dist < minDist) {
                     minDist = this.collide.dist;
                     iMin = i;
@@ -8636,10 +8536,7 @@ var qec;
             }
             if (iMin > -1) {
                 this.editorView.setSelectedIndex(iMin);
-                //console.log(iMin);
-                //this.vm.layers[iMin].sd.material.setDiffuse(1,0,0);
             }
-            //this.vm.setUpdateFlag();;
         };
         selectController.prototype.onMouseWheel = function (e) {
         };
@@ -8746,6 +8643,180 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var transformObjectController = /** @class */ (function () {
+        function transformObjectController() {
+            this.editor = qec.inject(qec.editor);
+            this.editorView = qec.inject(qec.editorView);
+            this.profileView = qec.inject(qec.profileView);
+            this.transformObjectUtils = qec.inject(qec.transformObjectUtils);
+            this.transformObjectView = qec.inject(qec.transformObjectView);
+            this.collide = new qec.renderCollide();
+            this.isMouseDown = false;
+            this.updateFlag = false;
+            this.handlePicked = false;
+            this.startX = 0;
+            this.startY = 0;
+            this.startPos = vec3.create();
+            this.mousePos = vec3.create();
+            this.deltaPos = vec3.create();
+            this.startTransform = mat4.create();
+            this.startHalfSizeProfile = vec2.create();
+            this.startBounds = vec4.create();
+            this.newBounds = vec4.create();
+            this.ro = vec3.create();
+            this.rd = vec3.create();
+            this.dirUp = vec3.fromValues(0, 0, 1);
+            this.lineUp = new qec.wm5Line3();
+            this.lineCam = new qec.wm5Line3();
+            this.distLines = new qec.wm5DistLine3Line3();
+            this.tmpVec3 = vec3.create();
+            this.isScaleMode = false;
+            this.isScaleModeBottom = false;
+        }
+        transformObjectController.prototype.set = function () {
+            //console.log('heightController');
+            this.updateFlag = false;
+            this.isMouseDown = false;
+            this.handlePicked = false;
+        };
+        transformObjectController.prototype.unset = function () {
+        };
+        transformObjectController.prototype.updateLoop = function () {
+            if (this.isMouseDown && this.updateFlag && this.handlePicked) {
+                this.updateFlag = false;
+                var selected = this.editor.workspace.selectedObject();
+                this.editor.getCamera().getRay(this.mouseX, this.mouseY, this.ro, this.rd);
+                // project mouse on up ray from startPos
+                this.lineUp.setOriginAndDirection(this.startPos, this.dirUp);
+                this.lineCam.setOriginAndDirection(this.ro, this.rd);
+                this.distLines.setLines(this.lineUp, this.lineCam);
+                this.distLines.getDistance();
+                this.distLines.getClosestPoint0(this.mousePos);
+                vec3.subtract(this.deltaPos, this.mousePos, this.startPos);
+                if (!this.isScaleMode) {
+                    /*
+                    console.log("Translate mode !");
+                    console.log("startPos", this.startPos);
+                    console.log("mousePos", this.mousePos);
+                    */
+                    mat4.translate(selected.inverseTransform, this.startTransform, this.deltaPos);
+                    mat4.invert(selected.inverseTransform, selected.inverseTransform);
+                    selected.updateInverseTransform();
+                    this.editor.renderer.updateTransform(selected.sd);
+                    this.editor.setRenderFlag();
+                }
+                else if (!this.isScaleModeBottom) {
+                    vec4.copy(this.newBounds, this.startBounds);
+                    this.newBounds[3] += this.deltaPos[2];
+                    selected.scaleProfilePoints(this.newBounds);
+                    this.editor.updateSignedDistance(selected);
+                    this.editor.renderer.updateFloatTextures(selected.sd);
+                    this.editor.setRenderFlag();
+                }
+                else {
+                    mat4.translate(selected.inverseTransform, this.startTransform, this.deltaPos);
+                    mat4.invert(selected.inverseTransform, selected.inverseTransform);
+                    selected.updateInverseTransform();
+                    this.editor.renderer.updateTransform(selected.sd);
+                    vec4.copy(this.newBounds, this.startBounds);
+                    this.newBounds[3] += (-this.deltaPos[2]);
+                    selected.scaleProfilePoints(this.newBounds);
+                    this.editor.updateSignedDistance(selected);
+                    this.editor.renderer.updateFloatTextures(selected.sd);
+                    this.editor.setRenderFlag();
+                }
+                /*
+                if (this.isScaleMode) {
+                    this.profileView.refresh();
+                }*/
+            }
+        };
+        transformObjectController.prototype.onMouseMove = function (e) {
+            if (this.isMouseDown) {
+                this.mouseX = e.offsetX;
+                this.mouseY = e.offsetY;
+                this.updateFlag = true;
+            }
+        };
+        transformObjectController.prototype.onMouseDown = function (e) {
+            this.isMouseDown = false;
+            if (e.button != 0)
+                return;
+            this.handlePicked = false;
+            var l = this.editor.workspace.selectedObject();
+            if (l != null) {
+                this.transformObjectUtils.getMoveHandleScreenCoordinates(this.tmpVec3, l);
+                //console.log("handleTest ", this.tmpVec3[0], this.tmpVec3[1], e.offsetX, e.offsetY);
+                if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
+                    //console.log("in !");
+                    this.handlePicked = true;
+                    //this.transformObjectView.highlightCenter(true);
+                    this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+                    this.isMouseDown = true;
+                    this.isScaleMode = false;
+                    // Initial state
+                    this.startX = e.offsetX;
+                    this.startY = e.offsetY;
+                    l.getAbsoluteCenter(this.startPos);
+                    mat4.invert(this.startTransform, l.inverseTransform);
+                }
+            }
+            if (!this.handlePicked) {
+                var picked = this.pick(e);
+                this.editorView.setSelectedIndex(picked);
+            }
+        };
+        transformObjectController.prototype.onMouseUp = function (e) {
+            this.isMouseDown = false;
+        };
+        transformObjectController.prototype.onMouseWheel = function (e) {
+        };
+        transformObjectController.prototype.onTouchStart = function (e) {
+        };
+        transformObjectController.prototype.onTouchMove = function (e) {
+        };
+        transformObjectController.prototype.onTouchEnd = function (e) {
+        };
+        transformObjectController.prototype.pick = function (e) {
+            var minDist = 666;
+            var iMin = -1;
+            this.isMouseDown = false;
+            this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+            for (var i = 0; i < this.editor.workspace.editorObjects.length; ++i) {
+                this.collide.collide(this.editor.workspace.editorObjects[i].sd, this.ro, this.rd);
+                //console.log(this.collide.pos);
+                //console.log(this.collide.minDist);
+                if (this.collide.hasCollided && this.collide.dist < minDist) {
+                    minDist = this.collide.dist;
+                    iMin = i;
+                }
+            }
+            return iMin;
+        };
+        return transformObjectController;
+    }());
+    qec.transformObjectController = transformObjectController;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var transformObjectUtils = /** @class */ (function () {
+        function transformObjectUtils() {
+            this.editor = qec.inject(qec.editor);
+            this.tmpObjectTransform = mat4.create();
+        }
+        transformObjectUtils.prototype.getMoveHandleScreenCoordinates = function (out, selected) {
+            var bounds = selected.top.totalBounds;
+            mat4.invert(this.tmpObjectTransform, selected.inverseTransform);
+            var camera = this.editor.getCamera();
+            vec3.set(out, 0.5 * (bounds[2] + bounds[0]), 0.5 * (bounds[3] + bounds[1]), 0.5 * (selected.profileBounds[3] + selected.profileBounds[1]));
+            camera.getScreenPositionPreTransform(out, out, this.tmpObjectTransform);
+        };
+        return transformObjectUtils;
+    }());
+    qec.transformObjectUtils = transformObjectUtils;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var transformObjectView = /** @class */ (function () {
         function transformObjectView() {
             this.editor = qec.inject(qec.editor);
@@ -8774,9 +8845,6 @@ var qec;
         };
         transformObjectView.prototype.setSelectedIndex = function (i) {
             this.selectedIndex = i;
-            if (i < 0)
-                return;
-            var l = this.editor.workspace.editorObjects[i];
             this.draw();
         };
         transformObjectView.prototype.updateEditor = function () {
@@ -8808,6 +8876,8 @@ var qec;
             */
         };
         transformObjectView.prototype.draw = function () {
+            var ctx = this.canvas.getContext('2d');
+            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             if (this.selectedIndex < 0)
                 return;
             var l = this.editor.workspace.editorObjects[this.selectedIndex];
@@ -8828,8 +8898,6 @@ var qec;
             camera.getScreenPositionPreTransform(center, center, this.tmpObjectTransform);
             camera.getScreenPositionPreTransform(centerUp, centerUp, this.tmpObjectTransform);
             camera.getScreenPositionPreTransform(centerDown, centerDown, this.tmpObjectTransform);
-            var ctx = this.canvas.getContext('2d');
-            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             var rw = 10;
             ctx.strokeStyle = "rgba(0,255,0,1)";
             ctx.fillStyle = "rgba(0,255,0,1)";

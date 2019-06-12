@@ -1,20 +1,18 @@
 module qec {
 
-    export class workspace
-    {
+    export class workspace {
         svgRealSize = vec2.fromValues(1, 1);
-        editorObjects:editorObject[] = [];
+        editorObjects: editorObject[] = [];
         selectedIndex = -1;
         rimLight = new spotLight();
         keyLight = new spotLight();
         fillLight = new spotLight();
-        
-        importedSvgs:string[] = []
-        selectedSvgIndex:number = -1;
-        sculpteoUuids:string[] = [];
 
-        toDto():workspaceDto
-        {
+        importedSvgs: string[] = []
+        selectedSvgIndex: number = -1;
+        sculpteoUuids: string[] = [];
+
+        toDto(): workspaceDto {
             var dto = new workspaceDto();
             dto.editorObjects = this.editorObjects.map(o => o.toDto());
             dto.importedSvgs = this.importedSvgs;
@@ -23,13 +21,18 @@ module qec {
             return dto;
         }
 
-        pushObject(o:editorObject)
-        {
+        pushObject(o: editorObject) {
             this.editorObjects.push(o);
             o.needsTextureUpdate = true;
             o.needsTransformUpdate = true;
             o.needsMaterialUpdate = true;
         }
+
+        selectedObject(): editorObject {
+            if (this.selectedIndex == -1)
+                return null;
+            return this.editorObjects[this.selectedIndex];
+        }
     }
-    
+
 }

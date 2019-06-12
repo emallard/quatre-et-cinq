@@ -6,6 +6,9 @@ module qec {
         editor: editor = inject(qec.editor);
 
         importedSvgs = ko.observableArray<importedSvg>();
+        noPicture = ko.observable(true);
+        atLeastOnePicture = ko.observable(false);
+
         createImportedSvg: () => importedSvg = injectFunc(importedSvg);
 
         set() {
@@ -53,6 +56,10 @@ module qec {
                 this.editor.addSvg(readerResult);
                 //if (this.importedSvgs.length == 1)
                 this.select(newSvg);
+
+
+                this.atLeastOnePicture(true);
+                this.noPicture(false);
             }
 
             // when the file is read it triggers the onload event above.

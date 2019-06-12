@@ -173,8 +173,14 @@ nav ul ul li {
 .importToolbar {
 	display:flex;
 	flex-direction: row;
-	align-items: center;
+	/*align-items: center;*/
+	width:100%;
+	flex-grow:1;
 	height:120px;
+}
+
+.importToolbar label {
+	flex: 1 1 auto;
 }
 
 .modifyToolbar
@@ -183,7 +189,7 @@ nav ul ul li {
 	display: flex;
 	flex-direction:row;
 }
-.modifyToolbar a
+.modifyToolbar a, .modifyToolbar select
 {
 	flex: 1 1 auto;
 }

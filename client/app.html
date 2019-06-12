@@ -82,8 +82,11 @@
 
         <div class="profileViewContainer" data-bind="with: profileView, visible: profileViewVisible">
             <div class="profileView" data-bind="setElement: init">
+                <!--
                 <a data-bind="click: toggleDebug">Debug</a>
+                -->
             </div>
+
         </div>
 
         <div class="debug"></div>
@@ -95,8 +98,14 @@
     <div class="selectedTool">
 
         <div class="modifyToolbar" data-bind="visible: modifyToolbarVisible">
+            <!--
             <a data-bind="click: setSelectController, css : {active : isSelectControllerActive}"><img
                     src="css/images/mouse-cursor.svg"></a>
+            -->
+            <select>
+                <option>Please Select</option>
+                <option>Object 1</option>
+            </select>
             <!--
             <a data-bind="click: setMoveController, css : {active : isMoveControllerActive}"><img
                     src="css/images/mouse-move.svg"></a>
@@ -105,8 +114,9 @@
             <a data-bind="click: setScaleBottomController, css : {active : isScaleBottomControllerActive}"><img
                     src="css/images/mouse-scale-bottom.svg"></a>
             -->
-            <a data-bind="click: setProfileController, css : {active : profileViewVisible}"><img
+            <a data-bind="click: toggleProfileView, css : {active : profileViewVisible}"><img
                     src="css/images/profile.svg" width="30"></a>
+            <a data-bind=""><i class="fa fa-eye-slash" style="font-size:30px"></i></a>
 
 
             <!--
@@ -139,9 +149,13 @@
         </div>
 
         <div class="importToolbar" data-bind="with: importView, visible:importToolbarVisible">
+
             <input class="inputfile" type="file" name="importFile" id="importFile"
                 data-bind="event: { change: function() { $data.readImage($element.files[0]) } }">
-            <label for="importFile" class="btn btn-default">Add<br />SVG</label>
+            <label for="importFile" class="btn btn-default importFileLabel"
+                data-bind="visible: noPicture">Import<br />SVG</label>
+            <label class="btn btn-default" data-bind="visible: noPicture">Library</label>
+            <label class="btn btn-default" data-bind="visible: noPicture">Draw</label>
 
             <!--
                 Or Drop below :
@@ -150,8 +164,7 @@
                 </div>
                 -->
             <div data-bind='foreach: importedSvgs'>
-                <button style="margin:5px" class="btn btn-default"
-                    data-bind="css : { 'btn-active-border': isActive }, click: onClick">
+                <div style="margin:5px" class="btn btn-default" data-bind="css : { 'btn-active-border': isActive }">
                     <div style="float:left">
                         <!--<input type="radio" ____data-bind="checked: isActive , event : { change: onClick }">-->
                         <img style="max-width:100px;max-height:100px" data-bind="attr: {src: src}">
@@ -163,8 +176,11 @@
                         </div>
                         <div style="clear: both"></div>
                         -->
-                </button>
+                </div>
             </div>
+            <button class="btn btn-default" data-bind="visible: atLeastOnePicture">Download & Edit</button>
+            <label for="importFile" data-bind="visible: atLeastOnePicture"
+                class="btn btn-default importFileLabel">Update</label>
         </div>
 
 

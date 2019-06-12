@@ -55,9 +55,6 @@ module qec {
                 this.collide.collide(this.editor.workspace.editorObjects[i].sd, this.ro, this.rd);
                 //console.log(this.collide.pos);
                 //console.log(this.collide.minDist);
-
-                //this.vm.layers[i].sd.material.setDiffuse(0,1,0);
-
                 if (this.collide.hasCollided && this.collide.dist < minDist) {
                     minDist = this.collide.dist;
                     iMin = i;
@@ -66,11 +63,7 @@ module qec {
 
             if (iMin > -1) {
                 this.editorView.setSelectedIndex(iMin);
-                //console.log(iMin);
-                //this.vm.layers[iMin].sd.material.setDiffuse(1,0,0);
             }
-
-            //this.vm.setUpdateFlag();;
         }
 
         onMouseWheel(e: WheelEvent) {

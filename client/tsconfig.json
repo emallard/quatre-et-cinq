@@ -11,7 +11,8 @@
     "outFile": "app/built/built.js"
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "_site"
   ],
   "include": [
     "**/*.ts"
