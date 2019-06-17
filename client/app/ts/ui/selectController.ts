@@ -66,20 +66,14 @@ module qec {
             }
         }
 
-        onMouseWheel(e: WheelEvent) {
+        onMouseWheel(e: WheelEvent) { }
 
-        }
-
-        onTouchStart(e: TouchEvent) {
-
-        }
-
-        onTouchMove(e: TouchEvent) {
-
-        }
-
-        onTouchEnd(e: TouchEvent) {
-
-        }
+        onTouchStart(e: TouchEvent) { }
+        onTouchMove(e: TouchEvent) { }
+        onTouchEnd(e: TouchEvent) { }
+        onPanStart(e: HammerInput) { }
+        onPanMove(e: HammerInput) { }
+        onPanEnd(e: HammerInput) { }
+        onTap(e: HammerInput) { }
     }
 }

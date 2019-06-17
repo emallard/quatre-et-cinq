@@ -80,6 +80,8 @@ module qec {
 
 
         pan(dx: number, dy: number) {
+            //console.log(this.panTranslation);
+            //return;
             this.up[0] = this.rotationMat[1];
             this.up[1] = this.rotationMat[5];
             this.up[2] = this.rotationMat[9];
@@ -92,81 +94,10 @@ module qec {
 
             vec3.scale(this.right, this.right, dx);
 
-            mat4.translate(this.panTranslation, this.up, this.panTranslation);
-            mat4.translate(this.panTranslation, this.right, this.panTranslation);
-            this.updateTransformMatrix();
-        }
-
-        /*
-        tmpMat4 = mat4.create();
-        rotCpy = mat4.create();
-        vecx = vec3.createFrom(1,0,0);
-        vecy = vec3.createFrom(0,1,0);
-        vecz = vec3.createFrom(0,0,1);
-        tmpQuat = quat4.create();
-        tmpVec = vec3.create();
-        tmpRotAxis = vec3.create();
-
-        getPitch(quat:Float32Array)
-        {
-            var x = quat[0];
-            var y = quat[1]
-            var z = quat[2]
-            var w = quat[3]
-            return Math.atan2(2*x*w - 2*y*z, 1 - 2*x*x - 2*z*z);
-        }
-
-        getYaw(quat:Float32Array)
-        {
-            var x = quat[0];
-            var y = quat[1]
-            var z = quat[2]
-            var w = quat[3]
-            return Math.asin(2*x*y + 2*z*w);
-        }
-
-        rotateRight()
-        {
-            quat4.fromAngleAxis(3.14/20, this.vecz, this.tmpQuat);
-            quat4.multiply(this.tmpQuat, this.rotation, this.rotation);
+            mat4.translate(this.panTranslation, this.panTranslation, this.up);
+            mat4.translate(this.panTranslation, this.panTranslation, this.right);
 
             this.updateTransformMatrix();
         }
-
-        rotateLeft()
-        {
-            //quat4.fromAngleAxis(-3.14/20, this.vecy, this.tmpQuat);
-            //quat4.multiply(this.rotation, this.tmpQuat, this.rotation);
-            quat4.fromAngleAxis(-3.14/20, this.vecz, this.tmpQuat);
-            quat4.multiply(this.tmpQuat, this.rotation, this.rotation);
-            this.updateTransformMatrix();
-        }
-
-        rotateUp()
-        {
-
-            quat4.multiplyVec3(this.rotation, this.vecz, this.tmpVec);
-            //console.log(vec3.str(this.tmpVec));
-
-            vec3.cross(this.vecz, this.tmpVec, this.tmpRotAxis);
-            vec3.normalize(this.tmpRotAxis);
-
-            quat4.fromAngleAxis(-3.14/20, this.tmpRotAxis, this.tmpQuat);
-            quat4.multiply(this.tmpQuat, this.rotation, this.rotation);
-
-            // quat4.fromAngleAxis(3.14/20, this.vecx, this.tmpQuat);
-            //quat4.multiply(this.rotation, this.tmpQuat, this.rotation);
-            this.updateTransformMatrix();
-
-        }
-
-        rotateDown()
-        {
-            quat4.fromAngleAxis(-3.14/20, this.vecx, this.tmpQuat);
-            quat4.multiply(this.rotation, this.tmpQuat, this.rotation);
-            this.updateTransformMatrix();
-        }
-        */
     }
-
 }

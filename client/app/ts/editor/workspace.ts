@@ -28,7 +28,7 @@ module qec {
             o.needsMaterialUpdate = true;
         }
 
-        selectedObject(): editorObject {
+        getSelectedObject(): editorObject {
             if (this.selectedIndex == -1)
                 return null;
             return this.editorObjects[this.selectedIndex];

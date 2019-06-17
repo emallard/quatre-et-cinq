@@ -3,7 +3,7 @@
 <head>
     <title>svgprint3d</title>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1" />
 
     <script src="libs/three.js"></script>
     <script src="libs/jquery.3.1.1.min.js"></script>
@@ -15,6 +15,7 @@
     <script src="libs/jszip.min.js"></script>
     <script src="libs/zip.js"></script>
     <script src="libs/FileSaver.js"></script>
+    <script src="libs/hammer.min.js"></script>
     <script src="app/built/built.js"></script>
     <link rel="stylesheet" href="libs/spectrum.css">
     <link rel="stylesheet" href="libs/bootstrap/bootstrap.css">
@@ -68,8 +69,9 @@
     <div class='screen'>
 
         <div class='renderPanel'>
+            <!-- touchstart: onTouchStart, touchmove: onTouchMove, touchend: onTouchEnd -->
             <div class='renderContainer'
-                data-bind="setElement: initEditor, event: { touchstart: onTouchStart, touchmove: onTouchMove, touchend: onTouchEnd, mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }">
+                data-bind="setElement: initEditor, tap: onTap, panStart: onPanStart, panMove: onPanMove, panEnd: onPanEnd, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }">
             </div>
         </div>
 

@@ -83,7 +83,7 @@ module qec {
             this.setRenderFlag();
         }
 
-        getCamera() {
+        getCamera(): camera {
             return this.renderSettings.camera;
         }
 

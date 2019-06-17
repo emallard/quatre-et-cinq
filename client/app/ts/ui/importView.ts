@@ -4,6 +4,7 @@ module qec {
 
         importedContent: string;
         editor: editor = inject(qec.editor);
+        editorView: editorView = inject(qec.editorView);
 
         importedSvgs = ko.observableArray<importedSvg>();
         noPicture = ko.observable(true);
@@ -40,6 +41,7 @@ module qec {
 
             reader.onload = (event) => {
 
+                var isFirstImport = this.editor.workspace.editorObjects.length == 0;
                 /*
                 this.importedContent = reader.result;
                 this.editor.importSvg(this.importedContent,    
@@ -60,6 +62,9 @@ module qec {
 
                 this.atLeastOnePicture(true);
                 this.noPicture(false);
+
+                if (isFirstImport)
+                    this.editorView.showModifyToolbar();
             }
 
             // when the file is read it triggers the onload event above.

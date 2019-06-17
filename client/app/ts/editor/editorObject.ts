@@ -68,6 +68,7 @@ module qec {
 
         scaleProfilePoints(newBounds: Float32Array) {
             //console.log('new bounds : ' + vec4.str(newBounds));
+
             for (var i = 0; i < this.profilePoints.length; ++i) {
                 var dx = (this.profilePoints[i][0] - this.profileBounds[0]) / (this.profileBounds[2] - this.profileBounds[0]);
                 var dy = (this.profilePoints[i][1] - this.profileBounds[1]) / (this.profileBounds[3] - this.profileBounds[1]);
@@ -77,6 +78,7 @@ module qec {
             }
 
             vec4.copy(this.profileBounds, newBounds);
+
             this.setProfilePoints(this.profilePoints);
         }
 
@@ -99,6 +101,7 @@ module qec {
 
             this.tmpProfileCanvas.width = canvasWidth;
             this.tmpProfileCanvas.height = canvasHeight;
+
             var ctx = this.tmpProfileCanvas.getContext('2d');
             ctx.clearRect(0, 0, this.tmpProfileCanvas.width, this.tmpProfileCanvas.height);
 
@@ -181,12 +184,48 @@ module qec {
 
             vec3.transformMat4(out, out, this.tmpTransform);
         }
-        /*
-                getAbsoluteBounds(outBoundMin:Float32Array, outBoundMax:Float32Array)
-                {
-                    
-                }
-        */
-    }
 
+        getAbsoluteTopCenter(out: Float32Array) {
+            var bounds = this.top.totalBounds;
+            mat4.invert(this.tmpTransform, this.inverseTransform);
+
+            vec3.set(out,
+                0.5 * (bounds[2] + bounds[0]),
+                0.5 * (bounds[3] + bounds[1]),
+                this.profileBounds[3]);
+
+            vec3.transformMat4(out, out, this.tmpTransform);
+        }
+
+        getAbsoluteBottomCenter(out: Float32Array) {
+            var bounds = this.top.totalBounds;
+            mat4.invert(this.tmpTransform, this.inverseTransform);
+
+            vec3.set(out,
+                0.5 * (bounds[2] + bounds[0]),
+                0.5 * (bounds[3] + bounds[1]),
+                this.profileBounds[1]);
+
+            vec3.transformMat4(out, out, this.tmpTransform);
+        }
+
+        getAbsoluteBounds(outMin: Float32Array, outMax: Float32Array) {
+            var bounds = this.top.totalBounds;
+            mat4.invert(this.tmpTransform, this.inverseTransform);
+
+            vec3.set(outMin,
+                bounds[0],
+                bounds[1],
+                this.profileBounds[1]);
+
+            vec3.transformMat4(outMin, outMin, this.tmpTransform);
+
+            vec3.set(outMax,
+                bounds[2],
+                bounds[3],
+                this.profileBounds[3]);
+
+            vec3.transformMat4(outMax, outMax, this.tmpTransform);
+        }
+    }
 }

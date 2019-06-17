@@ -140,20 +140,13 @@ module qec {
             this.isMouseDown = false;
         }
 
-        onMouseWheel(e: WheelEvent) {
-
-        }
-
-        onTouchStart(e: TouchEvent) {
-
-        }
-
-        onTouchMove(e: TouchEvent) {
-
-        }
-
-        onTouchEnd(e: TouchEvent) {
-
-        }
+        onMouseWheel(e: WheelEvent) { }
+        onTouchStart(e: TouchEvent) { }
+        onTouchMove(e: TouchEvent) { }
+        onTouchEnd(e: TouchEvent) { }
+        onPanStart(e: HammerInput) { }
+        onPanMove(e: HammerInput) { }
+        onPanEnd(e: HammerInput) { }
+        onTap(e: HammerInput) { }
     }
 }

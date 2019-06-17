@@ -50,25 +50,11 @@ module qec {
         onTouchMove(data: any, e: Event) { this.controllerManager.onTouchMove(e); }
         onTouchEnd(data: any, e: Event) { this.controllerManager.onTouchEnd(e); }
 
-        setMoveController() {
-            this.heightController.isScaleMode = false;
-            this.controllerManager.setController(this.heightController);
-            this.setActiveController(this.isMoveControllerActive);
-        }
+        onPanStart(e: HammerInput) { this.controllerManager.onPanStart(e); }
+        onPanMove(e: HammerInput) { this.controllerManager.onPanMove(e); }
+        onPanEnd(e: HammerInput) { this.controllerManager.onPanEnd(e); }
+        onTap(e: HammerInput) { this.controllerManager.onTap(e); }
 
-        setScaleController() {
-            this.heightController.isScaleMode = true;
-            this.heightController.isScaleModeBottom = false;
-            this.controllerManager.setController(this.heightController);
-            this.setActiveController(this.isScaleControllerActive);
-        }
-
-        setScaleBottomController() {
-            this.heightController.isScaleMode = true;
-            this.heightController.isScaleModeBottom = true;
-            this.controllerManager.setController(this.heightController);
-            this.setActiveController(this.isScaleBottomControllerActive);
-        }
 
         setSelectController() {
             this.controllerManager.setController(this.transformObjectController);

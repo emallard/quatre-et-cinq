@@ -428,6 +428,26 @@ var qec;
             vec3.set(out, 0.5 * (bounds[2] + bounds[0]), 0.5 * (bounds[3] + bounds[1]), 0.5 * (this.profileBounds[3] + this.profileBounds[1]));
             vec3.transformMat4(out, out, this.tmpTransform);
         };
+        editorObject.prototype.getAbsoluteTopCenter = function (out) {
+            var bounds = this.top.totalBounds;
+            mat4.invert(this.tmpTransform, this.inverseTransform);
+            vec3.set(out, 0.5 * (bounds[2] + bounds[0]), 0.5 * (bounds[3] + bounds[1]), this.profileBounds[3]);
+            vec3.transformMat4(out, out, this.tmpTransform);
+        };
+        editorObject.prototype.getAbsoluteBottomCenter = function (out) {
+            var bounds = this.top.totalBounds;
+            mat4.invert(this.tmpTransform, this.inverseTransform);
+            vec3.set(out, 0.5 * (bounds[2] + bounds[0]), 0.5 * (bounds[3] + bounds[1]), this.profileBounds[1]);
+            vec3.transformMat4(out, out, this.tmpTransform);
+        };
+        editorObject.prototype.getAbsoluteBounds = function (outMin, outMax) {
+            var bounds = this.top.totalBounds;
+            mat4.invert(this.tmpTransform, this.inverseTransform);
+            vec3.set(outMin, bounds[0], bounds[1], this.profileBounds[1]);
+            vec3.transformMat4(outMin, outMin, this.tmpTransform);
+            vec3.set(outMax, bounds[2], bounds[3], this.profileBounds[3]);
+            vec3.transformMat4(outMax, outMax, this.tmpTransform);
+        };
         return editorObject;
     }());
     qec.editorObject = editorObject;
@@ -504,7 +524,7 @@ var qec;
             o.needsTransformUpdate = true;
             o.needsMaterialUpdate = true;
         };
-        workspace.prototype.selectedObject = function () {
+        workspace.prototype.getSelectedObject = function () {
             if (this.selectedIndex == -1)
                 return null;
             return this.editorObjects[this.selectedIndex];
@@ -2161,11 +2181,13 @@ var qec;
             console.log('dfHeight : ' + dfHeight);
             console.log('offsetX : ' + offsetX);
             console.log('offsetY : ' + offsetY);
+            console.log('img.width : ' + img.width);
+            console.log('img.height : ' + img.height);
             */
             this.canvas.width = dfWidth;
             this.canvas.height = dfHeight;
             var ctx = this.canvas.getContext('2d');
-            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            ctx.clearRect(0, 0, dfWidth, dfHeight);
             ctx.drawImage(img, 0, 0, img.width, img.height, offsetX, offsetY, newImgWidth, newImgHeight);
             // draw left margin if profile
             if (profile)
@@ -7140,6 +7162,10 @@ var qec;
             var mat = mat3.fromValues(x[0], y[0], n[0], x[1], y[1], n[1], x[2], y[2], n[2]);
             this.cameraTransforms.setRotation(mat);
         };
+        cameraArcballController.prototype.set = function () {
+        };
+        cameraArcballController.prototype.unset = function () {
+        };
         //
         //  Mouse Interactions
         //
@@ -7162,9 +7188,12 @@ var qec;
         };
         cameraArcballController.prototype.onMouseDown = function (e) {
             this.isRightClick = (e.which == 3);
+            console.log('rightclick :' + this.isRightClick);
             this.isLeftClick = (e.which == 1);
             this.isMiddleClick = (e.which == 2);
             this.isShiftKey = e.shiftKey;
+            this.isAltKey = e.altKey;
+            this.isCtrlKey = e.ctrlKey;
             this.isMouseDown = true;
             // copy start state
             vec2.set(this.startXY, e.offsetX, e.offsetY);
@@ -7190,15 +7219,10 @@ var qec;
                 return;
             this.hasMouseMoved = false;
             if (this.isRotateEnabled) {
-                if (this.isMouseDown && this.isRightClick && !this.isShiftKey) {
-                    if (false && this.collide.hasCollided) {
-                        // Proj*Pan*Rot*LocalPicked = (x1,y1) => permet de déduire localpicked
-                        // Proj*Pan*Rot*DeltaRot*LocalPicked = (x2,y2) => permet de déduire DeltaRot
-                    }
-                    else {
-                        var sphereRadius = 0.5 * Math.min(this.viewportWidth, this.viewportHeight);
-                        this.arcball.getRotationFrom2dPoints(this.viewportWidth, this.viewportHeight, sphereRadius, this.startXY, this.currentMouseXY, this.dragQuat);
-                    }
+                if (this.isMouseDown && this.isRightClick
+                    || this.isMouseDown && this.isCtrlKey) {
+                    var sphereRadius = 0.5 * Math.min(this.viewportWidth, this.viewportHeight);
+                    this.arcball.getRotationFrom2dPoints(this.viewportWidth, this.viewportHeight, sphereRadius, this.startXY, this.currentMouseXY, this.dragQuat);
                     quat.multiply(this.tmpRotation, this.dragQuat, this.startQuat);
                     this.cameraTransforms.setRotation(this.tmpRotation);
                     this.cameraTransforms.updateCamera(this.editor.getCamera());
@@ -7207,11 +7231,16 @@ var qec;
                 }
             }
             if (this.isPanEnabled) {
-                if ((this.isMouseDown && this.isRightClick && this.isShiftKey)
+                if ((this.isMouseDown && this.isShiftKey)
                     || (this.isMouseDown && this.isMiddleClick)) {
                     var xFactor = -this.cameraTransforms.zcam / this.viewportWidth;
                     var yFactor = this.cameraTransforms.zcam / this.viewportHeight;
-                    this.cameraTransforms.pan(this.currentMouseXY[0] * xFactor, this.currentMouseXY[1] * yFactor);
+                    //this.cameraTransforms.pan(this.currentMouseXY[0] * xFactor, this.currentMouseXY[1] * yFactor);
+                    //this.cameraTransforms.pan(0.1, 0);
+                    //this.startXY
+                    this.cameraTransforms.updateCamera(this.editor.getCamera());
+                    this.editor.setRenderFlag();
+                    this.transformObjectView.draw();
                 }
             }
         };
@@ -7230,8 +7259,6 @@ var qec;
             // pick point in 3D
             this.editor.getCamera().getRay(e.touches[0].clientX, e.touches[0].clientY, this.ro, this.rd);
             this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
-            if (this.collide.hasCollided) {
-            }
         };
         cameraArcballController.prototype.onTouchMove = function (e) {
             vec2.set(this.currentMouseXY, e.touches[0].clientX, e.touches[0].clientY);
@@ -7239,6 +7266,39 @@ var qec;
         };
         cameraArcballController.prototype.onTouchEnd = function (e) {
             this.isMouseDown = false;
+        };
+        cameraArcballController.prototype.onPanStart = function (e) {
+            console.log("panStart");
+            /*
+            this.isRightClick = true;
+            this.isLeftClick = false;
+            this.isMiddleClick = false;
+            this.isShiftKey = false;
+            this.isMouseDown = true;
+
+            // copy start state
+            vec2.set(this.startXY, e.center.x, e.center.y)
+            quat.copy(this.startQuat, this.cameraTransforms.rotation);
+            mat4.copy(this.startPan, this.cameraTransforms.panTranslation);
+            this.viewportWidth = this.editor.getViewportWidth();
+            this.viewportHeight = this.editor.getViewportHeight();
+            */
+        };
+        cameraArcballController.prototype.onPanMove = function (e) {
+            console.log("panMove");
+            /*
+            vec2.set(this.currentMouseXY, e.touches[0].clientX, e.touches[0].clientY);
+            this.hasMouseMoved = true;
+            */
+        };
+        cameraArcballController.prototype.onPanEnd = function (e) {
+            console.log("panEnd");
+            /*
+            this.isMouseDown = false;
+            */
+        };
+        cameraArcballController.prototype.onTap = function (e) {
+            console.log("tap");
         };
         return cameraArcballController;
     }());
@@ -7258,76 +7318,6 @@ var qec;
             this.tmpVec3 = vec3.create();
             this.up = vec3.create();
             this.right = vec3.create();
-            /*
-            tmpMat4 = mat4.create();
-            rotCpy = mat4.create();
-            vecx = vec3.createFrom(1,0,0);
-            vecy = vec3.createFrom(0,1,0);
-            vecz = vec3.createFrom(0,0,1);
-            tmpQuat = quat4.create();
-            tmpVec = vec3.create();
-            tmpRotAxis = vec3.create();
-    
-            getPitch(quat:Float32Array)
-            {
-                var x = quat[0];
-                var y = quat[1]
-                var z = quat[2]
-                var w = quat[3]
-                return Math.atan2(2*x*w - 2*y*z, 1 - 2*x*x - 2*z*z);
-            }
-    
-            getYaw(quat:Float32Array)
-            {
-                var x = quat[0];
-                var y = quat[1]
-                var z = quat[2]
-                var w = quat[3]
-                return Math.asin(2*x*y + 2*z*w);
-            }
-    
-            rotateRight()
-            {
-                quat4.fromAngleAxis(3.14/20, this.vecz, this.tmpQuat);
-                quat4.multiply(this.tmpQuat, this.rotation, this.rotation);
-    
-                this.updateTransformMatrix();
-            }
-    
-            rotateLeft()
-            {
-                //quat4.fromAngleAxis(-3.14/20, this.vecy, this.tmpQuat);
-                //quat4.multiply(this.rotation, this.tmpQuat, this.rotation);
-                quat4.fromAngleAxis(-3.14/20, this.vecz, this.tmpQuat);
-                quat4.multiply(this.tmpQuat, this.rotation, this.rotation);
-                this.updateTransformMatrix();
-            }
-    
-            rotateUp()
-            {
-    
-                quat4.multiplyVec3(this.rotation, this.vecz, this.tmpVec);
-                //console.log(vec3.str(this.tmpVec));
-    
-                vec3.cross(this.vecz, this.tmpVec, this.tmpRotAxis);
-                vec3.normalize(this.tmpRotAxis);
-    
-                quat4.fromAngleAxis(-3.14/20, this.tmpRotAxis, this.tmpQuat);
-                quat4.multiply(this.tmpQuat, this.rotation, this.rotation);
-    
-                // quat4.fromAngleAxis(3.14/20, this.vecx, this.tmpQuat);
-                //quat4.multiply(this.rotation, this.tmpQuat, this.rotation);
-                this.updateTransformMatrix();
-    
-            }
-    
-            rotateDown()
-            {
-                quat4.fromAngleAxis(-3.14/20, this.vecx, this.tmpQuat);
-                quat4.multiply(this.rotation, this.tmpQuat, this.rotation);
-                this.updateTransformMatrix();
-            }
-            */
         }
         cameraTransforms.prototype.afterInject = function () {
             quat.normalize(this.rotation, this.rotation);
@@ -7382,6 +7372,8 @@ var qec;
             this.updateTransformMatrix();
         };
         cameraTransforms.prototype.pan = function (dx, dy) {
+            //console.log(this.panTranslation);
+            //return;
             this.up[0] = this.rotationMat[1];
             this.up[1] = this.rotationMat[5];
             this.up[2] = this.rotationMat[9];
@@ -7390,8 +7382,8 @@ var qec;
             this.right[1] = this.rotationMat[4];
             this.right[2] = this.rotationMat[8];
             vec3.scale(this.right, this.right, dx);
-            mat4.translate(this.panTranslation, this.up, this.panTranslation);
-            mat4.translate(this.panTranslation, this.right, this.panTranslation);
+            mat4.translate(this.panTranslation, this.panTranslation, this.up);
+            mat4.translate(this.panTranslation, this.panTranslation, this.right);
             this.updateTransformMatrix();
         };
         return cameraTransforms;
@@ -7464,6 +7456,30 @@ var qec;
         controllerManager.prototype.onTouchEnd = function (e) {
             if (this.camActive)
                 this.cameraController.onTouchEnd(e);
+        };
+        controllerManager.prototype.onPanStart = function (e) {
+            if (this.camActive)
+                this.cameraController.onPanStart(e);
+            if (this.currentController != null)
+                this.currentController.onPanStart(e);
+        };
+        controllerManager.prototype.onPanMove = function (e) {
+            if (this.camActive)
+                this.cameraController.onPanMove(e);
+            if (this.currentController != null)
+                this.currentController.onPanMove(e);
+        };
+        controllerManager.prototype.onPanEnd = function (e) {
+            if (this.camActive)
+                this.cameraController.onPanEnd(e);
+            if (this.currentController != null)
+                this.currentController.onPanEnd(e);
+        };
+        controllerManager.prototype.onTap = function (e) {
+            if (this.camActive)
+                this.cameraController.onTap(e);
+            if (this.currentController != null)
+                this.currentController.onTap(e);
         };
         controllerManager.prototype.updateLoop = function () {
             if (this.camActive)
@@ -7620,23 +7636,10 @@ var qec;
         editorView.prototype.onTouchStart = function (data, e) { this.controllerManager.onTouchStart(e); };
         editorView.prototype.onTouchMove = function (data, e) { this.controllerManager.onTouchMove(e); };
         editorView.prototype.onTouchEnd = function (data, e) { this.controllerManager.onTouchEnd(e); };
-        editorView.prototype.setMoveController = function () {
-            this.heightController.isScaleMode = false;
-            this.controllerManager.setController(this.heightController);
-            this.setActiveController(this.isMoveControllerActive);
-        };
-        editorView.prototype.setScaleController = function () {
-            this.heightController.isScaleMode = true;
-            this.heightController.isScaleModeBottom = false;
-            this.controllerManager.setController(this.heightController);
-            this.setActiveController(this.isScaleControllerActive);
-        };
-        editorView.prototype.setScaleBottomController = function () {
-            this.heightController.isScaleMode = true;
-            this.heightController.isScaleModeBottom = true;
-            this.controllerManager.setController(this.heightController);
-            this.setActiveController(this.isScaleBottomControllerActive);
-        };
+        editorView.prototype.onPanStart = function (e) { this.controllerManager.onPanStart(e); };
+        editorView.prototype.onPanMove = function (e) { this.controllerManager.onPanMove(e); };
+        editorView.prototype.onPanEnd = function (e) { this.controllerManager.onPanEnd(e); };
+        editorView.prototype.onTap = function (e) { this.controllerManager.onTap(e); };
         editorView.prototype.setSelectController = function () {
             this.controllerManager.setController(this.transformObjectController);
             this.setActiveController(this.isSelectControllerActive);
@@ -7843,14 +7846,14 @@ var qec;
         heightController.prototype.onMouseUp = function (e) {
             this.isMouseDown = false;
         };
-        heightController.prototype.onMouseWheel = function (e) {
-        };
-        heightController.prototype.onTouchStart = function (e) {
-        };
-        heightController.prototype.onTouchMove = function (e) {
-        };
-        heightController.prototype.onTouchEnd = function (e) {
-        };
+        heightController.prototype.onMouseWheel = function (e) { };
+        heightController.prototype.onTouchStart = function (e) { };
+        heightController.prototype.onTouchMove = function (e) { };
+        heightController.prototype.onTouchEnd = function (e) { };
+        heightController.prototype.onPanStart = function (e) { };
+        heightController.prototype.onPanMove = function (e) { };
+        heightController.prototype.onPanEnd = function (e) { };
+        heightController.prototype.onTap = function (e) { };
         return heightController;
     }());
     qec.heightController = heightController;
@@ -7860,6 +7863,7 @@ var qec;
     var importView = /** @class */ (function () {
         function importView() {
             this.editor = qec.inject(qec.editor);
+            this.editorView = qec.inject(qec.editorView);
             this.importedSvgs = ko.observableArray();
             this.noPicture = ko.observable(true);
             this.atLeastOnePicture = ko.observable(false);
@@ -7889,6 +7893,7 @@ var qec;
             console.log('readImage');
             var reader = new FileReader();
             reader.onload = function (event) {
+                var isFirstImport = _this.editor.workspace.editorObjects.length == 0;
                 /*
                 this.importedContent = reader.result;
                 this.editor.importSvg(this.importedContent,
@@ -7906,6 +7911,8 @@ var qec;
                 _this.select(newSvg);
                 _this.atLeastOnePicture(true);
                 _this.noPicture(false);
+                if (isFirstImport)
+                    _this.editorView.showModifyToolbar();
             };
             // when the file is read it triggers the onload event above.
             if (file) {
@@ -8073,6 +8080,23 @@ ko.bindingHandlers['setElement'] =
             fct.call(viewModel, element);
         }
     };
+//var Hammer: any;
+var events = ['tap', 'doubletap', 'press', 'pinch', 'pan', 'panstart', 'panmove', 'panend', 'pinchstart', 'pinchmove', 'pinchend'];
+ko.utils.arrayForEach(events, function (eventName) {
+    ko.bindingHandlers[eventName] = {
+        init: function (element, valueAccessor, allBindingsAccessor, viewModel) {
+            if (element.hammer == null) {
+                element.hammer = new Hammer(element);
+                element.hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
+            }
+            var hammer = element.hammer;
+            var value = valueAccessor();
+            hammer.on(eventName, function (e) {
+                value.call(viewModel, e);
+            });
+        }
+    };
+});
 var qec;
 (function (qec) {
     var materialView = /** @class */ (function () {
@@ -8538,14 +8562,14 @@ var qec;
                 this.editorView.setSelectedIndex(iMin);
             }
         };
-        selectController.prototype.onMouseWheel = function (e) {
-        };
-        selectController.prototype.onTouchStart = function (e) {
-        };
-        selectController.prototype.onTouchMove = function (e) {
-        };
-        selectController.prototype.onTouchEnd = function (e) {
-        };
+        selectController.prototype.onMouseWheel = function (e) { };
+        selectController.prototype.onTouchStart = function (e) { };
+        selectController.prototype.onTouchMove = function (e) { };
+        selectController.prototype.onTouchEnd = function (e) { };
+        selectController.prototype.onPanStart = function (e) { };
+        selectController.prototype.onPanMove = function (e) { };
+        selectController.prototype.onPanEnd = function (e) { };
+        selectController.prototype.onTap = function (e) { };
         return selectController;
     }());
     qec.selectController = selectController;
@@ -8684,7 +8708,7 @@ var qec;
         transformObjectController.prototype.updateLoop = function () {
             if (this.isMouseDown && this.updateFlag && this.handlePicked) {
                 this.updateFlag = false;
-                var selected = this.editor.workspace.selectedObject();
+                var selected = this.editor.workspace.getSelectedObject();
                 this.editor.getCamera().getRay(this.mouseX, this.mouseY, this.ro, this.rd);
                 // project mouse on up ray from startPos
                 this.lineUp.setOriginAndDirection(this.startPos, this.dirUp);
@@ -8704,27 +8728,36 @@ var qec;
                     selected.updateInverseTransform();
                     this.editor.renderer.updateTransform(selected.sd);
                     this.editor.setRenderFlag();
+                    this.transformObjectView.draw();
                 }
                 else if (!this.isScaleModeBottom) {
                     vec4.copy(this.newBounds, this.startBounds);
                     this.newBounds[3] += this.deltaPos[2];
+                    /*
+                    console.log("Translate mode !");
+                    console.log("newBounds", this.newBounds);
+                    */
                     selected.scaleProfilePoints(this.newBounds);
-                    this.editor.updateSignedDistance(selected);
                     this.editor.renderer.updateFloatTextures(selected.sd);
                     this.editor.setRenderFlag();
+                    this.editor.setUpdateFlag();
+                    this.transformObjectView.draw();
                 }
+                /*
                 else {
                     mat4.translate(selected.inverseTransform, this.startTransform, this.deltaPos);
                     mat4.invert(selected.inverseTransform, selected.inverseTransform);
                     selected.updateInverseTransform();
                     this.editor.renderer.updateTransform(selected.sd);
-                    vec4.copy(this.newBounds, this.startBounds);
+
+                    vec4.copy(this.newBounds, this.startBounds)
                     this.newBounds[3] += (-this.deltaPos[2]);
                     selected.scaleProfilePoints(this.newBounds);
                     this.editor.updateSignedDistance(selected);
                     this.editor.renderer.updateFloatTextures(selected.sd);
+
                     this.editor.setRenderFlag();
-                }
+                }*/
                 /*
                 if (this.isScaleMode) {
                     this.profileView.refresh();
@@ -8743,10 +8776,9 @@ var qec;
             if (e.button != 0)
                 return;
             this.handlePicked = false;
-            var l = this.editor.workspace.selectedObject();
+            var l = this.editor.workspace.getSelectedObject();
             if (l != null) {
                 this.transformObjectUtils.getMoveHandleScreenCoordinates(this.tmpVec3, l);
-                //console.log("handleTest ", this.tmpVec3[0], this.tmpVec3[1], e.offsetX, e.offsetY);
                 if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
                     //console.log("in !");
                     this.handlePicked = true;
@@ -8757,9 +8789,42 @@ var qec;
                     // Initial state
                     this.startX = e.offsetX;
                     this.startY = e.offsetY;
-                    l.getAbsoluteCenter(this.startPos);
+                    l.getAbsoluteBottomCenter(this.startPos);
                     mat4.invert(this.startTransform, l.inverseTransform);
                 }
+                this.transformObjectUtils.getScaleTopHandleScreenCoordinates(this.tmpVec3, l);
+                if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
+                    this.handlePicked = true;
+                    this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+                    this.isMouseDown = true;
+                    this.isScaleMode = true;
+                    this.isScaleModeBottom = false;
+                    // Initial state
+                    this.startX = e.offsetX;
+                    this.startY = e.offsetY;
+                    vec4.copy(this.startBounds, l.profileBounds);
+                    l.getAbsoluteTopCenter(this.startPos);
+                    mat4.invert(this.startTransform, l.inverseTransform);
+                }
+                /*
+                this.transformObjectUtils.getScaleBottomHandleScreenCoordinates(this.tmpVec3, l);
+
+                if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
+                    this.handlePicked = true;
+
+                    this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+                    this.isMouseDown = true;
+                    this.isScaleMode = true;
+                    this.isScaleModeBottom = true;
+
+                    // Initial state
+                    this.startX = (<MouseEvent>e).offsetX;
+                    this.startY = (<MouseEvent>e).offsetY;
+
+                    l.getAbsoluteBottomCenter(this.startPos);
+                    mat4.invert(this.startTransform, l.inverseTransform);
+                }
+                */
             }
             if (!this.handlePicked) {
                 var picked = this.pick(e);
@@ -8769,14 +8834,14 @@ var qec;
         transformObjectController.prototype.onMouseUp = function (e) {
             this.isMouseDown = false;
         };
-        transformObjectController.prototype.onMouseWheel = function (e) {
-        };
-        transformObjectController.prototype.onTouchStart = function (e) {
-        };
-        transformObjectController.prototype.onTouchMove = function (e) {
-        };
-        transformObjectController.prototype.onTouchEnd = function (e) {
-        };
+        transformObjectController.prototype.onMouseWheel = function (e) { };
+        transformObjectController.prototype.onTouchStart = function (e) { };
+        transformObjectController.prototype.onTouchMove = function (e) { };
+        transformObjectController.prototype.onTouchEnd = function (e) { };
+        transformObjectController.prototype.onPanStart = function (e) { };
+        transformObjectController.prototype.onPanMove = function (e) { };
+        transformObjectController.prototype.onPanEnd = function (e) { };
+        transformObjectController.prototype.onTap = function (e) { };
         transformObjectController.prototype.pick = function (e) {
             var minDist = 666;
             var iMin = -1;
@@ -8805,11 +8870,14 @@ var qec;
             this.tmpObjectTransform = mat4.create();
         }
         transformObjectUtils.prototype.getMoveHandleScreenCoordinates = function (out, selected) {
-            var bounds = selected.top.totalBounds;
-            mat4.invert(this.tmpObjectTransform, selected.inverseTransform);
             var camera = this.editor.getCamera();
-            vec3.set(out, 0.5 * (bounds[2] + bounds[0]), 0.5 * (bounds[3] + bounds[1]), 0.5 * (selected.profileBounds[3] + selected.profileBounds[1]));
-            camera.getScreenPositionPreTransform(out, out, this.tmpObjectTransform);
+            selected.getAbsoluteBottomCenter(out);
+            camera.getScreenPosition(out, out);
+        };
+        transformObjectUtils.prototype.getScaleTopHandleScreenCoordinates = function (out, selected) {
+            var camera = this.editor.getCamera();
+            selected.getAbsoluteTopCenter(out);
+            camera.getScreenPosition(out, out);
         };
         return transformObjectUtils;
     }());
@@ -8820,11 +8888,30 @@ var qec;
     var transformObjectView = /** @class */ (function () {
         function transformObjectView() {
             this.editor = qec.inject(qec.editor);
+            this.transformObjectUtils = qec.inject(qec.transformObjectUtils);
             this.points = [];
-            this.pointIndex = -1;
-            this.doUpdate = false;
             this.selectedIndex = -1;
             this.tmpObjectTransform = mat4.create();
+            this.bbmin = vec3.create();
+            this.bbmax = vec3.create();
+            this.center = vec3.create();
+            this.centerTop = vec3.create();
+            this.centerBottom = vec3.create();
+            this.p1 = vec3.create();
+            this.p2 = vec3.create();
+            this.p3 = vec3.create();
+            this.p4 = vec3.create();
+            this.p5 = vec3.create();
+            this.p6 = vec3.create();
+            this.p7 = vec3.create();
+            this.p8 = vec3.create();
+            this.s1 = vec3.create();
+            this.s2 = vec3.create();
+            this.s3 = vec3.create();
+            this.s4 = vec3.create();
+            this.camDir = vec3.create();
+            this.vdot1 = vec3.create();
+            this.vdot2 = vec3.create();
         }
         transformObjectView.prototype.init = function (elt) {
             this.canvas = document.createElement('canvas');
@@ -8832,90 +8919,98 @@ var qec;
             elt.appendChild(this.canvas);
             this.canvas.width = window.innerWidth;
             this.canvas.height = window.innerHeight - 102;
-            console.log("this.canvas.height : " + this.canvas.height);
-            /*
-            this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(<MouseEvent>e));
-            this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(<MouseEvent>e))
-            this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(<MouseEvent>e))
-
-
-            this.points = [[0, 0], [295, 0], [295, 295], [0, 295]];
-            */
             this.draw();
         };
         transformObjectView.prototype.setSelectedIndex = function (i) {
             this.selectedIndex = i;
             this.draw();
         };
-        transformObjectView.prototype.updateEditor = function () {
-            if (this.selectedIndex < 0)
-                return;
-            var l = this.editor.workspace.editorObjects[this.selectedIndex];
-            var profileBounds = l.profileBounds;
-            /*
-            // convert points to real coordinates
-            var profilePoints = [];
-            for (var j = 0; j < this.points.length; ++j) {
-                var px = this.points[j][0];
-                var py = this.points[j][1];
-                px -= this.offsetX;
-                py -= this.offsetY;
-
-                var drawWidth = this.canvas.width - 2 * this.offsetX;
-                var drawHeight = this.canvas.height - 2 * this.offsetY;
-
-                var x = (px / drawWidth) * (profileBounds[2] - profileBounds[0]) + profileBounds[0];
-                var y = (py - drawHeight) / drawHeight * (profileBounds[3] - profileBounds[1]) + profileBounds[1];
-                y *= -1;
-                profilePoints.push([x, y]);
-            }
-
-            l.setProfilePoints(profilePoints);
-            this.editor.renderer.updateFloatTextures(l.sd);
-            this.editor.setRenderFlag();
-            */
-        };
         transformObjectView.prototype.draw = function () {
             var ctx = this.canvas.getContext('2d');
             ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             if (this.selectedIndex < 0)
                 return;
-            var l = this.editor.workspace.editorObjects[this.selectedIndex];
-            var bounds = l.top.totalBounds;
-            mat4.invert(this.tmpObjectTransform, l.inverseTransform);
-            var camera = this.editor.getCamera();
-            var screenPosition1 = vec3.fromValues(bounds[0], bounds[1], 0);
-            var screenPosition2 = vec3.fromValues(bounds[0], bounds[3], 0);
-            var screenPosition3 = vec3.fromValues(bounds[2], bounds[3], 0);
-            var screenPosition4 = vec3.fromValues(bounds[2], bounds[1], 0);
-            var center = vec3.fromValues(0.5 * (bounds[2] + bounds[0]), 0.5 * (bounds[3] + bounds[1]), 0.5 * (l.profileBounds[3] + l.profileBounds[1]));
-            var centerUp = vec3.fromValues(center[0], center[1], l.profileBounds[3]);
-            var centerDown = vec3.fromValues(center[0], center[1], l.profileBounds[1]);
-            camera.getScreenPositionPreTransform(screenPosition1, screenPosition1, this.tmpObjectTransform);
-            camera.getScreenPositionPreTransform(screenPosition2, screenPosition2, this.tmpObjectTransform);
-            camera.getScreenPositionPreTransform(screenPosition3, screenPosition3, this.tmpObjectTransform);
-            camera.getScreenPositionPreTransform(screenPosition4, screenPosition4, this.tmpObjectTransform);
-            camera.getScreenPositionPreTransform(center, center, this.tmpObjectTransform);
-            camera.getScreenPositionPreTransform(centerUp, centerUp, this.tmpObjectTransform);
-            camera.getScreenPositionPreTransform(centerDown, centerDown, this.tmpObjectTransform);
+            var l = this.editor.workspace.getSelectedObject();
+            l.getAbsoluteBounds(this.bbmin, this.bbmax);
+            vec3.set(this.p1, this.bbmin[0], this.bbmin[1], this.bbmin[2]);
+            vec3.set(this.p2, this.bbmin[0], this.bbmax[1], this.bbmin[2]);
+            vec3.set(this.p3, this.bbmax[0], this.bbmax[1], this.bbmin[2]);
+            vec3.set(this.p4, this.bbmax[0], this.bbmin[1], this.bbmin[2]);
+            vec3.set(this.p5, this.bbmin[0], this.bbmin[1], this.bbmax[2]);
+            vec3.set(this.p6, this.bbmin[0], this.bbmax[1], this.bbmax[2]);
+            vec3.set(this.p7, this.bbmax[0], this.bbmax[1], this.bbmax[2]);
+            vec3.set(this.p8, this.bbmax[0], this.bbmin[1], this.bbmax[2]);
+            var _1 = this.p1;
+            var _2 = this.p2;
+            var _3 = this.p3;
+            var _4 = this.p4;
+            var _5 = this.p5;
+            var _6 = this.p6;
+            var _7 = this.p7;
+            var _8 = this.p8;
+            this.drawSquare(_1, _2, _3, _4);
+            this.drawSquare(_5, _8, _7, _6);
+            this.drawSquare(_1, _4, _8, _5);
+            this.drawSquare(_2, _6, _7, _3);
+            this.drawSquare(_1, _5, _6, _2);
+            this.drawSquare(_4, _3, _7, _8);
             var rw = 10;
+            this.transformObjectUtils.getMoveHandleScreenCoordinates(this.center, l);
+            this.transformObjectUtils.getScaleTopHandleScreenCoordinates(this.centerTop, l);
             ctx.strokeStyle = "rgba(0,255,0,1)";
-            ctx.fillStyle = "rgba(0,255,0,1)";
-            ctx.strokeRect(center[0] - 0.5 * rw, center[1] - 0.5 * rw, rw, rw);
-            ctx.strokeStyle = "rgba(0,0,255,1)";
-            ctx.fillStyle = "rgba(0,255,0,1)";
-            ctx.strokeRect(centerUp[0] - 0.5 * rw, centerUp[1] - 0.5 * rw, rw, rw);
-            ctx.strokeStyle = "rgba(0,0,255,1)";
-            ctx.fillStyle = "rgba(0,255,0,1)";
-            ctx.strokeRect(centerDown[0] - 0.5 * rw, centerDown[1] - 0.5 * rw, rw, rw);
+            ctx.strokeRect(this.center[0] - 0.5 * rw, this.center[1] - 0.5 * rw, rw, rw);
+            ctx.strokeStyle = "rgba(255, 255, 0,1)";
+            ctx.strokeRect(this.centerTop[0] - 0.5 * rw, this.centerTop[1] - 0.5 * rw, rw, rw);
+            ctx.beginPath();
+            ctx.moveTo(this.center[0], this.center[1]);
+            ctx.lineTo(this.centerTop[0], this.centerTop[1]);
+            ctx.stroke();
+            ctx.closePath();
+            /*
+
             ctx.strokeStyle = "rgba(128,128,128,1)";
             ctx.beginPath();
             ctx.moveTo(centerDown[0], centerDown[1]);
             ctx.lineTo(centerUp[0], centerUp[1]);
             ctx.stroke();
             ctx.closePath();
-            this.points = [screenPosition1, screenPosition2, screenPosition3, screenPosition4];
+
+
+            this.points = [screenPosition1, screenPosition2, screenPosition3, screenPosition4]
             ctx.strokeStyle = "rgba(128,128,128,1)";
+            ctx.beginPath();
+            ctx.moveTo(this.points[0][0], this.points[0][1]);
+            for (var i = 0; i < this.points.length; i++) {
+                ctx.lineTo(this.points[i][0], this.points[i][1]);
+            }
+            ctx.lineTo(this.points[0][0], this.points[0][1]);
+
+            ctx.stroke();
+            ctx.closePath();
+            */
+        };
+        transformObjectView.prototype.drawSquare = function (_1, _2, _3, _4) {
+            var camera = this.editor.getCamera();
+            this.camDir[0] = camera.transformMatrix[2];
+            this.camDir[1] = camera.transformMatrix[6];
+            this.camDir[2] = camera.transformMatrix[10];
+            //vec3.subtract(this.camDir, camera.target, camera.position);
+            // check if square faces the camera
+            vec3.subtract(this.vdot1, _1, _2);
+            vec3.subtract(this.vdot2, _3, _2);
+            var cross = vec3.cross(this.vdot1, this.vdot1, this.vdot2);
+            var dot = vec3.dot(cross, this.camDir);
+            //console.log("square: ", this.camDir, dot);
+            camera.getScreenPosition(this.s1, _1);
+            camera.getScreenPosition(this.s2, _2);
+            camera.getScreenPosition(this.s3, _3);
+            camera.getScreenPosition(this.s4, _4);
+            var ctx = this.canvas.getContext('2d');
+            ctx.strokeStyle = "rgba(128,128,128,1)";
+            if (dot > 0)
+                //ctx.strokeStyle = "rgba(128,0,0,1)";
+                return;
+            this.points = [this.s1, this.s2, this.s3, this.s4];
             ctx.beginPath();
             ctx.moveTo(this.points[0][0], this.points[0][1]);
             for (var i = 0; i < this.points.length; i++) {
@@ -8924,20 +9019,6 @@ var qec;
             ctx.lineTo(this.points[0][0], this.points[0][1]);
             ctx.stroke();
             ctx.closePath();
-            /*
-            
-                        // draw points
-                        for (var i = 0; i < this.points.length; i++) {
-                            ctx.fillStyle = "rgba(0,255,0,1)";
-                            if (this.pointIndex == i)
-                                ctx.fillStyle = "rgba(255,0,0,1)";
-            
-                            ctx.beginPath();
-                            ctx.arc(this.points[i][0], this.points[i][1], 5, 0, Math.PI * 2, false);
-                            ctx.fill();
-                            ctx.closePath();
-                        }
-                        */
         };
         return transformObjectView;
     }());

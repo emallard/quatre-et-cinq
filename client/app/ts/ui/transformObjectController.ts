@@ -56,7 +56,7 @@ module qec {
             if (this.isMouseDown && this.updateFlag && this.handlePicked) {
                 this.updateFlag = false;
 
-                var selected = this.editor.workspace.selectedObject();
+                var selected = this.editor.workspace.getSelectedObject();
 
                 this.editor.getCamera().getRay(this.mouseX, this.mouseY, this.ro, this.rd);
 
@@ -80,16 +80,23 @@ module qec {
                     selected.updateInverseTransform();
                     this.editor.renderer.updateTransform(selected.sd);
                     this.editor.setRenderFlag();
+                    this.transformObjectView.draw();
 
                 }
                 else if (!this.isScaleModeBottom) {
                     vec4.copy(this.newBounds, this.startBounds)
                     this.newBounds[3] += this.deltaPos[2];
+                    /*
+                    console.log("Translate mode !");
+                    console.log("newBounds", this.newBounds);
+                    */
                     selected.scaleProfilePoints(this.newBounds);
-                    this.editor.updateSignedDistance(selected);
                     this.editor.renderer.updateFloatTextures(selected.sd);
                     this.editor.setRenderFlag();
+                    this.editor.setUpdateFlag();
+                    this.transformObjectView.draw();
                 }
+                /*
                 else {
                     mat4.translate(selected.inverseTransform, this.startTransform, this.deltaPos);
                     mat4.invert(selected.inverseTransform, selected.inverseTransform);
@@ -103,7 +110,7 @@ module qec {
                     this.editor.renderer.updateFloatTextures(selected.sd);
 
                     this.editor.setRenderFlag();
-                }
+                }*/
 
                 /*
                 if (this.isScaleMode) {
@@ -128,12 +135,10 @@ module qec {
                 return;
 
             this.handlePicked = false;
-            var l = this.editor.workspace.selectedObject();
+            var l = this.editor.workspace.getSelectedObject();
             if (l != null) {
 
                 this.transformObjectUtils.getMoveHandleScreenCoordinates(this.tmpVec3, l);
-                //console.log("handleTest ", this.tmpVec3[0], this.tmpVec3[1], e.offsetX, e.offsetY);
-
                 if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
                     //console.log("in !");
                     this.handlePicked = true;
@@ -147,9 +152,49 @@ module qec {
                     this.startX = (<MouseEvent>e).offsetX;
                     this.startY = (<MouseEvent>e).offsetY;
 
-                    l.getAbsoluteCenter(this.startPos);
+                    l.getAbsoluteBottomCenter(this.startPos);
                     mat4.invert(this.startTransform, l.inverseTransform);
                 }
+
+                this.transformObjectUtils.getScaleTopHandleScreenCoordinates(this.tmpVec3, l);
+
+                if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
+                    this.handlePicked = true;
+
+                    this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+                    this.isMouseDown = true;
+                    this.isScaleMode = true;
+                    this.isScaleModeBottom = false;
+
+                    // Initial state
+                    this.startX = (<MouseEvent>e).offsetX;
+                    this.startY = (<MouseEvent>e).offsetY;
+
+                    vec4.copy(this.startBounds, l.profileBounds);
+
+                    l.getAbsoluteTopCenter(this.startPos);
+                    mat4.invert(this.startTransform, l.inverseTransform);
+                }
+
+                /*
+                this.transformObjectUtils.getScaleBottomHandleScreenCoordinates(this.tmpVec3, l);
+
+                if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
+                    this.handlePicked = true;
+
+                    this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+                    this.isMouseDown = true;
+                    this.isScaleMode = true;
+                    this.isScaleModeBottom = true;
+
+                    // Initial state
+                    this.startX = (<MouseEvent>e).offsetX;
+                    this.startY = (<MouseEvent>e).offsetY;
+
+                    l.getAbsoluteBottomCenter(this.startPos);
+                    mat4.invert(this.startTransform, l.inverseTransform);
+                }
+                */
             }
 
             if (!this.handlePicked) {
@@ -163,21 +208,14 @@ module qec {
             this.isMouseDown = false;
         }
 
-        onMouseWheel(e: WheelEvent) {
-
-        }
-
-        onTouchStart(e: TouchEvent) {
-
-        }
-
-        onTouchMove(e: TouchEvent) {
-
-        }
-
-        onTouchEnd(e: TouchEvent) {
-
-        }
+        onMouseWheel(e: WheelEvent) { }
+        onTouchStart(e: TouchEvent) { }
+        onTouchMove(e: TouchEvent) { }
+        onTouchEnd(e: TouchEvent) { }
+        onPanStart(e: HammerInput) { }
+        onPanMove(e: HammerInput) { }
+        onPanEnd(e: HammerInput) { }
+        onTap(e: HammerInput) { }
 
         pick(e: MouseEvent): number {
             var minDist = 666;

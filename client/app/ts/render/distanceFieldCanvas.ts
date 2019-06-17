@@ -80,13 +80,14 @@ module qec {
             console.log('dfHeight : ' + dfHeight);
             console.log('offsetX : ' + offsetX);
             console.log('offsetY : ' + offsetY);
+            console.log('img.width : ' + img.width);
+            console.log('img.height : ' + img.height);
             */
-
             this.canvas.width = dfWidth;
             this.canvas.height = dfHeight;
 
             var ctx = this.canvas.getContext('2d');
-            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            ctx.clearRect(0, 0, dfWidth, dfHeight);
 
             ctx.drawImage(img, 0, 0, img.width, img.height, offsetX, offsetY, newImgWidth, newImgHeight);
 

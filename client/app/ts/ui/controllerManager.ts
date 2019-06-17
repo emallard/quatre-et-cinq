@@ -81,6 +81,40 @@ module qec {
                 this.cameraController.onTouchEnd(<TouchEvent>e);
         }
 
+        onPanStart(e: HammerInput) {
+            if (this.camActive)
+                this.cameraController.onPanStart(e);
+
+            if (this.currentController != null)
+                this.currentController.onPanStart(e);
+        }
+
+        onPanMove(e: HammerInput) {
+            if (this.camActive)
+                this.cameraController.onPanMove(e);
+
+            if (this.currentController != null)
+                this.currentController.onPanMove(e);
+        }
+
+        onPanEnd(e: HammerInput) {
+            if (this.camActive)
+                this.cameraController.onPanEnd(e);
+
+            if (this.currentController != null)
+                this.currentController.onPanEnd(e);
+        }
+
+        onTap(e: HammerInput) {
+            if (this.camActive)
+                this.cameraController.onTap(e);
+
+            if (this.currentController != null)
+                this.currentController.onTap(e);
+        }
+
+
+
         updateLoop() {
             if (this.camActive)
                 this.cameraController.updateLoop();
@@ -101,6 +135,10 @@ module qec {
         onTouchStart(e: TouchEvent);
         onTouchMove(e: TouchEvent);
         onTouchEnd(e: TouchEvent);
+        onPanStart(e: HammerInput);
+        onPanMove(e: HammerInput);
+        onPanEnd(e: HammerInput);
+        onTap(e: HammerInput);
         updateLoop();
     }
 }
