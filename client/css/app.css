@@ -1,3 +1,6 @@
+* {
+	box-sizing: border-box;
+}
 
 body {
 	color: #174450;
@@ -112,7 +115,9 @@ nav ul ul li {
 }
 
 .screen {
-	background-color:red;
+	background:url('/data/logobackground.jpg');
+	background-size:cover;
+	background-position:center;
 	position:absolute;
 	top:50px;
 	bottom:50px;
@@ -143,6 +148,9 @@ nav ul ul li {
 	margin: 0 0 0.25em 0;
 }
 
+.toolbar a.active {
+	color: orangered;
+}
 
 .secondToolbar
 {
@@ -275,6 +283,20 @@ nav ul ul li {
 	border-color:orange;
 }
 
+/*.modal {
+	position:fixed;
+	height:100%;
+	width: 100%;
+	background-color:rgba(0, 0, 0, 0.3);
+	display:flex;
+	align-items: center;
+	flex-direction: column;
+}
+
+.modal-dialog {
+	width:50%;
+	margin:auto;
+}*/
 
 .modal-dialog-full {
   width: 100%;

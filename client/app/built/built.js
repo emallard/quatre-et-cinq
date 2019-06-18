@@ -529,6 +529,21 @@ var qec;
                 return null;
             return this.editorObjects[this.selectedIndex];
         };
+        workspace.prototype.getObjectByName = function (name) {
+            for (var _i = 0, _a = this.editorObjects; _i < _a.length; _i++) {
+                var o = _a[_i];
+                if (o.name == name)
+                    return o;
+            }
+            return null;
+        };
+        workspace.prototype.getObjectIndex = function (name) {
+            for (var i = 0; i < this.editorObjects.length; ++i) {
+                if (this.editorObjects[i].name == name)
+                    return i;
+            }
+            return -1;
+        };
         return workspace;
     }());
     qec.workspace = workspace;
@@ -1767,6 +1782,8 @@ var qec;
             //console.log('size :' , size, 'center', center, 'autoHeight', autoHeight);
             var l = new qec.editorObject();
             this.workspace.pushObject(l);
+            console.log('afterDraw id :' + id);
+            l.name = id;
             l.topSvgId = id;
             l.setTopImg2(this.helper.canvas2, vec4.fromValues(-0.5 * size[0], -0.5 * size[1], 0.5 * size[0], 0.5 * size[1]));
             l.setProfileHeight(autoHeight);
@@ -2679,7 +2696,7 @@ var qec;
             return this.height;
         };
         hardwareRenderer.prototype.getCanvas = function () {
-            return this.gRenderer.domElement;
+            return this.rendererCanvas;
         };
         hardwareRenderer.prototype.showBoundingBox = function (b) {
         };
@@ -2792,16 +2809,16 @@ var qec;
             //            this.gRenderer = new THREE.WebGLRenderer(
             //                {/*preserveDrawingBuffer: true*/}
             //            );
-            var canvas = document.createElement('canvas');
-            var context = canvas.getContext('webgl2');
-            this.gRenderer = new THREE.WebGLRenderer({ canvas: canvas, context: context });
+            this.rendererCanvas = document.createElement('canvas');
+            var context = this.rendererCanvas.getContext('webgl2');
+            this.gRenderer = new THREE.WebGLRenderer({ canvas: this.rendererCanvas, context: context });
             this.gRenderer.setSize(this.width, this.height);
             //gRenderer.setClearColorHex(0x000000, 1);
             this.gRenderer.setClearColor(0xffffff, 1);
             this.gRenderer.setPixelRatio(window.devicePixelRatio);
             //gRenderer.autoClear = false;
             //this.container.appendChild(this.gRenderer.domElement);
-            this.container.appendChild(canvas);
+            this.container.appendChild(this.rendererCanvas);
             // camera to render, orthogonal (fov=0)
             this.gCamera = new THREE.OrthographicCamera(-.5, .5, .5, -.5, -1, 1);
             // scene for rendering
@@ -6892,6 +6909,7 @@ var qec;
             location.replace(uri);
         }*/
     }
+    qec.saveFile = saveFile;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -7595,6 +7613,7 @@ var qec;
             this.isMoveControllerActive = ko.observable(false);
             this.isScaleControllerActive = ko.observable(false);
             this.isScaleBottomControllerActive = ko.observable(false);
+            this.selectedName = ko.observable();
             // toolbars
             this.importToolbarVisible = ko.observable(false);
             this.modifyToolbarVisible = ko.observable(false);
@@ -7603,6 +7622,7 @@ var qec;
             this.printToolbarVisible = ko.observable(false);
             this.transformObjectViewVisible = ko.observable(false);
             this.profileViewVisible = ko.observable(false);
+            this.editorObjects = ko.observableArray();
             this.toolbarsVisible = [
                 this.importToolbarVisible,
                 this.modifyToolbarVisible,
@@ -7665,11 +7685,16 @@ var qec;
             this.isScaleBottomControllerActive(false);
             c(true);
         };
+        editorView.prototype.onObjectListChange = function () {
+            this.setSelectedIndex(this.editor.workspace.getObjectIndex(this.selectedName()));
+        };
         editorView.prototype.setSelectedIndex = function (i) {
             this.editor.setSelectedIndex(i);
             this.profileView.setSelectedIndex(i);
             //this.materialView.setSelectedIndex(i);
             this.transformObjectView.setSelectedIndex(i);
+            if (i != -1)
+                this.selectedName(this.editor.workspace.editorObjects[i].name);
         };
         editorView.prototype.updateLoop = function () {
             var _this = this;
@@ -7685,6 +7710,13 @@ var qec;
                 this.setToolbar(this.modifyToolbarVisible);
                 this.transformObjectViewVisible(true);
                 this.setSelectController();
+                //console.log("showModifyToolbar : " + this.editor.workspace.editorObjects.length);
+                var editorNamesArray = ["Please Select"];
+                for (var _i = 0, _a = this.editor.workspace.editorObjects.map(function (x) { return x.name; }); _i < _a.length; _i++) {
+                    var n = _a[_i];
+                    editorNamesArray.push(n);
+                }
+                this.editorObjects(editorNamesArray);
             }
             else {
                 this.setToolbar(this.modifyToolbarVisible);
@@ -7868,8 +7900,19 @@ var qec;
             this.noPicture = ko.observable(true);
             this.atLeastOnePicture = ko.observable(false);
             this.createImportedSvg = qec.injectFunc(qec.importedSvg);
+            this.createSvgLibraryItemView = qec.injectFunc(qec.svgLibraryItemView);
+            this.svgLibrary = ko.observableArray();
+            this.svgLibrarySrcs = ['/data/hearts.svg', '/data/hearts2.svg', '/data/cartoon-owl.svg'];
         }
-        importView.prototype.set = function () {
+        importView.prototype.afterInject = function () {
+            if (this.svgLibrary().length == 0) {
+                for (var _i = 0, _a = this.svgLibrarySrcs; _i < _a.length; _i++) {
+                    var src = _a[_i];
+                    var item = this.createSvgLibraryItemView();
+                    item.src = src;
+                    this.svgLibrary.push(item);
+                }
+            }
         };
         importView.prototype.setElement = function (elt) {
             var _this = this;
@@ -7893,7 +7936,6 @@ var qec;
             console.log('readImage');
             var reader = new FileReader();
             reader.onload = function (event) {
-                var isFirstImport = _this.editor.workspace.editorObjects.length == 0;
                 /*
                 this.importedContent = reader.result;
                 this.editor.importSvg(this.importedContent,
@@ -7901,30 +7943,36 @@ var qec;
                 );
                 */
                 var readerResult = reader.result;
-                var newSvg = _this.createImportedSvg();
-                newSvg.importView = _this;
-                newSvg.src("data:image/svg+xml;base64," + btoa(readerResult));
-                newSvg.content = readerResult;
-                _this.importedSvgs.push(newSvg);
-                _this.editor.addSvg(readerResult);
-                //if (this.importedSvgs.length == 1)
-                _this.select(newSvg);
-                _this.atLeastOnePicture(true);
-                _this.noPicture(false);
-                if (isFirstImport)
-                    _this.editorView.showModifyToolbar();
+                _this.readImageAsText(readerResult);
             };
             // when the file is read it triggers the onload event above.
             if (file) {
                 reader.readAsText(file);
             }
         };
-        importView.prototype.select = function (importedSvg) {
+        importView.prototype.readImageAsText = function (readerResult) {
+            var _this = this;
+            var isFirstImport = this.editor.workspace.editorObjects.length == 0;
+            var newSvg = this.createImportedSvg();
+            newSvg.importView = this;
+            newSvg.src("data:image/svg+xml;base64," + btoa(readerResult));
+            newSvg.content = readerResult;
+            this.importedSvgs.push(newSvg);
+            this.editor.addSvg(readerResult);
+            //if (this.importedSvgs.length == 1)
+            this.select(newSvg, function () {
+                _this.atLeastOnePicture(true);
+                _this.noPicture(false);
+                if (isFirstImport)
+                    _this.editorView.showModifyToolbar();
+            });
+        };
+        importView.prototype.select = function (importedSvg, done) {
             this.importedSvgs().forEach(function (x) { return x.isActive(false); });
             importedSvg.isActive(true);
             var index = this.importedSvgs().indexOf(importedSvg);
             console.log('index ' + index);
-            this.editor.setSelectedSvgIndex(index, function () { });
+            this.editor.setSelectedSvgIndex(index, done);
             //this.editor.importSvg(importedSvg.content,()=>{});
         };
         importView.prototype.remove = function (importedSvg) {
@@ -7943,11 +7991,14 @@ var qec;
             this.isActive = ko.observable(false);
         }
         importedSvg.prototype.onClick = function () {
-            this.importView.select(this);
+            this.importView.select(this, function () { });
             //this.isActive(true);
         };
         importedSvg.prototype.remove = function () {
             this.importView.remove(this);
+        };
+        importedSvg.prototype.download = function () {
+            qec.saveFile(this.src(), "download.svg");
         };
         return importedSvg;
     }());
@@ -8339,8 +8390,8 @@ var qec;
             this.debugCanvas = document.createElement('canvas');
             elt.appendChild(this.debugCanvas);
             this.debugCanvas.style.display = 'none';
-            this.maxCanvasWidth = window.innerWidth;
-            this.maxCanvasHeight = window.innerHeight - 142;
+            this.maxCanvasWidth = window.innerWidth - 2;
+            this.maxCanvasHeight = window.innerHeight - 152;
             this.canvas = document.createElement('canvas');
             this.canvas.style.border = 'solid 1px green';
             elt.appendChild(this.canvas);
@@ -8636,6 +8687,33 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var svgLibraryItemView = /** @class */ (function () {
+        function svgLibraryItemView() {
+            this.importView = qec.inject(qec.importView);
+        }
+        svgLibraryItemView.prototype.click = function () {
+            var _this = this;
+            var req = new XMLHttpRequest();
+            req.open('GET', this.src, true);
+            req.onreadystatechange = function () {
+                if (req.readyState == 4) {
+                    if (req.status == 200) {
+                        _this.importView.readImageAsText(req.responseText);
+                    }
+                    else {
+                        console.error("Erreur pendant le chargement de la page.\n");
+                    }
+                    $('#modalLibrary').modal('hide');
+                }
+            };
+            req.send(null);
+        };
+        return svgLibraryItemView;
+    }());
+    qec.svgLibraryItemView = svgLibraryItemView;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var topView = /** @class */ (function () {
         function topView() {
         }
@@ -8917,7 +8995,7 @@ var qec;
             this.canvas = document.createElement('canvas');
             this.canvas.style.border = 'solid 1px red';
             elt.appendChild(this.canvas);
-            this.canvas.width = window.innerWidth;
+            this.canvas.width = window.innerWidth - 2;
             this.canvas.height = window.innerHeight - 102;
             this.draw();
         };

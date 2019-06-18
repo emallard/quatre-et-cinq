@@ -32,8 +32,8 @@ module qec {
             elt.appendChild(this.debugCanvas);
             this.debugCanvas.style.display = 'none';
 
-            this.maxCanvasWidth = window.innerWidth;
-            this.maxCanvasHeight = window.innerHeight - 142;
+            this.maxCanvasWidth = window.innerWidth - 2;
+            this.maxCanvasHeight = window.innerHeight - 152;
 
             this.canvas = document.createElement('canvas');
             this.canvas.style.border = 'solid 1px green';

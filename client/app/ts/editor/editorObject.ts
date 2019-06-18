@@ -3,7 +3,7 @@ module qec {
 
     export class editorObject {
         //canvas = document.createElement('canvas');
-
+        name: string;
         topSvgId: string;
 
         sd = new sdFields();

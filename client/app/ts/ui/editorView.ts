@@ -90,11 +90,18 @@ module qec {
             c(true);
         }
 
+        selectedName = ko.observable<string>();
+        onObjectListChange() {
+            this.setSelectedIndex(this.editor.workspace.getObjectIndex(this.selectedName()));
+        }
+
         setSelectedIndex(i: number) {
             this.editor.setSelectedIndex(i);
             this.profileView.setSelectedIndex(i);
             //this.materialView.setSelectedIndex(i);
             this.transformObjectView.setSelectedIndex(i);
+            if (i != -1)
+                this.selectedName(this.editor.workspace.editorObjects[i].name);
         }
 
         private updateLoop() {
@@ -114,6 +121,7 @@ module qec {
         printToolbarVisible = ko.observable<boolean>(false);
         transformObjectViewVisible = ko.observable<boolean>(false);
         profileViewVisible = ko.observable<boolean>(false);
+        editorObjects = ko.observableArray<string>();
 
         toolbarsVisible: KnockoutObservable<boolean>[] = [
             this.importToolbarVisible,
@@ -129,6 +137,11 @@ module qec {
                 this.setToolbar(this.modifyToolbarVisible);
                 this.transformObjectViewVisible(true);
                 this.setSelectController();
+                //console.log("showModifyToolbar : " + this.editor.workspace.editorObjects.length);
+                var editorNamesArray = ["Please Select"];
+                for (let n of this.editor.workspace.editorObjects.map(x => x.name))
+                    editorNamesArray.push(n);
+                this.editorObjects(editorNamesArray);
             }
             else {
                 this.setToolbar(this.modifyToolbarVisible);
@@ -192,5 +205,7 @@ module qec {
             cameraTransforms.updateCamera(this.editor.getCamera());
             this.editor.setRenderFlag();
         }
+
+
     }
 }

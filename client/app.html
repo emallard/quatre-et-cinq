@@ -100,22 +100,10 @@
     <div class="selectedTool">
 
         <div class="modifyToolbar" data-bind="visible: modifyToolbarVisible">
-            <!--
-            <a data-bind="click: setSelectController, css : {active : isSelectControllerActive}"><img
-                    src="css/images/mouse-cursor.svg"></a>
-            -->
-            <select>
-                <option>Please Select</option>
-                <option>Object 1</option>
+            Selection:
+            <select data-bind="foreach : editorObjects, value: selectedName, event:{change: onObjectListChange}">
+                <option data-bind="value: $data, text: $data"></option>
             </select>
-            <!--
-            <a data-bind="click: setMoveController, css : {active : isMoveControllerActive}"><img
-                    src="css/images/mouse-move.svg"></a>
-            <a data-bind="click: setScaleController, css : {active : isScaleControllerActive}"><img
-                    src="css/images/mouse-scale.svg"></a>
-            <a data-bind="click: setScaleBottomController, css : {active : isScaleBottomControllerActive}"><img
-                    src="css/images/mouse-scale-bottom.svg"></a>
-            -->
             <a data-bind="click: toggleProfileView, css : {active : profileViewVisible}"><img
                     src="css/images/profile.svg" width="30"></a>
             <a data-bind=""><i class="fa fa-eye-slash" style="font-size:30px"></i></a>
@@ -156,7 +144,8 @@
                 data-bind="event: { change: function() { $data.readImage($element.files[0]) } }">
             <label for="importFile" class="btn btn-default importFileLabel"
                 data-bind="visible: noPicture">Import<br />SVG</label>
-            <label class="btn btn-default" data-bind="visible: noPicture">Library</label>
+            <label class="btn btn-default" data-bind="visible: noPicture"
+                onclick="console.log('click'); ($('#modalLibrary')).modal('show');">Library</label>
             <label class="btn btn-default" data-bind="visible: noPicture">Draw</label>
 
             <!--
@@ -178,11 +167,13 @@
                         </div>
                         <div style="clear: both"></div>
                         -->
+                    <button class="btn btn-default" data-bind="click: download">
+                        Download & Edit</button>
+                    <label for="importFile" data-bind="" class=" btn btn-default importFileLabel">
+                        Upload & Replace</label>
                 </div>
             </div>
-            <button class="btn btn-default" data-bind="visible: atLeastOnePicture">Download & Edit</button>
-            <label for="importFile" data-bind="visible: atLeastOnePicture"
-                class="btn btn-default importFileLabel">Update</label>
+
         </div>
 
 
@@ -280,6 +271,25 @@
                     <input readonly data-bind="value: uploadedUrl" style="width:100%"><br />
                     <div style="text-align:center">
                         <img data-bind="attr : { src: uploadedSrc }" style="max-width:500px; max-height:500px">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalLibrary" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content" data-bind="with:importView">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">SVG Library</h4>
+                </div>
+                <div class="modal-body">
+                    <div data-bind="foreach : svgLibrary">
+                        <button data-bind="click:click" style="padding:0px;display:inline-block">
+                            <img style="max-width:100px;max-height:100px" data-bind="attr: {src: src}">
+                        </button>
                     </div>
                 </div>
             </div>

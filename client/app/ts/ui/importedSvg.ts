@@ -7,15 +7,17 @@ module qec {
         isActive = ko.observable(false);
         importView: importView;
 
-        onClick() : void
-        {
-            this.importView.select(this);
+        onClick(): void {
+            this.importView.select(this, () => { });
             //this.isActive(true);
         }
 
-        remove() : void
-        {
+        remove(): void {
             this.importView.remove(this);
+        }
+
+        download(): void {
+            qec.saveFile(this.src(), "download.svg");
         }
     }
 

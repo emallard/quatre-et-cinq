@@ -2,7 +2,7 @@ module qec {
 
     var strDownloadMime = "image/octet-stream";
 
-    export function saveAsImage(elt:HTMLCanvasElement) {
+    export function saveAsImage(elt: HTMLCanvasElement) {
         var imgData, imgNode;
 
         try {
@@ -17,15 +17,15 @@ module qec {
 
     }
 
-    function saveFile(strData:string, filename:string) {
-        var link:any = document.createElement('a');
+    export function saveFile(strData: string, filename: string) {
+        var link: any = document.createElement('a');
         if (typeof link.download === 'string') {
             document.body.appendChild(link); //Firefox requires the link to be in the body
             link.download = filename;
             link.href = strData;
             link.click();
             document.body.removeChild(link); //remove the link when done
-        } 
+        }
         /*else {
             location.replace(uri);
         }*/

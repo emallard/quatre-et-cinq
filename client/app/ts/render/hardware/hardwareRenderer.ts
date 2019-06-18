@@ -5,6 +5,7 @@ module qec {
 
     export class hardwareRenderer implements irenderer {
         container: HTMLElement;
+        rendererCanvas: HTMLCanvasElement;
         width: number;
         height: number;
 
@@ -56,7 +57,7 @@ module qec {
         }
 
         getCanvas(): HTMLCanvasElement {
-            return this.gRenderer.domElement;
+            return this.rendererCanvas;
         }
 
         showBoundingBox(b: boolean) {
@@ -204,9 +205,9 @@ module qec {
             //                {/*preserveDrawingBuffer: true*/}
             //            );
 
-            var canvas = document.createElement('canvas');
-            var context = canvas.getContext('webgl2');
-            this.gRenderer = new THREE.WebGLRenderer({ canvas: canvas, context: context });
+            this.rendererCanvas = document.createElement('canvas');
+            var context = this.rendererCanvas.getContext('webgl2');
+            this.gRenderer = new THREE.WebGLRenderer({ canvas: this.rendererCanvas, context: context });
 
             this.gRenderer.setSize(this.width, this.height);
             //gRenderer.setClearColorHex(0x000000, 1);
@@ -216,7 +217,7 @@ module qec {
             //gRenderer.autoClear = false;
 
             //this.container.appendChild(this.gRenderer.domElement);
-            this.container.appendChild(canvas);
+            this.container.appendChild(this.rendererCanvas);
 
             // camera to render, orthogonal (fov=0)
             this.gCamera = new THREE.OrthographicCamera(-.5, .5, .5, -.5, -1, 1);

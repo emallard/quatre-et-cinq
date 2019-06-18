@@ -33,6 +33,22 @@ module qec {
                 return null;
             return this.editorObjects[this.selectedIndex];
         }
-    }
 
+        getObjectByName(name: string): editorObject {
+            for (let o of this.editorObjects) {
+                if (o.name == name)
+                    return o;
+            }
+            return null;
+        }
+
+        getObjectIndex(name: string): number {
+            for (let i = 0; i < this.editorObjects.length; ++i) {
+                if (this.editorObjects[i].name == name)
+                    return i;
+            }
+            return -1;
+        }
+
+    }
 }

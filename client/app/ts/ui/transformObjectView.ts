@@ -39,7 +39,7 @@ module qec {
             this.canvas = document.createElement('canvas');
             this.canvas.style.border = 'solid 1px red';
             elt.appendChild(this.canvas);
-            this.canvas.width = window.innerWidth;
+            this.canvas.width = window.innerWidth - 2;
             this.canvas.height = window.innerHeight - 102;
             this.draw();
         }
