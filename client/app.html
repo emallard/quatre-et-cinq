@@ -145,8 +145,9 @@
             <label for="importFile" class="btn btn-default importFileLabel"
                 data-bind="visible: noPicture">Import<br />SVG</label>
             <label class="btn btn-default" data-bind="visible: noPicture"
-                onclick="console.log('click'); ($('#modalLibrary')).modal('show');">Library</label>
-            <label class="btn btn-default" data-bind="visible: noPicture">Draw</label>
+                onclick="($('#modalLibrary')).modal('show');">Library</label>
+            <label class="btn btn-default" data-bind="visible: noPicture"
+                onclick="($('#modalDraw')).modal('show');">Draw</label>
 
             <!--
                 Or Drop below :
@@ -296,27 +297,48 @@
         </div>
     </div>
 
-    <script>
-        zip.workerScriptsPath = "libs/";
-        qec.resources.loadAll(onResourceLoaded);
+    <div class="modal fade" id="modalDraw" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document" data-bind="with:importView">
+            <div class="modal-content" data-bind="with:drawView">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Draw</h4>
+                    </sdiv>
+                    <div class="modal-body">
+                        <canvas
+                            data-bind="setElement: init, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp }">
+                        </canvas>
+                        <div>
+                            <button data-bind="click: okClick">OK</button>
+                            <button data-bind="click: cancelClick">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            zip.workerScriptsPath = "libs/";
+            qec.resources.loadAll(onResourceLoaded);
 
 
-        /*
-        var view = new qec.appView();
-        
-            view.init();
-        }
-        //$('#myModal').modal();
-        */
-        function onResourceLoaded() {
-            var injector = new qec.injector();
-            var editorView = injector.create(qec.editorView);
-            ko.applyBindings(editorView);
+            /*
+            var view = new qec.appView();
+            
+                view.init();
+            }
+            //$('#myModal').modal();
+            */
+            function onResourceLoaded() {
+                var injector = new qec.injector();
+                var editorView = injector.create(qec.editorView);
+                ko.applyBindings(editorView);
 
-            $(".renderContainer canvas").contextmenu(function () { return false });
+                $(".renderContainer canvas").contextmenu(function () { return false });
 
-        }
-    </script>
+            }
+        </script>
 
 </body>
 

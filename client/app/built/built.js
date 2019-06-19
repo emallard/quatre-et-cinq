@@ -2810,6 +2810,7 @@ var qec;
             //                {/*preserveDrawingBuffer: true*/}
             //            );
             this.rendererCanvas = document.createElement('canvas');
+            this.rendererCanvas.id = "hardwareRenderer";
             var context = this.rendererCanvas.getContext('webgl2');
             this.gRenderer = new THREE.WebGLRenderer({ canvas: this.rendererCanvas, context: context });
             this.gRenderer.setSize(this.width, this.height);
@@ -7592,6 +7593,86 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var drawView = /** @class */ (function () {
+        function drawView() {
+            this.importView = qec.inject(qec.importView);
+            this.isMouseDown = false;
+            this.hasMoved = false;
+            this.previousMouseXY = vec2.create();
+            this.mouseXY = vec2.create();
+        }
+        drawView.prototype.init = function (elt) {
+            console.log("drawView init");
+            this.canvas = elt; //document.createElement('canvas');
+            this.canvas.width = window.innerWidth - 2;
+            this.canvas.height = window.innerHeight - 152;
+            //elt.appendChild(this.canvas);
+        };
+        drawView.prototype.onMouseDown = function (data, e) {
+            console.log("onMouseDown");
+            this.isMouseDown = true;
+            this.hasMoved = true;
+            this.previousMouseXY[0] = e.offsetX;
+            this.previousMouseXY[1] = e.offsetY;
+            this.mouseXY[0] = e.offsetX;
+            this.mouseXY[1] = e.offsetY;
+        };
+        drawView.prototype.onMouseUp = function (data, e) {
+            this.isMouseDown = false;
+        };
+        drawView.prototype.onMouseMove = function (data, e) {
+            if (!this.isMouseDown)
+                return;
+            this.hasMoved = true;
+            this.mouseXY[0] = e.offsetX;
+            this.mouseXY[1] = e.offsetY;
+        };
+        drawView.prototype.updateLoop = function () {
+            if (!this.isMouseDown || !this.hasMoved)
+                return;
+            this.hasMoved = false;
+            var context = this.canvas.getContext('2d');
+            context.beginPath();
+            context.moveTo(this.previousMouseXY[0], this.previousMouseXY[1]);
+            context.lineTo(this.mouseXY[0], this.mouseXY[1]);
+            context.closePath();
+            context.strokeStyle = "red";
+            context.lineWidth = 30;
+            context.stroke();
+            context.ellipse(this.previousMouseXY[0], this.previousMouseXY[1], 30, 30, 0, 0, 360);
+            context.fillStyle = "red";
+            context.fill();
+            vec2.copy(this.previousMouseXY, this.mouseXY);
+        };
+        drawView.prototype.okClick = function () {
+            var widthAndHeight = 'width="' + this.canvas.width + '" height="' + this.canvas.height + '"';
+            var viewbox = 'viewbox="0 0 ' + this.canvas.width + ' ' + this.canvas.height + '"';
+            var dataUrl = this.canvas.toDataURL("image/png");
+            var text = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n'
+                + '<svg '
+                + ' xmlns:svg="http://www.w3.org/2000/svg" '
+                + ' xmlns="http://www.w3.org/2000/svg" '
+                + ' xmlns:xlink="http://www.w3.org/1999/xlink" '
+                + ' ' + widthAndHeight
+                + ' ' + viewbox
+                + '><g>\n'
+                + '<image ' + widthAndHeight + ' id="drawing1" xlink:href="'
+                + dataUrl
+                + '"/>'
+                + '\n</g></svg>';
+            console.log(text);
+            this.importView.readImageAsText(text);
+            $('#modalDraw').modal('hide');
+        };
+        drawView.prototype.cancelClick = function () {
+            $('#modalDraw').modal('hide');
+        };
+        return drawView;
+    }());
+    qec.drawView = drawView;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var editorView = /** @class */ (function () {
         function editorView() {
             this.editor = qec.inject(qec.editor);
@@ -7609,6 +7690,7 @@ var qec;
             this.shareView = qec.inject(qec.shareView);
             this.printView = qec.inject(qec.printView);
             this.transformObjectView = qec.inject(qec.transformObjectView);
+            this.drawView = qec.inject(qec.drawView);
             this.isSelectControllerActive = ko.observable(true);
             this.isMoveControllerActive = ko.observable(false);
             this.isScaleControllerActive = ko.observable(false);
@@ -7702,6 +7784,7 @@ var qec;
             this.profileView.updateLoop();
             this.animateLoop();
             this.editor.updateLoop();
+            this.drawView.updateLoop();
             requestAnimationFrame(function () { return _this.updateLoop(); });
         };
         editorView.prototype.showImportToolbar = function () { this.setToolbar(this.importToolbarVisible); };
@@ -7896,6 +7979,7 @@ var qec;
         function importView() {
             this.editor = qec.inject(qec.editor);
             this.editorView = qec.inject(qec.editorView);
+            this.drawView = qec.inject(qec.drawView);
             this.importedSvgs = ko.observableArray();
             this.noPicture = ko.observable(true);
             this.atLeastOnePicture = ko.observable(false);

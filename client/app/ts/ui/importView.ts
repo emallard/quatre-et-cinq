@@ -5,7 +5,7 @@ module qec {
         importedContent: string;
         editor: editor = inject(qec.editor);
         editorView: editorView = inject(qec.editorView);
-
+        drawView: drawView = inject(drawView);
 
         importedSvgs = ko.observableArray<importedSvg>();
         noPicture = ko.observable(true);

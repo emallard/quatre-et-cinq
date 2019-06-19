@@ -19,6 +19,7 @@ module qec {
         shareView: shareView = inject(shareView);
         printView: printView = inject(printView);
         transformObjectView: transformObjectView = inject(transformObjectView);
+        drawView: drawView = inject(drawView);
 
         afterInject() {
             this.editor.setRenderFlag();
@@ -109,6 +110,7 @@ module qec {
             this.profileView.updateLoop();
             this.animateLoop();
             this.editor.updateLoop();
+            this.drawView.updateLoop();
             requestAnimationFrame(() => this.updateLoop());
         }
 
