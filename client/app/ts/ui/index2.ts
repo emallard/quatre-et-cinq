@@ -1,12 +1,11 @@
 module qec {
-    export class index2
-    {
+    export class index2 {
         sceneDTO: any;
-        sc:scene;
-        element:HTMLElement;
-        renderer:irenderer;
-        rendererParallel:parallelRenderer;
-        texturePacker:texturePacker;
+        sc: scene;
+        element: HTMLElement;
+        renderer: irenderer;
+        rendererParallel: parallelRenderer;
+        texturePacker: texturePacker;
 
         /*
         sd:signedDistance;
@@ -19,30 +18,28 @@ module qec {
 
         renderSettings = new renderSettings();
 
-        start(element:HTMLElement)
-        {
+        start(element: HTMLElement) {
             var select = document.createElement('select');
             var option0 = document.createElement('option');
-                option0.value = "";
-                option0.text = "<select>";
-                select.appendChild(option0);
+            option0.value = "";
+            option0.text = "<select>";
+            select.appendChild(option0);
 
             var examples = getExamples();
-            for(var i in examples)
-            {
+            for (var i in examples) {
                 var option = document.createElement('option');
                 option.value = examples[i].title;
                 option.text = option.value;
                 select.appendChild(option);
             }
             document.body.appendChild(select);
-            select.addEventListener('change', (e) => 
-                window.location.href = 
-                    '?scene=' + select.value + 
-                    '&isParallel=' + (this.isParallel ? '1' : '0') +
-                    '&isHardware=' + (this.isHardware ? '1' : '0') +
-                    '&renderSteps=' + (this.renderSteps ? '1' : '0')
-                )
+            select.addEventListener('change', (e) =>
+                window.location.href =
+                '?scene=' + select.value +
+                '&isParallel=' + (this.isParallel ? '1' : '0') +
+                '&isHardware=' + (this.isHardware ? '1' : '0') +
+                '&renderSteps=' + (this.renderSteps ? '1' : '0')
+            )
 
             this.element = element;
 
@@ -51,53 +48,47 @@ module qec {
             this.createScene(sceneName);
         }
 
-        createScene(title:string)
-        {
+        createScene(title: string) {
             this.sceneDTO = createExample(title);
-            
+
             if (!this.isParallel) {
                 this.sc = new scene();
                 this.sc.setDebug(true);
-                this.sc.create(this.sceneDTO, ()=>
-                {
+                this.sc.create(this.sceneDTO, () => {
                     if (this.isHardware)
                         this.renderer = new hardwareRenderer();
-                    else
-                    {
+                    else {
                         var sr = new simpleRenderer();
                         sr.setRenderSteps(this.renderSteps);
                         this.renderer = sr;
                     }
                     this.renderer.setContainerAndSize(this.element, 600, 600);
 
-                    var scrend = this.sc.get<scRenderer>(o=>o instanceof scRenderer, 'render');
+                    var scrend = this.sc.get<scRenderer>(o => o instanceof scRenderer, 'render');
                     this.renderSettings = scrend.settings;
-                    this.renderSettings.shadows = true; 
-                    
+                    this.renderSettings.shadows = true;
+
                     this.texturePacker = new texturePacker();
                     this.texturePacker.repackMode = 0;
-                    this.texturePacker.repackSdRec(this.renderSettings.sd); 
+                    this.texturePacker.repackSdRec(this.renderSettings.sd);
 
-                    this.render(()=>{});        
+                    this.render(() => { });
                 });
             }
             else {
-                this.rendererParallel = new parallelRenderer();    
+                this.rendererParallel = new parallelRenderer();
                 this.rendererParallel.setContainerAndSize(this.element, 400, 400);
 
-                this.rendererParallel.initDTO(this.sceneDTO, () =>
-                {
+                this.rendererParallel.initDTO(this.sceneDTO, () => {
                     var sc = new scene();
                     //this.cam = <camera> sc.createOne(this.sceneDTO, 'camera');
-                    this.render(()=>{});
+                    this.render(() => { });
                 });
             }
         }
 
-        render(done: ()=>void)
-        {
-            if (!this.isParallel)
-            {
+        render(done: () => void) {
+            if (!this.isParallel) {
                 this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length, this.texturePacker);
                 this.renderer.render(this.renderSettings);
                 done();
@@ -106,8 +97,7 @@ module qec {
                 this.rendererParallel.render(this.renderSettings.camera, done);
         }
 
-        debug(x:number, y:number)
-        {
+        debug(x: number, y: number) {
             if (!this.isParallel)
                 this.renderer.renderDebug(x, y, this.renderSettings);
         }
@@ -115,16 +105,16 @@ module qec {
 
         t = 5;
         camDist = 0;
-        startRenderLoop()
-        {
+        startRenderLoop() {
             var cam = this.renderSettings.camera;
             this.t = 5;
             this.camDist = vec2.distance(cam.target, cam.position);
             this.renderLoop();
         }
-         
-        private renderLoop()
-        {
+
+        private renderLoop() {
+            alert("maj des mouvements de camera");
+            /*
             if (this.t>10)
                 return;
             
@@ -137,8 +127,8 @@ module qec {
                 this.t += 0.5;
                 setTimeout(()=>this.renderLoop(), 0);
             });
+            */
 
-            
         }
 
     }

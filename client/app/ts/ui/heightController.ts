@@ -147,6 +147,9 @@ module qec {
         onPanStart(e: HammerInput) { }
         onPanMove(e: HammerInput) { }
         onPanEnd(e: HammerInput) { }
+        onPan2Start(e: HammerInput) { }
+        onPan2Move(e: HammerInput) { }
+        onPan2End(e: HammerInput) { }
         onTap(e: HammerInput) { }
     }
 }

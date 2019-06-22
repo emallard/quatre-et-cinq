@@ -105,6 +105,30 @@ module qec {
                 this.currentController.onPanEnd(e);
         }
 
+        onPan2Start(e: HammerInput) {
+            if (this.camActive)
+                this.cameraController.onPan2Start(e);
+
+            if (this.currentController != null)
+                this.currentController.onPan2Start(e);
+        }
+
+        onPan2Move(e: HammerInput) {
+            if (this.camActive)
+                this.cameraController.onPan2Move(e);
+
+            if (this.currentController != null)
+                this.currentController.onPan2Move(e);
+        }
+
+        onPan2End(e: HammerInput) {
+            if (this.camActive)
+                this.cameraController.onPan2End(e);
+
+            if (this.currentController != null)
+                this.currentController.onPan2End(e);
+        }
+
         onTap(e: HammerInput) {
             if (this.camActive)
                 this.cameraController.onTap(e);
@@ -138,7 +162,11 @@ module qec {
         onPanStart(e: HammerInput);
         onPanMove(e: HammerInput);
         onPanEnd(e: HammerInput);
+        onPan2Start(e: HammerInput);
+        onPan2Move(e: HammerInput);
+        onPan2End(e: HammerInput);
         onTap(e: HammerInput);
         updateLoop();
     }
+
 }

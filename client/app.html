@@ -71,7 +71,7 @@
         <div class='renderPanel'>
             <!-- touchstart: onTouchStart, touchmove: onTouchMove, touchend: onTouchEnd -->
             <div class='renderContainer'
-                data-bind="setElement: initEditor, tap: onTap, panStart: onPanStart, panMove: onPanMove, panEnd: onPanEnd, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }">
+                data-bind="setElement: initEditor, tap: onTap, panstart: onPanStart, panmove: onPanMove, panend: onPanEnd, pan2start: onPan2Start, pan2move: onPan2Move, pan2end: onPan2End, pinchstart: onPinchStart, pinchmove: onPinchMove, pinchend: onPinchEnd, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp, wheel: onMouseWheel, DOMMouseScroll:controllerManager.onMouseWheel }">
             </div>
         </div>
 
@@ -238,6 +238,10 @@
                 Prendre une video ?
             </div>
 -->
+    </div>
+
+    <div class="consoleView" data-bind="with: consoleView, visible: consoleViewVisible">
+        <div data-bind="html : allText"></div>
     </div>
 
     <div class="modal fade" id="modalSculpteo" tabindex="-1" role="dialog" aria-labelledby="sculpteoModalLabel">

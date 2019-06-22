@@ -63,6 +63,16 @@ module qec {
             this.updateTransformMatrix();
         }
 
+        getPosition(dest: Float32Array) {
+            vec3.set(dest, 0, 0, 0);
+            vec3.transformMat4(dest, dest, this.transformMatrix);
+        }
+
+        setTranslation(trans: Float32Array) {
+            mat4.copy(this.panTranslation, trans);
+            this.updateTransformMatrix();
+        }
+
         setZcam(z: number) {
             this.zcam = z;
             this.updateTransformMatrix();

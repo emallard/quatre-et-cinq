@@ -84,15 +84,20 @@ module qec {
             mat4.invert(this.inverseTransformMatrix, this.transformMatrix);
         }
 
+        getRayOrigin(ro: Float32Array) {
+            vec3.set(ro, 0, 0, 0)
+            vec3.transformMat4(ro, ro, this.inverseTransformMatrix);
+        }
+
         getRay(mx: number, my: number, ro: Float32Array, rd: Float32Array) {
             var x = (2.0 * mx) / this.canvasWidth - 1.0;
             var y = 1.0 - (2.0 * my) / this.canvasHeight;
             this.getRayRel(x, y, ro, rd);
         }
 
-        ray_eye = vec4.create();
-        ray_clip = vec4.create();
-        ray_wor = vec4.create();
+        private ray_eye = vec4.create();
+        private ray_clip = vec4.create();
+        private ray_wor = vec4.create();
 
         private getRayRel(x: number, y: number, ro: Float32Array, rd: Float32Array) {
             //console.log('rayrel : ' + x + ' , ' + y);

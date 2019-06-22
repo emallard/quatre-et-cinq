@@ -36,7 +36,7 @@ module qec {
             console.log("this.hardwareRenderer.height : " + this.hardwareRenderer.height);
             this.setSimpleRenderer(isSimple);
 
-            this.renderSettings.camera.setCam(vec3.fromValues(0, -1, 3), vec3.fromValues(0, 0, 0), vec3.fromValues(0, 0, 1));
+            //this.renderSettings.camera.setCam(vec3.fromValues(0, -1, 3), vec3.fromValues(0, 0, 0), vec3.fromValues(0, 0, 1));
 
             this.workspace.rimLight.createFrom({
                 type: 'spotLightDTO',

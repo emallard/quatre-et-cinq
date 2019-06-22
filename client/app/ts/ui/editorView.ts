@@ -8,6 +8,7 @@ module qec {
         loadWorkspace: loadWorkspace = inject(loadWorkspace);
 
         //updateLoop:updateLoop = inject(updateLoop);
+        cameraTransforms: cameraTransforms = inject(cameraTransforms);
         controllerManager: controllerManager = inject(controllerManager);
         cameraController: cameraArcballController = inject(cameraArcballController);
         selectController: selectController = inject(selectController);
@@ -20,6 +21,7 @@ module qec {
         printView: printView = inject(printView);
         transformObjectView: transformObjectView = inject(transformObjectView);
         drawView: drawView = inject(drawView);
+        consoleView: consoleView = inject(consoleView);
 
         afterInject() {
             this.editor.setRenderFlag();
@@ -47,15 +49,24 @@ module qec {
         onMouseUp(data: any, e: Event) { this.controllerManager.onMouseUp(e); }
         onMouseWheel(data: any, e: Event) { this.controllerManager.onMouseWheel(e); }
 
-        onTouchStart(data: any, e: Event) { this.controllerManager.onTouchStart(e); }
+        onTouchStart(data: any, e: Event) { this.controllerManager.onTouchStart(e); this.consoleView.log("touchStart"); }
         onTouchMove(data: any, e: Event) { this.controllerManager.onTouchMove(e); }
         onTouchEnd(data: any, e: Event) { this.controllerManager.onTouchEnd(e); }
 
-        onPanStart(e: HammerInput) { this.controllerManager.onPanStart(e); }
-        onPanMove(e: HammerInput) { this.controllerManager.onPanMove(e); }
-        onPanEnd(e: HammerInput) { this.controllerManager.onPanEnd(e); }
-        onTap(e: HammerInput) { this.controllerManager.onTap(e); }
+        onPanStart(e: HammerInput) { this.controllerManager.onPanStart(e); this.consoleView.log("panStart"); }
+        onPanMove(e: HammerInput) { this.controllerManager.onPanMove(e); }//this.consoleView.log("panMove") }
+        onPanEnd(e: HammerInput) { this.controllerManager.onPanEnd(e); }// this.consoleView.log("panEnd") }
 
+
+        onPan2Start(e: HammerInput) { this.controllerManager.onPan2Start(e); this.consoleView.log("pan2Start " + e.pointers.length); }
+        onPan2Move(e: HammerInput) { this.controllerManager.onPan2Move(e); }// this.consoleView.log("pan2Move " + e.pointers.length) }
+        onPan2End(e: HammerInput) { this.controllerManager.onPan2End(e); }// this.consoleView.log("pan2End " + e.pointers.length) }
+
+        onTap(e: HammerInput) { }// this.controllerManager.onTap(e); this.consoleView.log("tap_ " + (<any>e).tapCount); }
+
+        onPinchStart(e: HammerInput) { /*this.controllerManager.onPanStart(e);*/ this.consoleView.log("pinchStart"); }
+        onPinchMove(e: HammerInput) { /*this.controllerManager.onPanStart(e);*/ this.consoleView.log("pinchMove"); }
+        onPinchEnd(e: HammerInput) { /*this.controllerManager.onPanStart(e);*/ this.consoleView.log("pinchEnd"); }
 
         setSelectController() {
             this.controllerManager.setController(this.transformObjectController);
@@ -124,6 +135,7 @@ module qec {
         transformObjectViewVisible = ko.observable<boolean>(false);
         profileViewVisible = ko.observable<boolean>(false);
         editorObjects = ko.observableArray<string>();
+        consoleViewVisible = ko.observable(true);
 
         toolbarsVisible: KnockoutObservable<boolean>[] = [
             this.importToolbarVisible,

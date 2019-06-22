@@ -261,7 +261,18 @@ nav ul ul li {
 	border:black solid 1px;
 }
 
-
+.consoleView
+{
+	position:fixed;
+	border: solid 2px black;
+	top: 50px;
+	left: 0;
+	right: 0;
+	height: 90px;
+	background-color: lightgrey;
+	color: black;
+	z-index: 11;
+}
 
 .dropZone
 {

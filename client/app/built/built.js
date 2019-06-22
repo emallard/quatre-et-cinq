@@ -68,7 +68,7 @@ var qec;
             this.hardwareRenderer.setContainerAndSize(containerElt, window.innerWidth, window.innerHeight - 102);
             console.log("this.hardwareRenderer.height : " + this.hardwareRenderer.height);
             this.setSimpleRenderer(isSimple);
-            this.renderSettings.camera.setCam(vec3.fromValues(0, -1, 3), vec3.fromValues(0, 0, 0), vec3.fromValues(0, 0, 1));
+            //this.renderSettings.camera.setCam(vec3.fromValues(0, -1, 3), vec3.fromValues(0, 0, 0), vec3.fromValues(0, 0, 1));
             this.workspace.rimLight.createFrom({
                 type: 'spotLightDTO',
                 position: [2, 2, 0.5],
@@ -1907,6 +1907,10 @@ var qec;
         camera.prototype.updateMatrices = function () {
             mat4.lookAt(this.transformMatrix, this.position, this.target, this.up);
             mat4.invert(this.inverseTransformMatrix, this.transformMatrix);
+        };
+        camera.prototype.getRayOrigin = function (ro) {
+            vec3.set(ro, 0, 0, 0);
+            vec3.transformMat4(ro, ro, this.inverseTransformMatrix);
         };
         camera.prototype.getRay = function (mx, my, ro, rd) {
             var x = (2.0 * mx) / this.canvasWidth - 1.0;
@@ -7041,6 +7045,110 @@ var qec;
     }());
     qec.wm5DistLine3Line3 = wm5DistLine3Line3;
 })(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var wm5Plane3 = /** @class */ (function () {
+        function wm5Plane3() {
+            this.normal = vec3.create();
+            this.constant = 0;
+        }
+        wm5Plane3.prototype.distanceTo = function (p) {
+            return vec3.dot(this.normal, p) - this.constant;
+        };
+        wm5Plane3.prototype.computeConstant = function (p) {
+            this.constant = -vec3.dot(this.normal, p);
+        };
+        return wm5Plane3;
+    }());
+    qec.wm5Plane3 = wm5Plane3;
+    qec.IT_EMPTY = 1;
+    qec.IT_POINT = 2;
+    qec.IT_SEGMENT = 3;
+    qec.IT_POLYGON = 4;
+    qec.IT_LINE = 5;
+    var wm5IntrLine3Plane3 = /** @class */ (function () {
+        function wm5IntrLine3Plane3() {
+            this.lineOrigin = vec3.create();
+            this.lineDirection = vec3.create();
+            this.lineParameter = 0;
+            this.mIntersectionType = qec.IT_EMPTY;
+            this.ZERO_TOLERANCE = 1e-20;
+        }
+        wm5IntrLine3Plane3.prototype.setAll = function (lineOrigin, lineDirection, plane) {
+            this.plane = plane;
+            vec3.copy(this.lineDirection, lineDirection);
+            vec3.copy(this.lineOrigin, lineOrigin);
+        };
+        wm5IntrLine3Plane3.prototype.find = function () {
+            //Real DdN = mLine->Direction.Dot(mPlane->Normal);
+            var DdN = vec3.dot(this.lineDirection, this.plane.normal);
+            //Real signedDistance = mPlane->DistanceTo(mLine->Origin);
+            var signedDistance = this.plane.distanceTo(this.lineOrigin);
+            if (Math.abs(DdN) > this.ZERO_TOLERANCE) {
+                // The line is not parallel to the plane, so they must intersect.
+                this.lineParameter = -signedDistance / DdN;
+                this.mIntersectionType = qec.IT_POINT;
+                return true;
+            }
+            /*
+             if (Math.abs(signedDistance) <= ZERO_TOLERANCE)
+             {
+             // The line is coincident with the plane, so choose t = 0 for the
+             // parameter.
+             self.lineParameter = 0;
+             self.mIntersectionType = IT_LINE;
+             return true;
+             }
+             */
+            this.mIntersectionType = qec.IT_EMPTY;
+            return false;
+        };
+        wm5IntrLine3Plane3.prototype.getLineParameter = function () {
+            return this.lineParameter;
+        };
+        wm5IntrLine3Plane3.prototype.getIntersectionType = function () {
+            return this.mIntersectionType;
+        };
+        wm5IntrLine3Plane3.prototype.getIntersection = function (dest) {
+            for (var i = 0; i < 3; ++i) {
+                dest[i] = this.lineOrigin[i] + this.lineParameter * this.lineDirection[i];
+            }
+        };
+        return wm5IntrLine3Plane3;
+    }());
+    qec.wm5IntrLine3Plane3 = wm5IntrLine3Plane3;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var wm5IntrRay3Plane3 = /** @class */ (function () {
+        function wm5IntrRay3Plane3() {
+            this.mRayParameter = 0;
+            this.mIntersectionType = 0;
+            this.intr = new qec.wm5IntrLine3Plane3();
+        }
+        wm5IntrRay3Plane3.prototype.setAll = function (origin, direction, plane) {
+            this.intr.setAll(origin, direction, plane);
+        };
+        wm5IntrRay3Plane3.prototype.find = function () {
+            this.intr.find();
+            this.mIntersectionType = this.intr.getIntersectionType();
+            this.mRayParameter = this.intr.getLineParameter();
+            if (this.mIntersectionType == qec.IT_POINT && this.mRayParameter > 0) {
+                return true;
+            }
+            this.mIntersectionType = qec.IT_EMPTY;
+            return false;
+        };
+        wm5IntrRay3Plane3.prototype.getIntersectionType = function () {
+            return this.mIntersectionType;
+        };
+        wm5IntrRay3Plane3.prototype.getIntersection = function (dest) {
+            this.intr.getIntersection(dest);
+        };
+        return wm5IntrRay3Plane3;
+    }());
+    qec.wm5IntrRay3Plane3 = wm5IntrRay3Plane3;
+})(qec || (qec = {}));
 // Adapted From:
 // Geometric Tools, LLC
 // Copyright (c) 1998-2014
@@ -7158,21 +7266,28 @@ var qec;
             this.rd = vec3.create();
             this.tmpVec3 = vec3.create();
             this.tmpRotation = quat.create();
-            this.isPanEnabled = true;
-            this.isRotateEnabled = true;
-            this.isZoomEnabled = true;
+            this.tmpTranslation = mat4.create();
             this.currentMouseXY = vec2.create();
             this.hasMouseMoved = false;
             this.startXY = vec2.create();
             this.startQuat = quat.create();
-            this.startPan = mat4.create();
+            this.startTranslation = mat4.create();
             this.up = vec3.create();
             this.right = vec3.create();
+            this.wm5Plane = new qec.wm5Plane3();
+            this.wm5IntrRay3Plane3 = qec.inject(qec.wm5IntrRay3Plane3);
+            this.panPlaneFrom = vec3.create();
+            this.panPlaneTo = vec3.create();
+            this.panPlaneMove = vec3.create();
+            this.isPanEnabled = true;
+            this.isRotateEnabled = true;
+            this.isZoomEnabled = true;
             this.dragQuat = quat.create();
         }
         cameraArcballController.prototype.afterInject = function () {
             this.cameraTransforms.reset();
             this.cameraTransforms.updateTransformMatrix();
+            this.cameraTransforms.updateCamera(this.editor.getCamera());
         };
         cameraArcballController.prototype.setButton = function (button) {
             this.button = button;
@@ -7207,7 +7322,6 @@ var qec;
         };
         cameraArcballController.prototype.onMouseDown = function (e) {
             this.isRightClick = (e.which == 3);
-            console.log('rightclick :' + this.isRightClick);
             this.isLeftClick = (e.which == 1);
             this.isMiddleClick = (e.which == 2);
             this.isShiftKey = e.shiftKey;
@@ -7217,9 +7331,7 @@ var qec;
             // copy start state
             vec2.set(this.startXY, e.offsetX, e.offsetY);
             quat.copy(this.startQuat, this.cameraTransforms.rotation);
-            mat4.copy(this.startPan, this.cameraTransforms.panTranslation);
-            this.viewportWidth = this.editor.getViewportWidth();
-            this.viewportHeight = this.editor.getViewportHeight();
+            mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
             // pick point in 3D
             this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
             this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
@@ -7240,8 +7352,10 @@ var qec;
             if (this.isRotateEnabled) {
                 if (this.isMouseDown && this.isRightClick
                     || this.isMouseDown && this.isCtrlKey) {
-                    var sphereRadius = 0.5 * Math.min(this.viewportWidth, this.viewportHeight);
-                    this.arcball.getRotationFrom2dPoints(this.viewportWidth, this.viewportHeight, sphereRadius, this.startXY, this.currentMouseXY, this.dragQuat);
+                    var viewportWidth = this.editor.getViewportWidth();
+                    var viewportHeight = this.editor.getViewportHeight();
+                    var sphereRadius = 0.5 * Math.min(viewportWidth, viewportHeight);
+                    this.arcball.getRotationFrom2dPoints(viewportWidth, viewportHeight, sphereRadius, this.startXY, this.currentMouseXY, this.dragQuat);
                     quat.multiply(this.tmpRotation, this.dragQuat, this.startQuat);
                     this.cameraTransforms.setRotation(this.tmpRotation);
                     this.cameraTransforms.updateCamera(this.editor.getCamera());
@@ -7252,11 +7366,27 @@ var qec;
             if (this.isPanEnabled) {
                 if ((this.isMouseDown && this.isShiftKey)
                     || (this.isMouseDown && this.isMiddleClick)) {
-                    var xFactor = -this.cameraTransforms.zcam / this.viewportWidth;
-                    var yFactor = this.cameraTransforms.zcam / this.viewportHeight;
-                    //this.cameraTransforms.pan(this.currentMouseXY[0] * xFactor, this.currentMouseXY[1] * yFactor);
-                    //this.cameraTransforms.pan(0.1, 0);
-                    //this.startXY
+                    var cam = this.editor.getCamera();
+                    this.cameraTransforms.getCenter(this.tmpVec3);
+                    cam.getRayOrigin(this.ro);
+                    vec3.subtract(this.wm5Plane.normal, this.ro, cam.tmpVec3);
+                    vec3.normalize(this.wm5Plane.normal, this.wm5Plane.normal);
+                    this.wm5Plane.computeConstant(cam.target);
+                    cam.getRay(this.startXY[0], this.startXY[1], this.ro, this.rd);
+                    this.wm5IntrRay3Plane3.setAll(this.ro, this.rd, this.wm5Plane);
+                    this.wm5IntrRay3Plane3.find();
+                    this.wm5IntrRay3Plane3.getIntersection(this.panPlaneFrom);
+                    cam.getRay(this.currentMouseXY[0], this.currentMouseXY[1], this.ro, this.rd);
+                    this.wm5IntrRay3Plane3.setAll(this.ro, this.rd, this.wm5Plane);
+                    this.wm5IntrRay3Plane3.find();
+                    this.wm5IntrRay3Plane3.getIntersection(this.panPlaneTo);
+                    vec3.subtract(this.panPlaneMove, this.panPlaneTo, this.panPlaneFrom);
+                    //console.log("panPlaneFrom : ", this.panPlaneFrom);
+                    //console.log("panPlaneTo : ", this.panPlaneTo);
+                    mat4.identity(this.tmpTranslation);
+                    mat4.translate(this.tmpTranslation, this.tmpTranslation, this.panPlaneMove);
+                    mat4.multiply(this.tmpTranslation, this.tmpTranslation, this.startTranslation);
+                    this.cameraTransforms.setTranslation(this.tmpTranslation);
                     this.cameraTransforms.updateCamera(this.editor.getCamera());
                     this.editor.setRenderFlag();
                     this.transformObjectView.draw();
@@ -7272,9 +7402,7 @@ var qec;
             // copy start state
             vec2.set(this.startXY, e.touches[0].clientX, e.touches[0].clientY);
             quat.copy(this.startQuat, this.cameraTransforms.rotation);
-            mat4.copy(this.startPan, this.cameraTransforms.panTranslation);
-            this.viewportWidth = this.editor.getViewportWidth();
-            this.viewportHeight = this.editor.getViewportHeight();
+            mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
             // pick point in 3D
             this.editor.getCamera().getRay(e.touches[0].clientX, e.touches[0].clientY, this.ro, this.rd);
             this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
@@ -7287,37 +7415,47 @@ var qec;
             this.isMouseDown = false;
         };
         cameraArcballController.prototype.onPanStart = function (e) {
-            console.log("panStart");
-            /*
-            this.isRightClick = true;
-            this.isLeftClick = false;
+            this.isRightClick = false;
+            this.isLeftClick = true;
             this.isMiddleClick = false;
-            this.isShiftKey = false;
+            this.isShiftKey = e.srcEvent.shiftKey;
+            this.isCtrlKey = e.srcEvent.ctrlKey;
             this.isMouseDown = true;
-
             // copy start state
-            vec2.set(this.startXY, e.center.x, e.center.y)
-            quat.copy(this.startQuat, this.cameraTransforms.rotation);
-            mat4.copy(this.startPan, this.cameraTransforms.panTranslation);
-            this.viewportWidth = this.editor.getViewportWidth();
-            this.viewportHeight = this.editor.getViewportHeight();
-            */
+            vec2.set(this.startXY, e.center.x, e.center.y);
+            mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
         };
         cameraArcballController.prototype.onPanMove = function (e) {
-            console.log("panMove");
-            /*
-            vec2.set(this.currentMouseXY, e.touches[0].clientX, e.touches[0].clientY);
+            vec2.set(this.currentMouseXY, e.center.x, e.center.y);
             this.hasMouseMoved = true;
-            */
         };
         cameraArcballController.prototype.onPanEnd = function (e) {
-            console.log("panEnd");
-            /*
             this.isMouseDown = false;
-            */
+        };
+        cameraArcballController.prototype.onPan2Start = function (e) {
+            this.isRightClick = false;
+            this.isLeftClick = true;
+            this.isMiddleClick = false;
+            this.isShiftKey = true;
+            this.isAltKey = false;
+            this.isCtrlKey = false;
+            this.isMouseDown = true;
+            // copy start state
+            vec2.set(this.startXY, e.pointers[0].offsetX, e.pointers[0].offsetY);
+            quat.copy(this.startQuat, this.cameraTransforms.rotation);
+            mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
+            // pick point in 3D
+            this.editor.getCamera().getRay(e.pointers[0].offsetX, e.pointers[0].offsetY, this.ro, this.rd);
+            this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
+        };
+        cameraArcballController.prototype.onPan2Move = function (e) {
+            vec2.set(this.currentMouseXY, e.pointers[0].offsetX, e.pointers[0].offsetY);
+            this.hasMouseMoved = true;
+        };
+        cameraArcballController.prototype.onPan2End = function (e) {
+            this.isMouseDown = false;
         };
         cameraArcballController.prototype.onTap = function (e) {
-            console.log("tap");
         };
         return cameraArcballController;
     }());
@@ -7377,6 +7515,14 @@ var qec;
             quat.copy(this.rotation, rot);
             this.updateTransformMatrix();
         };
+        cameraTransforms.prototype.getPosition = function (dest) {
+            vec3.set(dest, 0, 0, 0);
+            vec3.transformMat4(dest, dest, this.transformMatrix);
+        };
+        cameraTransforms.prototype.setTranslation = function (trans) {
+            mat4.copy(this.panTranslation, trans);
+            this.updateTransformMatrix();
+        };
         cameraTransforms.prototype.setZcam = function (z) {
             this.zcam = z;
             this.updateTransformMatrix();
@@ -7408,6 +7554,32 @@ var qec;
         return cameraTransforms;
     }());
     qec.cameraTransforms = cameraTransforms;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var consoleView = /** @class */ (function () {
+        function consoleView() {
+            this.allText = ko.observable();
+            this.logCount = 0;
+            this.text = ko.observable("LOGLOGLOG");
+        }
+        consoleView.prototype.log = function (log) {
+            var d = new Date();
+            var s = d.getHours() + ":"
+                + d.getMinutes() + ":"
+                + d.getSeconds();
+            this.allText(this.allText() + "<br/>\n" + s + " : " + log);
+            this.logCount++;
+            if (this.logCount > 3) {
+                var cutIndex = this.allText().indexOf('\n');
+                this.allText(this.allText().substr(cutIndex + 1));
+                this.logCount--;
+            }
+            this.text("" + s + " : " + log);
+        };
+        return consoleView;
+    }());
+    qec.consoleView = consoleView;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -7493,6 +7665,24 @@ var qec;
                 this.cameraController.onPanEnd(e);
             if (this.currentController != null)
                 this.currentController.onPanEnd(e);
+        };
+        controllerManager.prototype.onPan2Start = function (e) {
+            if (this.camActive)
+                this.cameraController.onPan2Start(e);
+            if (this.currentController != null)
+                this.currentController.onPan2Start(e);
+        };
+        controllerManager.prototype.onPan2Move = function (e) {
+            if (this.camActive)
+                this.cameraController.onPan2Move(e);
+            if (this.currentController != null)
+                this.currentController.onPan2Move(e);
+        };
+        controllerManager.prototype.onPan2End = function (e) {
+            if (this.camActive)
+                this.cameraController.onPan2End(e);
+            if (this.currentController != null)
+                this.currentController.onPan2End(e);
         };
         controllerManager.prototype.onTap = function (e) {
             if (this.camActive)
@@ -7679,6 +7869,7 @@ var qec;
             this.saveWorkspace = qec.inject(qec.saveWorkspace);
             this.loadWorkspace = qec.inject(qec.loadWorkspace);
             //updateLoop:updateLoop = inject(updateLoop);
+            this.cameraTransforms = qec.inject(qec.cameraTransforms);
             this.controllerManager = qec.inject(qec.controllerManager);
             this.cameraController = qec.inject(qec.cameraArcballController);
             this.selectController = qec.inject(qec.selectController);
@@ -7691,6 +7882,7 @@ var qec;
             this.printView = qec.inject(qec.printView);
             this.transformObjectView = qec.inject(qec.transformObjectView);
             this.drawView = qec.inject(qec.drawView);
+            this.consoleView = qec.inject(qec.consoleView);
             this.isSelectControllerActive = ko.observable(true);
             this.isMoveControllerActive = ko.observable(false);
             this.isScaleControllerActive = ko.observable(false);
@@ -7705,6 +7897,7 @@ var qec;
             this.transformObjectViewVisible = ko.observable(false);
             this.profileViewVisible = ko.observable(false);
             this.editorObjects = ko.observableArray();
+            this.consoleViewVisible = ko.observable(true);
             this.toolbarsVisible = [
                 this.importToolbarVisible,
                 this.modifyToolbarVisible,
@@ -7735,13 +7928,19 @@ var qec;
         editorView.prototype.onMouseDown = function (data, e) { this.controllerManager.onMouseDown(e); };
         editorView.prototype.onMouseUp = function (data, e) { this.controllerManager.onMouseUp(e); };
         editorView.prototype.onMouseWheel = function (data, e) { this.controllerManager.onMouseWheel(e); };
-        editorView.prototype.onTouchStart = function (data, e) { this.controllerManager.onTouchStart(e); };
+        editorView.prototype.onTouchStart = function (data, e) { this.controllerManager.onTouchStart(e); this.consoleView.log("touchStart"); };
         editorView.prototype.onTouchMove = function (data, e) { this.controllerManager.onTouchMove(e); };
         editorView.prototype.onTouchEnd = function (data, e) { this.controllerManager.onTouchEnd(e); };
-        editorView.prototype.onPanStart = function (e) { this.controllerManager.onPanStart(e); };
-        editorView.prototype.onPanMove = function (e) { this.controllerManager.onPanMove(e); };
-        editorView.prototype.onPanEnd = function (e) { this.controllerManager.onPanEnd(e); };
-        editorView.prototype.onTap = function (e) { this.controllerManager.onTap(e); };
+        editorView.prototype.onPanStart = function (e) { this.controllerManager.onPanStart(e); this.consoleView.log("panStart"); };
+        editorView.prototype.onPanMove = function (e) { this.controllerManager.onPanMove(e); }; //this.consoleView.log("panMove") }
+        editorView.prototype.onPanEnd = function (e) { this.controllerManager.onPanEnd(e); }; // this.consoleView.log("panEnd") }
+        editorView.prototype.onPan2Start = function (e) { this.controllerManager.onPan2Start(e); this.consoleView.log("pan2Start " + e.pointers.length); };
+        editorView.prototype.onPan2Move = function (e) { this.controllerManager.onPan2Move(e); }; // this.consoleView.log("pan2Move " + e.pointers.length) }
+        editorView.prototype.onPan2End = function (e) { this.controllerManager.onPan2End(e); }; // this.consoleView.log("pan2End " + e.pointers.length) }
+        editorView.prototype.onTap = function (e) { }; // this.controllerManager.onTap(e); this.consoleView.log("tap_ " + (<any>e).tapCount); }
+        editorView.prototype.onPinchStart = function (e) { /*this.controllerManager.onPanStart(e);*/ this.consoleView.log("pinchStart"); };
+        editorView.prototype.onPinchMove = function (e) { /*this.controllerManager.onPanStart(e);*/ this.consoleView.log("pinchMove"); };
+        editorView.prototype.onPinchEnd = function (e) { /*this.controllerManager.onPanStart(e);*/ this.consoleView.log("pinchEnd"); };
         editorView.prototype.setSelectController = function () {
             this.controllerManager.setController(this.transformObjectController);
             this.setActiveController(this.isSelectControllerActive);
@@ -7968,6 +8167,9 @@ var qec;
         heightController.prototype.onPanStart = function (e) { };
         heightController.prototype.onPanMove = function (e) { };
         heightController.prototype.onPanEnd = function (e) { };
+        heightController.prototype.onPan2Start = function (e) { };
+        heightController.prototype.onPan2Move = function (e) { };
+        heightController.prototype.onPan2End = function (e) { };
         heightController.prototype.onTap = function (e) { };
         return heightController;
     }());
@@ -8186,17 +8388,21 @@ var qec;
             this.renderLoop();
         };
         index2.prototype.renderLoop = function () {
-            var _this = this;
-            if (this.t > 10)
+            alert("maj des mouvements de camera");
+            /*
+            if (this.t>10)
                 return;
+            
             var cam = this.renderSettings.camera;
-            cam.position[0] = cam.target[0] + this.camDist * Math.cos(Math.PI * 2 * this.t / 10);
-            cam.position[1] = cam.target[1] + this.camDist * Math.sin(Math.PI * 2 * this.t / 10);
+            cam.position[0] = cam.target[0] + this.camDist*Math.cos(Math.PI*2 * this.t/10);
+            cam.position[1] = cam.target[1] + this.camDist*Math.sin(Math.PI*2 * this.t/10);
             cam.setPosition(cam.position);
-            this.render(function () {
-                _this.t += 0.5;
-                setTimeout(function () { return _this.renderLoop(); }, 0);
+            this.render(() =>
+            {
+                this.t += 0.5;
+                setTimeout(()=>this.renderLoop(), 0);
             });
+            */
         };
         return index2;
     }());
@@ -8216,13 +8422,47 @@ ko.bindingHandlers['setElement'] =
         }
     };
 //var Hammer: any;
-var events = ['tap', 'doubletap', 'press', 'pinch', 'pan', 'panstart', 'panmove', 'panend', 'pinchstart', 'pinchmove', 'pinchend'];
+var events = ['tap', 'doubletap', 'press', 'pinch', 'pan', 'panstart', 'panmove', 'panend',
+    'pan2start', 'pan2move', 'pan2end',
+    'pinchstart', 'pinchmove', 'pinchend'];
 ko.utils.arrayForEach(events, function (eventName) {
     ko.bindingHandlers[eventName] = {
         init: function (element, valueAccessor, allBindingsAccessor, viewModel) {
             if (element.hammer == null) {
+                /*
                 element.hammer = new Hammer(element);
                 element.hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
+                element.hammer.get('pinch').set({ enable: true });
+                element.hammer.add(new Hammer.Pan({ event: "pan2", pointers: 2 }));
+                element.hammer.get('pan2').recognizeWith('pinch');
+                element.hammer.get('pinch').requireFailure('pan2');
+                */
+                var mc = new Hammer.Manager(element);
+                element.hammer = mc;
+                var tap = new Hammer.Tap({
+                    event: 'tap',
+                    pointers: 1,
+                });
+                var oneFingerPan = new Hammer.Pan({
+                    event: 'pan',
+                    direction: Hammer.DIRECTION_ALL,
+                    pointers: 1,
+                });
+                // similar, but 2 pointers & different event name:
+                var twoFingerPan = new Hammer.Pan({
+                    event: 'pan2',
+                    direction: Hammer.DIRECTION_ALL,
+                    pointers: 2,
+                });
+                /*
+                const pinch = new Hammer.Pinch({
+                    event: 'pinch',
+                });
+                // NOTE: recognize the pinch & 2 finger pan together
+                twoFingerPan.recognizeWith(pinch);
+                pinch.recognizeWith(twoFingerPan);
+                */
+                mc.add([oneFingerPan, twoFingerPan, tap]);
             }
             var hammer = element.hammer;
             var value = valueAccessor();
@@ -8704,6 +8944,9 @@ var qec;
         selectController.prototype.onPanStart = function (e) { };
         selectController.prototype.onPanMove = function (e) { };
         selectController.prototype.onPanEnd = function (e) { };
+        selectController.prototype.onPan2Start = function (e) { };
+        selectController.prototype.onPan2Move = function (e) { };
+        selectController.prototype.onPan2End = function (e) { };
         selectController.prototype.onTap = function (e) { };
         return selectController;
     }());
@@ -9003,6 +9246,9 @@ var qec;
         transformObjectController.prototype.onPanStart = function (e) { };
         transformObjectController.prototype.onPanMove = function (e) { };
         transformObjectController.prototype.onPanEnd = function (e) { };
+        transformObjectController.prototype.onPan2Start = function (e) { };
+        transformObjectController.prototype.onPan2Move = function (e) { };
+        transformObjectController.prototype.onPan2End = function (e) { };
         transformObjectController.prototype.onTap = function (e) { };
         transformObjectController.prototype.pick = function (e) {
             var minDist = 666;
