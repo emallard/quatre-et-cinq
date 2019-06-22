@@ -327,10 +327,10 @@ var qec;
             this.sd.material.setDiffuse(rgb[0], rgb[1], rgb[2]);
         };
         editorObject.prototype.setSelected = function (b) {
-            if (b)
-                this.sd.material.setDiffuse(1, 0, 0);
-            else
-                this.sd.material.setDiffuse(this.diffuseColor[0], this.diffuseColor[1], this.diffuseColor[2]);
+            //if (b)
+            //    this.sd.material.setDiffuse(1, 0, 0);
+            //else
+            this.sd.material.setDiffuse(this.diffuseColor[0], this.diffuseColor[1], this.diffuseColor[2]);
         };
         editorObject.prototype.setProfileHeight = function (height) {
             var newBounds = vec4.fromValues(-this.top.distanceField.maxDepth, 0, 0, height);
@@ -2815,7 +2815,7 @@ var qec;
             //            );
             this.rendererCanvas = document.createElement('canvas');
             this.rendererCanvas.id = "hardwareRenderer";
-            var context = this.rendererCanvas.getContext('webgl2');
+            var context = this.rendererCanvas.getContext('webgl2', { preserveDrawingBuffer: true });
             this.gRenderer = new THREE.WebGLRenderer({ canvas: this.rendererCanvas, context: context });
             this.gRenderer.setSize(this.width, this.height);
             //gRenderer.setClearColorHex(0x000000, 1);
@@ -7271,6 +7271,7 @@ var qec;
             this.hasMouseMoved = false;
             this.startXY = vec2.create();
             this.startQuat = quat.create();
+            this.dragQuat = quat.create();
             this.startTranslation = mat4.create();
             this.up = vec3.create();
             this.right = vec3.create();
@@ -7282,7 +7283,6 @@ var qec;
             this.isPanEnabled = true;
             this.isRotateEnabled = true;
             this.isZoomEnabled = true;
-            this.dragQuat = quat.create();
         }
         cameraArcballController.prototype.afterInject = function () {
             this.cameraTransforms.reset();
@@ -7320,38 +7320,52 @@ var qec;
             this.isRotateEnabled = !b;
             this.isZoomEnabled = !b;
         };
-        cameraArcballController.prototype.onMouseDown = function (e) {
-            this.isRightClick = (e.which == 3);
-            this.isLeftClick = (e.which == 1);
-            this.isMiddleClick = (e.which == 2);
-            this.isShiftKey = e.shiftKey;
-            this.isAltKey = e.altKey;
-            this.isCtrlKey = e.ctrlKey;
-            this.isMouseDown = true;
-            // copy start state
-            vec2.set(this.startXY, e.offsetX, e.offsetY);
-            quat.copy(this.startQuat, this.cameraTransforms.rotation);
-            mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
-            // pick point in 3D
-            this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
-            this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
-            if (this.collide.hasCollided) {
-            }
-        };
-        cameraArcballController.prototype.onMouseUp = function (e) {
-            this.isMouseDown = false;
-        };
-        cameraArcballController.prototype.onMouseMove = function (e) {
-            vec2.set(this.currentMouseXY, e.offsetX, e.offsetY);
-            this.hasMouseMoved = true;
-        };
+        cameraArcballController.prototype.onMouseDown = function (e) { };
+        ;
+        cameraArcballController.prototype.onMouseUp = function (e) { };
+        ;
+        cameraArcballController.prototype.onMouseMove = function (e) { };
+        ;
+        /*
+    onMouseDown(e: MouseEvent) {
+        this.isRightClick = (e.which == 3);
+        this.isLeftClick = (e.which == 1);
+        this.isMiddleClick = (e.which == 2);
+        this.isShiftKey = e.shiftKey;
+        this.isAltKey = e.altKey;
+        this.isCtrlKey = e.ctrlKey;
+        this.isMouseDown = true;
+
+        // copy start state
+        vec2.set(this.startXY, e.offsetX, e.offsetY)
+        quat.copy(this.startQuat, this.cameraTransforms.rotation);
+        mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
+
+        // pick point in 3D
+        this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+        this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
+        if (this.collide.hasCollided) {
+
+        }
+
+    }
+
+    onMouseUp(e: MouseEvent) {
+        this.isMouseDown = false;
+    }
+
+    
+    onMouseMove(e: MouseEvent) {
+        vec2.set(this.currentMouseXY, e.offsetX, e.offsetY);
+        this.hasMouseMoved = true;
+    }*/
         cameraArcballController.prototype.updateLoop = function () {
             if (!this.hasMouseMoved)
                 return;
             this.hasMouseMoved = false;
             if (this.isRotateEnabled) {
-                if (this.isMouseDown && this.isRightClick
-                    || this.isMouseDown && this.isCtrlKey) {
+                //if (this.isMouseDown && this.isRightClick || this.isMouseDown && this.isCtrlKey) {
+                if (this.isMouseDown && this.isLeftClick && !this.isShiftKey) {
                     var viewportWidth = this.editor.getViewportWidth();
                     var viewportHeight = this.editor.getViewportHeight();
                     var sphereRadius = 0.5 * Math.min(viewportWidth, viewportHeight);
@@ -7393,27 +7407,35 @@ var qec;
                 }
             }
         };
-        cameraArcballController.prototype.onTouchStart = function (e) {
+        cameraArcballController.prototype.onTouchStart = function (e) { };
+        cameraArcballController.prototype.onTouchMove = function (e) { };
+        cameraArcballController.prototype.onTouchEnd = function (e) { };
+        /*
+        onTouchStart(e: TouchEvent) {
             this.isRightClick = true;
             this.isLeftClick = false;
             this.isMiddleClick = false;
             this.isShiftKey = false;
             this.isMouseDown = true;
+
             // copy start state
-            vec2.set(this.startXY, e.touches[0].clientX, e.touches[0].clientY);
+            vec2.set(this.startXY, e.touches[0].clientX, e.touches[0].clientY)
             quat.copy(this.startQuat, this.cameraTransforms.rotation);
             mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
+
             // pick point in 3D
             this.editor.getCamera().getRay(e.touches[0].clientX, e.touches[0].clientY, this.ro, this.rd);
             this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
-        };
-        cameraArcballController.prototype.onTouchMove = function (e) {
+        }
+
+        onTouchMove(e: TouchEvent) {
             vec2.set(this.currentMouseXY, e.touches[0].clientX, e.touches[0].clientY);
             this.hasMouseMoved = true;
-        };
-        cameraArcballController.prototype.onTouchEnd = function (e) {
+        }
+
+        onTouchEnd(e: TouchEvent) {
             this.isMouseDown = false;
-        };
+        }*/
         cameraArcballController.prototype.onPanStart = function (e) {
             this.isRightClick = false;
             this.isLeftClick = true;
@@ -7423,7 +7445,11 @@ var qec;
             this.isMouseDown = true;
             // copy start state
             vec2.set(this.startXY, e.center.x, e.center.y);
+            quat.copy(this.startQuat, this.cameraTransforms.rotation);
             mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
+            // pick point in 3D
+            this.editor.getCamera().getRay(e.center.x, e.center.y, this.ro, this.rd);
+            this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
         };
         cameraArcballController.prototype.onPanMove = function (e) {
             vec2.set(this.currentMouseXY, e.center.x, e.center.y);
@@ -7897,7 +7923,7 @@ var qec;
             this.transformObjectViewVisible = ko.observable(false);
             this.profileViewVisible = ko.observable(false);
             this.editorObjects = ko.observableArray();
-            this.consoleViewVisible = ko.observable(true);
+            this.consoleViewVisible = ko.observable(false);
             this.toolbarsVisible = [
                 this.importToolbarVisible,
                 this.modifyToolbarVisible,

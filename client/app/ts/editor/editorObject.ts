@@ -53,10 +53,10 @@ module qec {
         }
 
         setSelected(b: boolean) {
-            if (b)
-                this.sd.material.setDiffuse(1, 0, 0);
-            else
-                this.sd.material.setDiffuse(this.diffuseColor[0], this.diffuseColor[1], this.diffuseColor[2]);
+            //if (b)
+            //    this.sd.material.setDiffuse(1, 0, 0);
+            //else
+            this.sd.material.setDiffuse(this.diffuseColor[0], this.diffuseColor[1], this.diffuseColor[2]);
         }
 
         setProfileHeight(height: number) {

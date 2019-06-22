@@ -31,6 +31,7 @@ module qec {
 
         startXY = vec2.create();
         startQuat = quat.create();
+        dragQuat = quat.create();
         startTranslation = mat4.create();
         up = vec3.create();
         right = vec3.create();
@@ -99,39 +100,42 @@ module qec {
         }
 
 
+        onMouseDown(e: MouseEvent) { };
+        onMouseUp(e: MouseEvent) { };
+        onMouseMove(e: MouseEvent) { };
+        /*
+    onMouseDown(e: MouseEvent) {
+        this.isRightClick = (e.which == 3);
+        this.isLeftClick = (e.which == 1);
+        this.isMiddleClick = (e.which == 2);
+        this.isShiftKey = e.shiftKey;
+        this.isAltKey = e.altKey;
+        this.isCtrlKey = e.ctrlKey;
+        this.isMouseDown = true;
 
-        onMouseDown(e: MouseEvent) {
-            this.isRightClick = (e.which == 3);
-            this.isLeftClick = (e.which == 1);
-            this.isMiddleClick = (e.which == 2);
-            this.isShiftKey = e.shiftKey;
-            this.isAltKey = e.altKey;
-            this.isCtrlKey = e.ctrlKey;
-            this.isMouseDown = true;
+        // copy start state
+        vec2.set(this.startXY, e.offsetX, e.offsetY)
+        quat.copy(this.startQuat, this.cameraTransforms.rotation);
+        mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
 
-            // copy start state
-            vec2.set(this.startXY, e.offsetX, e.offsetY)
-            quat.copy(this.startQuat, this.cameraTransforms.rotation);
-            mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
-
-            // pick point in 3D
-            this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
-            this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
-            if (this.collide.hasCollided) {
-
-            }
+        // pick point in 3D
+        this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+        this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
+        if (this.collide.hasCollided) {
 
         }
 
-        onMouseUp(e: MouseEvent) {
-            this.isMouseDown = false;
-        }
+    }
 
-        dragQuat = quat.create();
-        onMouseMove(e: MouseEvent) {
-            vec2.set(this.currentMouseXY, e.offsetX, e.offsetY);
-            this.hasMouseMoved = true;
-        }
+    onMouseUp(e: MouseEvent) {
+        this.isMouseDown = false;
+    }
+
+    
+    onMouseMove(e: MouseEvent) {
+        vec2.set(this.currentMouseXY, e.offsetX, e.offsetY);
+        this.hasMouseMoved = true;
+    }*/
 
         updateLoop() {
             if (!this.hasMouseMoved)
@@ -141,9 +145,8 @@ module qec {
 
 
             if (this.isRotateEnabled) {
-                if (this.isMouseDown && this.isRightClick
-                    || this.isMouseDown && this.isCtrlKey) {
-
+                //if (this.isMouseDown && this.isRightClick || this.isMouseDown && this.isCtrlKey) {
+                if (this.isMouseDown && this.isLeftClick && !this.isShiftKey) {
                     var viewportWidth = this.editor.getViewportWidth();
                     var viewportHeight = this.editor.getViewportHeight();
                     var sphereRadius = 0.5 * Math.min(viewportWidth, viewportHeight);
@@ -196,8 +199,10 @@ module qec {
 
         }
 
-
-
+        onTouchStart(e: TouchEvent) { }
+        onTouchMove(e: TouchEvent) { }
+        onTouchEnd(e: TouchEvent) { }
+        /*
         onTouchStart(e: TouchEvent) {
             this.isRightClick = true;
             this.isLeftClick = false;
@@ -222,7 +227,7 @@ module qec {
 
         onTouchEnd(e: TouchEvent) {
             this.isMouseDown = false;
-        }
+        }*/
 
         onPanStart(e: HammerInput) {
             this.isRightClick = false;
@@ -233,8 +238,14 @@ module qec {
             this.isMouseDown = true;
 
             // copy start state
-            vec2.set(this.startXY, e.center.x, e.center.y)
+            vec2.set(this.startXY, e.center.x, e.center.y);
+            quat.copy(this.startQuat, this.cameraTransforms.rotation);
             mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
+
+
+            // pick point in 3D
+            this.editor.getCamera().getRay(e.center.x, e.center.y, this.ro, this.rd);
+            this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
         }
 
         onPanMove(e: HammerInput) {

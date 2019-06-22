@@ -135,7 +135,7 @@ module qec {
         transformObjectViewVisible = ko.observable<boolean>(false);
         profileViewVisible = ko.observable<boolean>(false);
         editorObjects = ko.observableArray<string>();
-        consoleViewVisible = ko.observable(true);
+        consoleViewVisible = ko.observable(false);
 
         toolbarsVisible: KnockoutObservable<boolean>[] = [
             this.importToolbarVisible,

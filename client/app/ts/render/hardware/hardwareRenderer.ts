@@ -207,7 +207,7 @@ module qec {
 
             this.rendererCanvas = document.createElement('canvas');
             this.rendererCanvas.id = "hardwareRenderer";
-            var context = this.rendererCanvas.getContext('webgl2');
+            var context = this.rendererCanvas.getContext('webgl2', { preserveDrawingBuffer: true });
             this.gRenderer = new THREE.WebGLRenderer({ canvas: this.rendererCanvas, context: context });
 
             this.gRenderer.setSize(this.width, this.height);
