@@ -4,11 +4,17 @@
 
 body {
 	color: #174450;
-	font-size: 10px;
+	/*font-size: 10px;
 	line-height: 1.85em;
 	font-weight: 300;
+	*/
 	margin:0;
 	height:100%;
+}
+
+.modal
+{
+	background-color: rgba(0, 0, 0, 0.3);
 }
 
 a:hover,
@@ -121,7 +127,7 @@ nav ul ul li {
 	background-size:cover;
 	background-position:center;
 	position:absolute;
-	top:50px;
+	top:40px;
 	bottom:50px;
 	left:0;
 	right:0;
@@ -131,7 +137,7 @@ nav ul ul li {
 .selectedTool
 {
 	position:fixed;
-	bottom:40px;
+	bottom:50px;
 	left:0px;
 	right:0px;
 	background: #fff;
@@ -261,6 +267,11 @@ nav ul ul li {
 .profileView
 {
 	border:black solid 1px;
+}
+
+.drawView {
+	border: solid 1px lightgray;
+	border-radius: 4px;
 }
 
 .consoleView

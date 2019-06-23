@@ -139,14 +139,9 @@
 
         <div class="importToolbar" data-bind="with: importView, visible:importToolbarVisible">
 
-            <input class="inputfile" type="file" name="importFile" id="importFile"
-                data-bind="event: { change: function() { $data.readImage($element.files[0]) } }">
-            <label for="importFile" class="btn btn-default importFileLabel"
-                data-bind="visible: noPicture">Import<br />SVG</label>
-            <label class="btn btn-default" data-bind="visible: noPicture"
-                onclick="($('#modalLibrary')).modal('show');">Library</label>
-            <label class="btn btn-default" data-bind="visible: noPicture"
-                onclick="($('#modalDraw')).modal('show');">Draw</label>
+
+            <button class="btn btn-primary" data-bind="visible: noPicture, click : onAddSvgClick">Add
+                SVG</button>
 
             <!--
                 Or Drop below :
@@ -281,41 +276,57 @@
         </div>
     </div>
 
-    <div class="modal fade" id="modalLibrary" tabindex="-1" role="dialog">
+    <div class="modal" id="modalDraw" tabindex="-1" role="dialog" data-bind="css : {show : modalDrawVisible}">
         <div class="modal-dialog" role="document">
-            <div class="modal-content" data-bind="with:importView">
+            <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
                             aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title">SVG Library</h4>
-                </div>
-                <div class="modal-body">
-                    <div data-bind="foreach : svgLibrary">
-                        <button data-bind="click:click" style="padding:0px;display:inline-block">
-                            <img style="max-width:100px;max-height:100px" data-bind="attr: {src: src}">
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="modalDraw" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document" data-bind="with:importView">
-            <div class="modal-content" data-bind="with:drawView">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
-                            aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title">Draw</h4>
+                    <h4 class="modal-title">Add SVG</h4>
                     </sdiv>
-                    <div class="modal-body">
-                        <canvas
-                            data-bind="setElement: init, event: { mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp }">
-                        </canvas>
-                        <div>
-                            <button data-bind="click: okClick">OK</button>
-                            <button data-bind="click: cancelClick">Cancel</button>
+                    <div class="modal-body-unused" data-bind="with:importView">
+                        <div style="text-align:center">
+                            <div class="btn-group">
+                                <button class="btn btn-default"
+                                    data-bind="css: {'btn-primary': fileTabVisible}, click: onFileClick">From
+                                    file</button>
+                                <button class="btn btn-default"
+                                    data-bind="css: {'btn-primary': libraryTabVisible}, click: onLibraryClick">Examples</button>
+                                <button class="btn btn-default"
+                                    data-bind="css: {'btn-primary': drawTabVisible}, click: onDrawClick">Draw</button>
+                            </div>
                         </div>
+
+                        <div style="border-bottom: solid 1px lightgray; margin: 10px"></div>
+
+                        <div class="" data-bind="visible: fileTabVisible">
+
+                            <a href="#"><i class="fa fa-info-circle"></i> Learn how to create SVG</a><br /><br />
+                            <input type="file" name="importFile" id="importFile"
+                                data-bind="event: { change: function() { $data.readImage($element.files[0]) } }">
+                            <!--
+                            <label for="importFile" class="btn btn-default importFileLabel"
+                                data-bind="visible:">Select a file in your device</label>
+                                -->
+                        </div>
+
+                        <div data-bind="visible: libraryTabVisible">
+                            <div data-bind="foreach : svgLibrary">
+                                <button data-bind="click:click" style="padding:0px;display:inline-block">
+                                    <img style="max-width:100px;max-height:100px" data-bind="attr: {src: src}">
+                                </button>
+                            </div>
+                        </div>
+                        <div data-bind="visible: drawTabVisible, with:drawView">
+                            <canvas
+                                data-bind="setElement: init, event: { touchstart: onTouchStart, touchmove: onTouchMove, touchend: onTouchEnd, mousedown: onMouseDown, mousemove: onMouseMove, mouseup: onMouseUp }">
+                            </canvas>
+                            <div style="text-align: right">
+                                <button class="btn btn-default" data-bind="click: cancelClick">Cancel</button>
+                                <button class="btn btn-primary" data-bind="click: okClick">OK</button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>

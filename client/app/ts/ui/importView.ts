@@ -16,6 +16,10 @@ module qec {
         svgLibrary = ko.observableArray<svgLibraryItemView>();
         svgLibrarySrcs = ['/data/hearts.svg', '/data/hearts2.svg', '/data/cartoon-owl.svg'];
 
+        fileTabVisible = ko.observable(true);
+        libraryTabVisible = ko.observable(false);
+        drawTabVisible = ko.observable(false);
+
         afterInject() {
             if (this.svgLibrary().length == 0) {
                 for (let src of this.svgLibrarySrcs) {
@@ -88,6 +92,8 @@ module qec {
                 if (isFirstImport)
                     this.editorView.showModifyToolbar();
             });
+
+            this.editorView.modalDrawVisible(false);
         }
 
         select(importedSvg: importedSvg, done: () => void) {
@@ -102,6 +108,29 @@ module qec {
 
         remove(importedSvg: importedSvg) {
             this.importedSvgs.remove(importedSvg);
+        }
+
+        onAddSvgClick() {
+            console.log("hop");
+            this.editorView.modalDrawVisible(true);
+        }
+
+        onFileClick() {
+            this.fileTabVisible(true);
+            this.libraryTabVisible(false);
+            this.drawTabVisible(false);
+        }
+
+        onLibraryClick() {
+            this.fileTabVisible(false);
+            this.libraryTabVisible(true);
+            this.drawTabVisible(false);
+        }
+
+        onDrawClick() {
+            this.fileTabVisible(false);
+            this.libraryTabVisible(false);
+            this.drawTabVisible(true);
         }
     }
 }

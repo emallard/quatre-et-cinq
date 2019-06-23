@@ -2,6 +2,7 @@ module qec {
 
     export class svgLibraryItemView {
         importView: importView = inject(importView);
+        editorView: editorView = inject(editorView);
         src: string;
 
         click() {
@@ -16,7 +17,7 @@ module qec {
                     else {
                         console.error("Erreur pendant le chargement de la page.\n");
                     }
-                    (<any>$('#modalLibrary')).modal('hide');
+                    this.editorView.modalDrawVisible(false);
                 }
             };
             req.send(null);

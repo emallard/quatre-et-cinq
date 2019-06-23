@@ -209,9 +209,7 @@ module qec {
             this.rendererCanvas.id = "hardwareRenderer";
             var context = this.rendererCanvas.getContext('webgl2', { preserveDrawingBuffer: true });
             this.gRenderer = new THREE.WebGLRenderer({ canvas: this.rendererCanvas, context: context });
-
-            this.gRenderer.setSize(this.width, this.height);
-            //gRenderer.setClearColorHex(0x000000, 1);
+            this.gRenderer.setSize(this.width, this.height, true);
 
             this.gRenderer.setClearColor(0xffffff, 1);
             this.gRenderer.setPixelRatio(window.devicePixelRatio);
@@ -263,6 +261,12 @@ module qec {
 			texture.needsUpdate = true;
             this.cubemap = texture;
             */
+        }
+
+        setDegradation(coef: number) {
+            this.gRenderer.setSize(this.width / coef, this.height / coef, false);
+            this.rendererCanvas.style.width = '' + this.width + 'px';
+            this.rendererCanvas.style.height = '' + this.height + 'px';
         }
     }
 

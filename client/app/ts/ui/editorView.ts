@@ -22,10 +22,12 @@ module qec {
         transformObjectView: transformObjectView = inject(transformObjectView);
         drawView: drawView = inject(drawView);
         consoleView: consoleView = inject(consoleView);
+        modalDrawVisible = ko.observable(false);
 
         afterInject() {
             this.editor.setRenderFlag();
             this.updateLoop();
+            this.importView.onAddSvgClick();
         }
 
         initEditor(elt: HTMLElement) {

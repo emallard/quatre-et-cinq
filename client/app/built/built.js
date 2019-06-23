@@ -2817,8 +2817,7 @@ var qec;
             this.rendererCanvas.id = "hardwareRenderer";
             var context = this.rendererCanvas.getContext('webgl2', { preserveDrawingBuffer: true });
             this.gRenderer = new THREE.WebGLRenderer({ canvas: this.rendererCanvas, context: context });
-            this.gRenderer.setSize(this.width, this.height);
-            //gRenderer.setClearColorHex(0x000000, 1);
+            this.gRenderer.setSize(this.width, this.height, true);
             this.gRenderer.setClearColor(0xffffff, 1);
             this.gRenderer.setPixelRatio(window.devicePixelRatio);
             //gRenderer.autoClear = false;
@@ -2858,6 +2857,11 @@ var qec;
             texture.needsUpdate = true;
             this.cubemap = texture;
             */
+        };
+        hardwareRenderer.prototype.setDegradation = function (coef) {
+            this.gRenderer.setSize(this.width / coef, this.height / coef, false);
+            this.rendererCanvas.style.width = '' + this.width + 'px';
+            this.rendererCanvas.style.height = '' + this.height + 'px';
         };
         return hardwareRenderer;
     }());
@@ -7812,26 +7816,24 @@ var qec;
     var drawView = /** @class */ (function () {
         function drawView() {
             this.importView = qec.inject(qec.importView);
+            this.editorView = qec.inject(qec.editorView);
             this.isMouseDown = false;
             this.hasMoved = false;
             this.previousMouseXY = vec2.create();
             this.mouseXY = vec2.create();
         }
         drawView.prototype.init = function (elt) {
-            console.log("drawView init");
             this.canvas = elt; //document.createElement('canvas');
             this.canvas.width = window.innerWidth - 2;
-            this.canvas.height = window.innerHeight - 152;
+            this.canvas.height = window.innerHeight - 252;
             //elt.appendChild(this.canvas);
         };
         drawView.prototype.onMouseDown = function (data, e) {
-            console.log("onMouseDown");
             this.isMouseDown = true;
             this.hasMoved = true;
             this.previousMouseXY[0] = e.offsetX;
             this.previousMouseXY[1] = e.offsetY;
-            this.mouseXY[0] = e.offsetX;
-            this.mouseXY[1] = e.offsetY;
+            vec2.copy(this.mouseXY, this.previousMouseXY);
         };
         drawView.prototype.onMouseUp = function (data, e) {
             this.isMouseDown = false;
@@ -7843,6 +7845,25 @@ var qec;
             this.mouseXY[0] = e.offsetX;
             this.mouseXY[1] = e.offsetY;
         };
+        drawView.prototype.onTouchStart = function (data, e) {
+            this.isMouseDown = true;
+            this.hasMoved = true;
+            this.previousMouseXY[0] = e.touches[0].clientX - this.canvas.offsetLeft;
+            this.previousMouseXY[1] = e.touches[0].clientY - this.canvas.offsetTop;
+            vec2.copy(this.mouseXY, this.previousMouseXY);
+        };
+        drawView.prototype.onTouchMove = function (data, e) {
+            if (!this.isMouseDown)
+                return;
+            this.hasMoved = true;
+            this.mouseXY[0] = e.touches[0].clientX - this.canvas.offsetLeft;
+            ;
+            this.mouseXY[1] = e.touches[0].clientY - this.canvas.offsetTop;
+            ;
+        };
+        drawView.prototype.onTouchEnd = function (data, e) {
+            this.isMouseDown = false;
+        };
         drawView.prototype.updateLoop = function () {
             if (!this.isMouseDown || !this.hasMoved)
                 return;
@@ -7853,7 +7874,7 @@ var qec;
             context.lineTo(this.mouseXY[0], this.mouseXY[1]);
             context.closePath();
             context.strokeStyle = "red";
-            context.lineWidth = 30;
+            context.lineWidth = 60;
             context.stroke();
             context.ellipse(this.previousMouseXY[0], this.previousMouseXY[1], 30, 30, 0, 0, 360);
             context.fillStyle = "red";
@@ -7878,10 +7899,10 @@ var qec;
                 + '\n</g></svg>';
             console.log(text);
             this.importView.readImageAsText(text);
-            $('#modalDraw').modal('hide');
+            this.editorView.modalDrawVisible(false);
         };
         drawView.prototype.cancelClick = function () {
-            $('#modalDraw').modal('hide');
+            this.editorView.modalDrawVisible(false);
         };
         return drawView;
     }());
@@ -7909,6 +7930,7 @@ var qec;
             this.transformObjectView = qec.inject(qec.transformObjectView);
             this.drawView = qec.inject(qec.drawView);
             this.consoleView = qec.inject(qec.consoleView);
+            this.modalDrawVisible = ko.observable(false);
             this.isSelectControllerActive = ko.observable(true);
             this.isMoveControllerActive = ko.observable(false);
             this.isScaleControllerActive = ko.observable(false);
@@ -7938,6 +7960,7 @@ var qec;
         editorView.prototype.afterInject = function () {
             this.editor.setRenderFlag();
             this.updateLoop();
+            this.importView.onAddSvgClick();
         };
         editorView.prototype.initEditor = function (elt) {
             this.editor.init(elt);
@@ -8215,6 +8238,9 @@ var qec;
             this.createSvgLibraryItemView = qec.injectFunc(qec.svgLibraryItemView);
             this.svgLibrary = ko.observableArray();
             this.svgLibrarySrcs = ['/data/hearts.svg', '/data/hearts2.svg', '/data/cartoon-owl.svg'];
+            this.fileTabVisible = ko.observable(true);
+            this.libraryTabVisible = ko.observable(false);
+            this.drawTabVisible = ko.observable(false);
         }
         importView.prototype.afterInject = function () {
             if (this.svgLibrary().length == 0) {
@@ -8278,6 +8304,7 @@ var qec;
                 if (isFirstImport)
                     _this.editorView.showModifyToolbar();
             });
+            this.editorView.modalDrawVisible(false);
         };
         importView.prototype.select = function (importedSvg, done) {
             this.importedSvgs().forEach(function (x) { return x.isActive(false); });
@@ -8289,6 +8316,25 @@ var qec;
         };
         importView.prototype.remove = function (importedSvg) {
             this.importedSvgs.remove(importedSvg);
+        };
+        importView.prototype.onAddSvgClick = function () {
+            console.log("hop");
+            this.editorView.modalDrawVisible(true);
+        };
+        importView.prototype.onFileClick = function () {
+            this.fileTabVisible(true);
+            this.libraryTabVisible(false);
+            this.drawTabVisible(false);
+        };
+        importView.prototype.onLibraryClick = function () {
+            this.fileTabVisible(false);
+            this.libraryTabVisible(true);
+            this.drawTabVisible(false);
+        };
+        importView.prototype.onDrawClick = function () {
+            this.fileTabVisible(false);
+            this.libraryTabVisible(false);
+            this.drawTabVisible(true);
         };
         return importView;
     }());
@@ -9043,6 +9089,7 @@ var qec;
     var svgLibraryItemView = /** @class */ (function () {
         function svgLibraryItemView() {
             this.importView = qec.inject(qec.importView);
+            this.editorView = qec.inject(qec.editorView);
         }
         svgLibraryItemView.prototype.click = function () {
             var _this = this;
@@ -9056,7 +9103,7 @@ var qec;
                     else {
                         console.error("Erreur pendant le chargement de la page.\n");
                     }
-                    $('#modalLibrary').modal('hide');
+                    _this.editorView.modalDrawVisible(false);
                 }
             };
             req.send(null);
