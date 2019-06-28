@@ -92,7 +92,7 @@ module qec {
             this.drawSquare(_4, _3, _7, _8);
 
 
-            var rw = 10;
+            var rw = 40;
 
             this.transformObjectUtils.getMoveHandleScreenCoordinates(this.center, l);
             this.transformObjectUtils.getScaleTopHandleScreenCoordinates(this.centerTop, l);

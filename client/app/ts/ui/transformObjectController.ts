@@ -42,7 +42,6 @@ module qec {
         isScaleModeBottom = false;
 
         set() {
-            //console.log('heightController');
             this.updateFlag = false;
             this.isMouseDown = false;
             this.handlePicked = false;
@@ -96,29 +95,98 @@ module qec {
                     this.editor.setUpdateFlag();
                     this.transformObjectView.draw();
                 }
-                /*
-                else {
-                    mat4.translate(selected.inverseTransform, this.startTransform, this.deltaPos);
-                    mat4.invert(selected.inverseTransform, selected.inverseTransform);
-                    selected.updateInverseTransform();
-                    this.editor.renderer.updateTransform(selected.sd);
-
-                    vec4.copy(this.newBounds, this.startBounds)
-                    this.newBounds[3] += (-this.deltaPos[2]);
-                    selected.scaleProfilePoints(this.newBounds);
-                    this.editor.updateSignedDistance(selected);
-                    this.editor.renderer.updateFloatTextures(selected.sd);
-
-                    this.editor.setRenderFlag();
-                }*/
-
-                /*
-                if (this.isScaleMode) {
-                    this.profileView.refresh();
-                }*/
             }
         }
 
+
+
+        start(x: number, y: number, dx: number, dy: number) {
+            //console.log("start " + x + "," + y);
+            var detectionDistance = 20;
+
+            this.handlePicked = false;
+            var l = this.editor.workspace.getSelectedObject();
+            if (l != null) {
+
+                this.transformObjectUtils.getMoveHandleScreenCoordinates(this.tmpVec3, l);
+                if (Math.max(Math.abs(this.tmpVec3[0] - (x - dx)), Math.abs(this.tmpVec3[1] - (y - dy))) < detectionDistance) {
+                    //console.log("in !");
+                    this.handlePicked = true;
+                    //this.transformObjectView.highlightCenter(true);
+
+                    this.editor.getCamera().getRay(x, y, this.ro, this.rd);
+                    this.isMouseDown = true;
+                    this.isScaleMode = false;
+
+                    // Initial state
+                    this.startX = x;
+                    this.startY = y;
+
+                    l.getAbsoluteBottomCenter(this.startPos);
+                    mat4.invert(this.startTransform, l.inverseTransform);
+                }
+
+                this.transformObjectUtils.getScaleTopHandleScreenCoordinates(this.tmpVec3, l);
+
+                if (Math.max(Math.abs(this.tmpVec3[0] - (x - dx)), Math.abs(this.tmpVec3[1] - (y - dy))) < detectionDistance) {
+                    this.handlePicked = true;
+
+                    this.editor.getCamera().getRay(x, y, this.ro, this.rd);
+                    this.isMouseDown = true;
+                    this.isScaleMode = true;
+                    this.isScaleModeBottom = false;
+
+                    // Initial state
+                    this.startX = x;
+                    this.startY = y;
+
+                    vec4.copy(this.startBounds, l.profileBounds);
+
+                    l.getAbsoluteTopCenter(this.startPos);
+                    mat4.invert(this.startTransform, l.inverseTransform);
+                }
+                /*
+                this.transformObjectUtils.getScaleBottomHandleScreenCoordinates(this.tmpVec3, l);
+ 
+                if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
+                    this.handlePicked = true;
+ 
+                    this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+                    this.isMouseDown = true;
+                    this.isScaleMode = true;
+                    this.isScaleModeBottom = true;
+ 
+                    // Initial state
+                    this.startX = (<MouseEvent>e).offsetX;
+                    this.startY = (<MouseEvent>e).offsetY;
+ 
+                    l.getAbsoluteBottomCenter(this.startPos);
+                    mat4.invert(this.startTransform, l.inverseTransform);
+                }
+                */
+            }
+            if (!this.handlePicked) {
+                //var picked = this.pick(e.offsetX, e.offsetY);
+                //this.editorView.setSelectedIndex(picked);
+
+            }
+        }
+
+        onMouseDown(e: MouseEvent) {
+            //console.log("mousedown");
+            //this.start(e.offsetX, e.offsetY, 0, 0);
+        }
+        onMouseMove(e: MouseEvent) { }
+        onMouseUp(e: MouseEvent) { }
+        /*
+        onMouseDown(e: MouseEvent) {
+
+            this.isMouseDown = false;
+            if (e.button != 0)
+                return;
+
+            this.start(e.offsetX, e.offsetY);
+        }
         onMouseMove(e: MouseEvent) {
 
             if (this.isMouseDown) {
@@ -127,105 +195,41 @@ module qec {
                 this.updateFlag = true;
             }
         }
-
-        onMouseDown(e: MouseEvent) {
-
-            this.isMouseDown = false;
-            if (e.button != 0)
-                return;
-
-            this.handlePicked = false;
-            var l = this.editor.workspace.getSelectedObject();
-            if (l != null) {
-
-                this.transformObjectUtils.getMoveHandleScreenCoordinates(this.tmpVec3, l);
-                if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
-                    //console.log("in !");
-                    this.handlePicked = true;
-                    //this.transformObjectView.highlightCenter(true);
-
-                    this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
-                    this.isMouseDown = true;
-                    this.isScaleMode = false;
-
-                    // Initial state
-                    this.startX = (<MouseEvent>e).offsetX;
-                    this.startY = (<MouseEvent>e).offsetY;
-
-                    l.getAbsoluteBottomCenter(this.startPos);
-                    mat4.invert(this.startTransform, l.inverseTransform);
-                }
-
-                this.transformObjectUtils.getScaleTopHandleScreenCoordinates(this.tmpVec3, l);
-
-                if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
-                    this.handlePicked = true;
-
-                    this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
-                    this.isMouseDown = true;
-                    this.isScaleMode = true;
-                    this.isScaleModeBottom = false;
-
-                    // Initial state
-                    this.startX = (<MouseEvent>e).offsetX;
-                    this.startY = (<MouseEvent>e).offsetY;
-
-                    vec4.copy(this.startBounds, l.profileBounds);
-
-                    l.getAbsoluteTopCenter(this.startPos);
-                    mat4.invert(this.startTransform, l.inverseTransform);
-                }
-
-                /*
-                this.transformObjectUtils.getScaleBottomHandleScreenCoordinates(this.tmpVec3, l);
-
-                if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
-                    this.handlePicked = true;
-
-                    this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
-                    this.isMouseDown = true;
-                    this.isScaleMode = true;
-                    this.isScaleModeBottom = true;
-
-                    // Initial state
-                    this.startX = (<MouseEvent>e).offsetX;
-                    this.startY = (<MouseEvent>e).offsetY;
-
-                    l.getAbsoluteBottomCenter(this.startPos);
-                    mat4.invert(this.startTransform, l.inverseTransform);
-                }
-                */
-            }
-
-            if (!this.handlePicked) {
-                var picked = this.pick(e);
-                this.editorView.setSelectedIndex(picked);
-
-            }
-        }
-
         onMouseUp(e: MouseEvent) {
             this.isMouseDown = false;
-        }
+        }*/
 
         onMouseWheel(e: WheelEvent) { }
         onTouchStart(e: TouchEvent) { }
         onTouchMove(e: TouchEvent) { }
         onTouchEnd(e: TouchEvent) { }
-        onPanStart(e: HammerInput) { }
-        onPanMove(e: HammerInput) { }
-        onPanEnd(e: HammerInput) { }
+        onPanStart(e: HammerInput) {
+            this.start(e.center.x, e.center.y, e.deltaX, e.deltaY);
+        }
+        onPanMove(e: HammerInput) {
+            if (this.isMouseDown) {
+                this.mouseX = e.center.x;
+                this.mouseY = e.center.y;
+                this.updateFlag = true;
+            }
+        }
+        onPanEnd(e: HammerInput) {
+            this.isMouseDown = false;
+        }
         onPan2Start(e: HammerInput) { }
         onPan2Move(e: HammerInput) { }
         onPan2End(e: HammerInput) { }
-        onTap(e: HammerInput) { }
+        onTap(e: HammerInput) {
+            var picked = this.pick(e.center.x, e.center.y);
+            this.editorView.setSelectedIndex(picked);
+        }
 
-        pick(e: MouseEvent): number {
+        pick(x: number, y: number): number {
             var minDist = 666;
             var iMin = -1;
 
             this.isMouseDown = false;
-            this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+            this.editor.getCamera().getRay(x, y, this.ro, this.rd);
 
             for (var i = 0; i < this.editor.workspace.editorObjects.length; ++i) {
                 this.collide.collide(this.editor.workspace.editorObjects[i].sd, this.ro, this.rd);

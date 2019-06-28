@@ -230,6 +230,8 @@ module qec {
         }*/
 
         onPanStart(e: HammerInput) {
+            this.hasMouseMoved = false;
+
             this.isRightClick = false;
             this.isLeftClick = true;
             this.isMiddleClick = false;

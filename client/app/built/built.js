@@ -7441,6 +7441,7 @@ var qec;
             this.isMouseDown = false;
         }*/
         cameraArcballController.prototype.onPanStart = function (e) {
+            this.hasMouseMoved = false;
             this.isRightClick = false;
             this.isLeftClick = true;
             this.isMiddleClick = false;
@@ -7919,9 +7920,7 @@ var qec;
             this.cameraTransforms = qec.inject(qec.cameraTransforms);
             this.controllerManager = qec.inject(qec.controllerManager);
             this.cameraController = qec.inject(qec.cameraArcballController);
-            this.selectController = qec.inject(qec.selectController);
-            this.heightController = qec.inject(qec.heightController);
-            this.transformObjectController = qec.inject(qec.transformObjectController);
+            this.transformObjectAndCameraController = qec.inject(qec.transformObjectAndCameraController);
             this.importView = qec.inject(qec.importView);
             this.profileView = qec.inject(qec.profileView);
             this.materialView = qec.inject(qec.materialView);
@@ -7931,10 +7930,6 @@ var qec;
             this.drawView = qec.inject(qec.drawView);
             this.consoleView = qec.inject(qec.consoleView);
             this.modalDrawVisible = ko.observable(false);
-            this.isSelectControllerActive = ko.observable(true);
-            this.isMoveControllerActive = ko.observable(false);
-            this.isScaleControllerActive = ko.observable(false);
-            this.isScaleBottomControllerActive = ko.observable(false);
             this.selectedName = ko.observable();
             // toolbars
             this.importToolbarVisible = ko.observable(false);
@@ -7980,22 +7975,24 @@ var qec;
         editorView.prototype.onTouchStart = function (data, e) { this.controllerManager.onTouchStart(e); this.consoleView.log("touchStart"); };
         editorView.prototype.onTouchMove = function (data, e) { this.controllerManager.onTouchMove(e); };
         editorView.prototype.onTouchEnd = function (data, e) { this.controllerManager.onTouchEnd(e); };
-        editorView.prototype.onPanStart = function (e) { this.controllerManager.onPanStart(e); this.consoleView.log("panStart"); };
-        editorView.prototype.onPanMove = function (e) { this.controllerManager.onPanMove(e); }; //this.consoleView.log("panMove") }
-        editorView.prototype.onPanEnd = function (e) { this.controllerManager.onPanEnd(e); }; // this.consoleView.log("panEnd") }
-        editorView.prototype.onPan2Start = function (e) { this.controllerManager.onPan2Start(e); this.consoleView.log("pan2Start " + e.pointers.length); };
-        editorView.prototype.onPan2Move = function (e) { this.controllerManager.onPan2Move(e); }; // this.consoleView.log("pan2Move " + e.pointers.length) }
-        editorView.prototype.onPan2End = function (e) { this.controllerManager.onPan2End(e); }; // this.consoleView.log("pan2End " + e.pointers.length) }
-        editorView.prototype.onTap = function (e) { }; // this.controllerManager.onTap(e); this.consoleView.log("tap_ " + (<any>e).tapCount); }
+        editorView.prototype.relativeCoordinates = function (e) {
+            if (this.rect == null)
+                this.rect = this.editor.renderer.getCanvas().getBoundingClientRect();
+            e.center = {
+                x: e.center.x - this.rect.left,
+                y: e.center.y - this.rect.top
+            };
+        };
+        editorView.prototype.onPanStart = function (e) { this.relativeCoordinates(e); this.controllerManager.onPanStart(e); }; // this.consoleView.log("panStart"); }
+        editorView.prototype.onPanMove = function (e) { this.relativeCoordinates(e); this.controllerManager.onPanMove(e); }; //this.consoleView.log("panMove") }
+        editorView.prototype.onPanEnd = function (e) { this.relativeCoordinates(e); this.controllerManager.onPanEnd(e); }; // this.consoleView.log("panEnd") }
+        editorView.prototype.onPan2Start = function (e) { this.relativeCoordinates(e); this.controllerManager.onPan2Start(e); }; // this.consoleView.log("pan2Start " + e.pointers.length); }
+        editorView.prototype.onPan2Move = function (e) { this.relativeCoordinates(e); this.controllerManager.onPan2Move(e); }; // this.consoleView.log("pan2Move " + e.pointers.length) }
+        editorView.prototype.onPan2End = function (e) { this.relativeCoordinates(e); this.controllerManager.onPan2End(e); }; // this.consoleView.log("pan2End " + e.pointers.length) }
+        editorView.prototype.onTap = function (e) { this.relativeCoordinates(e); this.controllerManager.onTap(e); }; // this.controllerManager.onTap(e); this.consoleView.log("tap_ " + (<any>e).tapCount); }
         editorView.prototype.onPinchStart = function (e) { /*this.controllerManager.onPanStart(e);*/ this.consoleView.log("pinchStart"); };
         editorView.prototype.onPinchMove = function (e) { /*this.controllerManager.onPanStart(e);*/ this.consoleView.log("pinchMove"); };
         editorView.prototype.onPinchEnd = function (e) { /*this.controllerManager.onPanStart(e);*/ this.consoleView.log("pinchEnd"); };
-        editorView.prototype.setSelectController = function () {
-            this.controllerManager.setController(this.transformObjectController);
-            this.setActiveController(this.isSelectControllerActive);
-            this.transformObjectViewVisible(true);
-            this.profileViewVisible(false);
-        };
         editorView.prototype.toggleProfileView = function () {
             if (this.profileViewVisible()) {
                 this.profileViewVisible(false);
@@ -8007,13 +8004,6 @@ var qec;
         };
         editorView.prototype.toggleProfileDebug = function () {
             this.profileView.toggleDebug();
-        };
-        editorView.prototype.setActiveController = function (c) {
-            this.isSelectControllerActive(false);
-            this.isMoveControllerActive(false);
-            this.isScaleControllerActive(false);
-            this.isScaleBottomControllerActive(false);
-            c(true);
         };
         editorView.prototype.onObjectListChange = function () {
             this.setSelectedIndex(this.editor.workspace.getObjectIndex(this.selectedName()));
@@ -8039,8 +8029,9 @@ var qec;
         editorView.prototype.showModifyToolbar = function () {
             if (!this.modifyToolbarVisible()) {
                 this.setToolbar(this.modifyToolbarVisible);
+                this.controllerManager.setController(this.transformObjectAndCameraController);
+                this.controllerManager.camActive = false;
                 this.transformObjectViewVisible(true);
-                this.setSelectController();
                 //console.log("showModifyToolbar : " + this.editor.workspace.editorObjects.length);
                 var editorNamesArray = ["Please Select"];
                 for (var _i = 0, _a = this.editor.workspace.editorObjects.map(function (x) { return x.name; }); _i < _a.length; _i++) {
@@ -8057,6 +8048,8 @@ var qec;
         editorView.prototype.showPhotoToolbar = function () { this.setToolbar(this.photoToolbarVisible); };
         editorView.prototype.showPrintToolbar = function () { this.setToolbar(this.printToolbarVisible); };
         editorView.prototype.setToolbar = function (selected) {
+            this.controllerManager.setController(null);
+            this.controllerManager.camActive = true;
             this.transformObjectViewVisible(false);
             this.profileViewVisible(false);
             this.controllerManager.setController(null);
@@ -9145,6 +9138,84 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var transformObjectAndCameraController = /** @class */ (function () {
+        function transformObjectAndCameraController() {
+            this.transformObjectController = qec.inject(qec.transformObjectController);
+            this.cameraArcballController = qec.inject(qec.cameraArcballController);
+        }
+        transformObjectAndCameraController.prototype.set = function () {
+            this.transformObjectController.set();
+            this.cameraArcballController.set();
+        };
+        transformObjectAndCameraController.prototype.unset = function () {
+            this.transformObjectController.unset();
+            this.cameraArcballController.unset();
+        };
+        transformObjectAndCameraController.prototype.onMouseMove = function (e) {
+            this.transformObjectController.onMouseMove(e);
+            this.cameraArcballController.onMouseMove(e);
+        };
+        transformObjectAndCameraController.prototype.onMouseDown = function (e) {
+            this.transformObjectController.onMouseDown(e);
+            this.cameraArcballController.onMouseDown(e);
+        };
+        transformObjectAndCameraController.prototype.onMouseUp = function (e) {
+            this.transformObjectController.onMouseUp(e);
+            this.cameraArcballController.onMouseUp(e);
+        };
+        transformObjectAndCameraController.prototype.onMouseWheel = function (e) {
+            this.transformObjectController.onMouseWheel(e);
+            this.cameraArcballController.onMouseWheel(e);
+        };
+        transformObjectAndCameraController.prototype.onTouchStart = function (e) {
+            this.transformObjectController.onTouchStart(e);
+            this.cameraArcballController.onTouchStart(e);
+        };
+        transformObjectAndCameraController.prototype.onTouchMove = function (e) {
+            this.transformObjectController.onTouchMove(e);
+            this.cameraArcballController.onTouchMove(e);
+        };
+        transformObjectAndCameraController.prototype.onTouchEnd = function (e) {
+            this.transformObjectController.onTouchEnd(e);
+            this.cameraArcballController.onTouchEnd(e);
+        };
+        transformObjectAndCameraController.prototype.onPanStart = function (e) {
+            this.transformObjectController.onPanStart(e);
+            this.cameraArcballController.onPanStart(e);
+        };
+        transformObjectAndCameraController.prototype.onPanMove = function (e) {
+            this.transformObjectController.onPanMove(e);
+            this.cameraArcballController.onPanMove(e);
+        };
+        transformObjectAndCameraController.prototype.onPanEnd = function (e) {
+            this.transformObjectController.onPanEnd(e);
+            this.cameraArcballController.onPanEnd(e);
+        };
+        transformObjectAndCameraController.prototype.onPan2Start = function (e) {
+            this.cameraArcballController.onPan2Start(e);
+        };
+        transformObjectAndCameraController.prototype.onPan2Move = function (e) {
+            this.cameraArcballController.onPan2Move(e);
+        };
+        transformObjectAndCameraController.prototype.onPan2End = function (e) {
+            this.cameraArcballController.onPan2End(e);
+        };
+        transformObjectAndCameraController.prototype.onTap = function (e) {
+            this.transformObjectController.onTap(e);
+            this.cameraArcballController.onTap(e);
+        };
+        transformObjectAndCameraController.prototype.updateLoop = function () {
+            if (this.transformObjectController.handlePicked)
+                this.transformObjectController.updateLoop();
+            else
+                this.cameraArcballController.updateLoop();
+        };
+        return transformObjectAndCameraController;
+    }());
+    qec.transformObjectAndCameraController = transformObjectAndCameraController;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var transformObjectController = /** @class */ (function () {
         function transformObjectController() {
             this.editor = qec.inject(qec.editor);
@@ -9221,113 +9292,123 @@ var qec;
                     this.editor.setUpdateFlag();
                     this.transformObjectView.draw();
                 }
-                /*
-                else {
-                    mat4.translate(selected.inverseTransform, this.startTransform, this.deltaPos);
-                    mat4.invert(selected.inverseTransform, selected.inverseTransform);
-                    selected.updateInverseTransform();
-                    this.editor.renderer.updateTransform(selected.sd);
-
-                    vec4.copy(this.newBounds, this.startBounds)
-                    this.newBounds[3] += (-this.deltaPos[2]);
-                    selected.scaleProfilePoints(this.newBounds);
-                    this.editor.updateSignedDistance(selected);
-                    this.editor.renderer.updateFloatTextures(selected.sd);
-
-                    this.editor.setRenderFlag();
-                }*/
-                /*
-                if (this.isScaleMode) {
-                    this.profileView.refresh();
-                }*/
             }
         };
-        transformObjectController.prototype.onMouseMove = function (e) {
-            if (this.isMouseDown) {
-                this.mouseX = e.offsetX;
-                this.mouseY = e.offsetY;
-                this.updateFlag = true;
-            }
-        };
-        transformObjectController.prototype.onMouseDown = function (e) {
-            this.isMouseDown = false;
-            if (e.button != 0)
-                return;
+        transformObjectController.prototype.start = function (x, y, dx, dy) {
+            //console.log("start " + x + "," + y);
+            var detectionDistance = 20;
             this.handlePicked = false;
             var l = this.editor.workspace.getSelectedObject();
             if (l != null) {
                 this.transformObjectUtils.getMoveHandleScreenCoordinates(this.tmpVec3, l);
-                if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
+                if (Math.max(Math.abs(this.tmpVec3[0] - (x - dx)), Math.abs(this.tmpVec3[1] - (y - dy))) < detectionDistance) {
                     //console.log("in !");
                     this.handlePicked = true;
                     //this.transformObjectView.highlightCenter(true);
-                    this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+                    this.editor.getCamera().getRay(x, y, this.ro, this.rd);
                     this.isMouseDown = true;
                     this.isScaleMode = false;
                     // Initial state
-                    this.startX = e.offsetX;
-                    this.startY = e.offsetY;
+                    this.startX = x;
+                    this.startY = y;
                     l.getAbsoluteBottomCenter(this.startPos);
                     mat4.invert(this.startTransform, l.inverseTransform);
                 }
                 this.transformObjectUtils.getScaleTopHandleScreenCoordinates(this.tmpVec3, l);
-                if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
+                if (Math.max(Math.abs(this.tmpVec3[0] - (x - dx)), Math.abs(this.tmpVec3[1] - (y - dy))) < detectionDistance) {
                     this.handlePicked = true;
-                    this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+                    this.editor.getCamera().getRay(x, y, this.ro, this.rd);
                     this.isMouseDown = true;
                     this.isScaleMode = true;
                     this.isScaleModeBottom = false;
                     // Initial state
-                    this.startX = e.offsetX;
-                    this.startY = e.offsetY;
+                    this.startX = x;
+                    this.startY = y;
                     vec4.copy(this.startBounds, l.profileBounds);
                     l.getAbsoluteTopCenter(this.startPos);
                     mat4.invert(this.startTransform, l.inverseTransform);
                 }
                 /*
                 this.transformObjectUtils.getScaleBottomHandleScreenCoordinates(this.tmpVec3, l);
-
+ 
                 if (Math.max(Math.abs(this.tmpVec3[0] - e.offsetX), Math.abs(this.tmpVec3[1] - e.offsetY)) < 5) {
                     this.handlePicked = true;
-
+ 
                     this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
                     this.isMouseDown = true;
                     this.isScaleMode = true;
                     this.isScaleModeBottom = true;
-
+ 
                     // Initial state
                     this.startX = (<MouseEvent>e).offsetX;
                     this.startY = (<MouseEvent>e).offsetY;
-
+ 
                     l.getAbsoluteBottomCenter(this.startPos);
                     mat4.invert(this.startTransform, l.inverseTransform);
                 }
                 */
             }
             if (!this.handlePicked) {
-                var picked = this.pick(e);
-                this.editorView.setSelectedIndex(picked);
+                //var picked = this.pick(e.offsetX, e.offsetY);
+                //this.editorView.setSelectedIndex(picked);
             }
         };
-        transformObjectController.prototype.onMouseUp = function (e) {
-            this.isMouseDown = false;
+        transformObjectController.prototype.onMouseDown = function (e) {
+            //console.log("mousedown");
+            //this.start(e.offsetX, e.offsetY, 0, 0);
         };
+        transformObjectController.prototype.onMouseMove = function (e) { };
+        transformObjectController.prototype.onMouseUp = function (e) { };
+        /*
+        onMouseDown(e: MouseEvent) {
+
+            this.isMouseDown = false;
+            if (e.button != 0)
+                return;
+
+            this.start(e.offsetX, e.offsetY);
+        }
+        onMouseMove(e: MouseEvent) {
+
+            if (this.isMouseDown) {
+                this.mouseX = (<MouseEvent>e).offsetX;
+                this.mouseY = (<MouseEvent>e).offsetY;
+                this.updateFlag = true;
+            }
+        }
+        onMouseUp(e: MouseEvent) {
+            this.isMouseDown = false;
+        }*/
         transformObjectController.prototype.onMouseWheel = function (e) { };
         transformObjectController.prototype.onTouchStart = function (e) { };
         transformObjectController.prototype.onTouchMove = function (e) { };
         transformObjectController.prototype.onTouchEnd = function (e) { };
-        transformObjectController.prototype.onPanStart = function (e) { };
-        transformObjectController.prototype.onPanMove = function (e) { };
-        transformObjectController.prototype.onPanEnd = function (e) { };
+        transformObjectController.prototype.onPanStart = function (e) {
+            console.log(e);
+            this.start(e.center.x, e.center.y, e.deltaX, e.deltaY);
+        };
+        transformObjectController.prototype.onPanMove = function (e) {
+            if (this.isMouseDown) {
+                this.mouseX = e.center.x;
+                this.mouseY = e.center.y;
+                this.updateFlag = true;
+            }
+        };
+        transformObjectController.prototype.onPanEnd = function (e) {
+            this.isMouseDown = false;
+        };
         transformObjectController.prototype.onPan2Start = function (e) { };
         transformObjectController.prototype.onPan2Move = function (e) { };
         transformObjectController.prototype.onPan2End = function (e) { };
-        transformObjectController.prototype.onTap = function (e) { };
-        transformObjectController.prototype.pick = function (e) {
+        transformObjectController.prototype.onTap = function (e) {
+            var picked = this.pick(e.center.x, e.center.y);
+            this.editorView.setSelectedIndex(picked);
+        };
+        transformObjectController.prototype.pick = function (x, y) {
             var minDist = 666;
             var iMin = -1;
             this.isMouseDown = false;
-            this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+            this.editor.getCamera().getRay(x, y, this.ro, this.rd);
             for (var i = 0; i < this.editor.workspace.editorObjects.length; ++i) {
                 this.collide.collide(this.editor.workspace.editorObjects[i].sd, this.ro, this.rd);
                 //console.log(this.collide.pos);
@@ -9435,7 +9516,7 @@ var qec;
             this.drawSquare(_2, _6, _7, _3);
             this.drawSquare(_1, _5, _6, _2);
             this.drawSquare(_4, _3, _7, _8);
-            var rw = 10;
+            var rw = 40;
             this.transformObjectUtils.getMoveHandleScreenCoordinates(this.center, l);
             this.transformObjectUtils.getScaleTopHandleScreenCoordinates(this.centerTop, l);
             ctx.strokeStyle = "rgba(0,255,0,1)";

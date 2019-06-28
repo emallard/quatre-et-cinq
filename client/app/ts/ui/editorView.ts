@@ -11,9 +11,7 @@ module qec {
         cameraTransforms: cameraTransforms = inject(cameraTransforms);
         controllerManager: controllerManager = inject(controllerManager);
         cameraController: cameraArcballController = inject(cameraArcballController);
-        selectController: selectController = inject(selectController);
-        heightController: heightController = inject(heightController);
-        transformObjectController: transformObjectController = inject(transformObjectController);
+        transformObjectAndCameraController: transformObjectAndCameraController = inject(transformObjectAndCameraController);
         importView: importView = inject(importView);
         profileView: profileView = inject(profileView);
         materialView: materialView = inject(materialView);
@@ -55,27 +53,30 @@ module qec {
         onTouchMove(data: any, e: Event) { this.controllerManager.onTouchMove(e); }
         onTouchEnd(data: any, e: Event) { this.controllerManager.onTouchEnd(e); }
 
-        onPanStart(e: HammerInput) { this.controllerManager.onPanStart(e); this.consoleView.log("panStart"); }
-        onPanMove(e: HammerInput) { this.controllerManager.onPanMove(e); }//this.consoleView.log("panMove") }
-        onPanEnd(e: HammerInput) { this.controllerManager.onPanEnd(e); }// this.consoleView.log("panEnd") }
+        rect: ClientRect | DOMRect;
+        private relativeCoordinates(e: HammerInput) {
+            if (this.rect == null)
+                this.rect = this.editor.renderer.getCanvas().getBoundingClientRect();
+            e.center = {
+                x: e.center.x - this.rect.left,
+                y: e.center.y - this.rect.top
+            };
+        }
+        onPanStart(e: HammerInput) { this.relativeCoordinates(e); this.controllerManager.onPanStart(e); }// this.consoleView.log("panStart"); }
+        onPanMove(e: HammerInput) { this.relativeCoordinates(e); this.controllerManager.onPanMove(e); }//this.consoleView.log("panMove") }
+        onPanEnd(e: HammerInput) { this.relativeCoordinates(e); this.controllerManager.onPanEnd(e); }// this.consoleView.log("panEnd") }
 
 
-        onPan2Start(e: HammerInput) { this.controllerManager.onPan2Start(e); this.consoleView.log("pan2Start " + e.pointers.length); }
-        onPan2Move(e: HammerInput) { this.controllerManager.onPan2Move(e); }// this.consoleView.log("pan2Move " + e.pointers.length) }
-        onPan2End(e: HammerInput) { this.controllerManager.onPan2End(e); }// this.consoleView.log("pan2End " + e.pointers.length) }
+        onPan2Start(e: HammerInput) { this.relativeCoordinates(e); this.controllerManager.onPan2Start(e); }// this.consoleView.log("pan2Start " + e.pointers.length); }
+        onPan2Move(e: HammerInput) { this.relativeCoordinates(e); this.controllerManager.onPan2Move(e); }// this.consoleView.log("pan2Move " + e.pointers.length) }
+        onPan2End(e: HammerInput) { this.relativeCoordinates(e); this.controllerManager.onPan2End(e); }// this.consoleView.log("pan2End " + e.pointers.length) }
 
-        onTap(e: HammerInput) { }// this.controllerManager.onTap(e); this.consoleView.log("tap_ " + (<any>e).tapCount); }
+        onTap(e: HammerInput) { this.relativeCoordinates(e); this.controllerManager.onTap(e); }// this.controllerManager.onTap(e); this.consoleView.log("tap_ " + (<any>e).tapCount); }
 
         onPinchStart(e: HammerInput) { /*this.controllerManager.onPanStart(e);*/ this.consoleView.log("pinchStart"); }
         onPinchMove(e: HammerInput) { /*this.controllerManager.onPanStart(e);*/ this.consoleView.log("pinchMove"); }
         onPinchEnd(e: HammerInput) { /*this.controllerManager.onPanStart(e);*/ this.consoleView.log("pinchEnd"); }
 
-        setSelectController() {
-            this.controllerManager.setController(this.transformObjectController);
-            this.setActiveController(this.isSelectControllerActive);
-            this.transformObjectViewVisible(true);
-            this.profileViewVisible(false);
-        }
 
         toggleProfileView() {
             if (this.profileViewVisible()) {
@@ -89,19 +90,6 @@ module qec {
 
         toggleProfileDebug() {
             this.profileView.toggleDebug();
-        }
-
-        isSelectControllerActive = ko.observable(true);
-        isMoveControllerActive = ko.observable(false);
-        isScaleControllerActive = ko.observable(false);
-        isScaleBottomControllerActive = ko.observable(false);
-
-        setActiveController(c: KnockoutObservable<boolean>) {
-            this.isSelectControllerActive(false);
-            this.isMoveControllerActive(false);
-            this.isScaleControllerActive(false);
-            this.isScaleBottomControllerActive(false);
-            c(true);
         }
 
         selectedName = ko.observable<string>();
@@ -151,8 +139,10 @@ module qec {
         showModifyToolbar() {
             if (!this.modifyToolbarVisible()) {
                 this.setToolbar(this.modifyToolbarVisible);
+                this.controllerManager.setController(this.transformObjectAndCameraController);
+                this.controllerManager.camActive = false;
                 this.transformObjectViewVisible(true);
-                this.setSelectController();
+
                 //console.log("showModifyToolbar : " + this.editor.workspace.editorObjects.length);
                 var editorNamesArray = ["Please Select"];
                 for (let n of this.editor.workspace.editorObjects.map(x => x.name))
@@ -170,6 +160,9 @@ module qec {
         showPrintToolbar() { this.setToolbar(this.printToolbarVisible); }
 
         setToolbar(selected: KnockoutObservable<boolean>) {
+            this.controllerManager.setController(null);
+            this.controllerManager.camActive = true;
+
             this.transformObjectViewVisible(false);
             this.profileViewVisible(false);
             this.controllerManager.setController(null);
