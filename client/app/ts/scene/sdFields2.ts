@@ -7,8 +7,11 @@ module qec {
         type:string = sdFields2DTO.TYPE;
         topImage:scImageDTO;
         topBounds:number[];
-        //profileImage:scImageDTO;
-        thickness:number;
+        
+        profileOrigin: number[];
+        profileAxis: number[];
+        profileImage:scImageDTO;
+        profileBounds: number[];
 
         material: materialDTO;
         transform:Float32Array;
@@ -24,13 +27,14 @@ module qec {
         topTexture:floatTexture;
         topSpriteBounds:Float32Array;
         topBounds:Float32Array;
-        /*
+        
         profileTexture:floatTexture;
         profileSpriteBounds:Float32Array;
         profileBounds:Float32Array;
-        */
-        thickness:number;
-
+        
+        profileOrigin:Float32Array;
+        profileAxis:Float32Array;
+        
         private sdBox:sdBox;
         private debug:boolean;
 
@@ -41,24 +45,34 @@ module qec {
         {
             this.topBounds = new Float32Array(dto.topBounds);
             //this.profileBounds = new Float32Array(dto.profileBounds);
-            this.thickness = dto.thickness;
+            //this.thickness = dto.thickness;
+            this.profileOrigin = new Float32Array(dto.profileOrigin);
+            this.profileAxis = new Float32Array(dto.profileAxis);
+            vec2.normalize(this.profileAxis, this.profileAxis);
+            this.profileBounds = new Float32Array(dto.profileBounds);
 
             // crée la float texture            
             var topImage = dto.topImage['__instance'].image;
-            //var profileImage = dto.profileImage['__instance'].image;
+            var profileImage = dto.profileImage['__instance'].image;
 /*
             console.log(JSON.stringify(dto.topImage));
             console.log(profileImage);
 */
             var margin = 0.05;
             this.topDfCanvas.drawUserCanvasForTop(topImage, this.topBounds, margin);
-            //this.profileDfCanvas.drawUserCanvasForTop(profileImage, this.profileBounds, margin);
+            this.profileDfCanvas.drawUserCanvasForTop(profileImage, this.profileBounds, margin);
 
             
-            var debugCanvas = document.createElement('canvas');
-            document.body.appendChild(debugCanvas);
-            this.topDfCanvas.debugInfoInExistingCanvas(debugCanvas);
-            
+            {
+                let debugCanvas = document.createElement('canvas');
+                document.body.appendChild(debugCanvas);
+                this.topDfCanvas.debugInfoInExistingCanvas(debugCanvas);
+            }
+            {
+                let debugCanvas = document.createElement('canvas');
+                document.body.appendChild(debugCanvas);
+                this.profileDfCanvas.debugInfoInExistingCanvas(debugCanvas);
+            }
 
             this.topDfCanvas.update();
             //this.profileDfCanvas.update();
@@ -101,7 +115,7 @@ module qec {
             this.sdBox.setHalfSize(
                 0.5*(this.topBounds[2] - this.topBounds[0]), 
                 0.5*(this.topBounds[3] - this.topBounds[1]), 
-                this.thickness);
+                this.profileBounds[3]);
             mat4.identity(this.sdBox.inverseTransform);
             /*
             if (boundingHalfSize == null)
@@ -162,7 +176,7 @@ module qec {
             if (d3 > d) d = d3;
             */
             
-            var dToUpperPlane = p[2] - this.thickness;
+            var dToUpperPlane = p[2] - this.profileBounds[3];
             var dToLowerPlane = 0 - p[2];
             if (dToUpperPlane > d) d = dToUpperPlane;
             if (dToLowerPlane > d) d = dToLowerPlane;
