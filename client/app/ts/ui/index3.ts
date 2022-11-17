@@ -51,7 +51,7 @@ module qec {
 
                     let lightDto = new directionalLightDTO();
                     lightDto.direction= [1, 1, -1];
-                    lightDto.intensity = 0.5;
+                    lightDto.intensity = 1;
 
                     let light = new directionalLight();
                     light.createFrom(lightDto);

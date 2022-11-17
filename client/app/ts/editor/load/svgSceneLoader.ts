@@ -1,6 +1,8 @@
 module qec {
     export class svgSceneLoader {
 
+        debug:boolean = false;
+
         loadUrl(src:string, done: (sc:scSceneDTO) => void) {
             var req = new XMLHttpRequest();
             req.open('GET', src, true);
@@ -104,6 +106,8 @@ module qec {
                 let halfHeight = (realBounds[3]-realBounds[1])/2;
                 sdFields.topBounds = [-halfWidth, -halfHeight, halfWidth, halfHeight];
                 sdFields.transform = mat4.create();
+
+                cy = this.toLeftHanded(cy, x.ownerSVGElement.viewBox.baseVal.height);
                 mat4.translate(sdFields.transform , sdFields.transform, vec3.fromValues(cx, cy, 0));
 
                 // material
@@ -165,10 +169,12 @@ module qec {
             var widthAndHeight = 'width="' + width + '" height="' + height + '"';
             var viewbox = 'viewbox="0 0 ' + width + ' ' + height + '"';
 
-            var path ='M ' + points[0] + ' ' + points[1] + ' ';
+            let pointy = height - points[1];
+            var path ='M ' + points[0] + ' ' + pointy + ' ';
             for (let i=0; i< points.length; i+=2)
             {
-                path = path + 'L ' + points[i] + ' ' + points[i+1] + ' ';
+                pointy = height - points[i+1];
+                path = path + 'L ' + points[i] + ' ' + pointy + ' ';
             }
             path = path + 'Z';
 
@@ -184,9 +190,12 @@ module qec {
                 + '/>'
                 + '\n</g></svg>';
             
-            let doc = new DOMParser().parseFromString(text, "image/svg+xml");
-            let svgRootElement = doc.querySelector('svg');
-            document.body.append(svgRootElement);
+            if (this.debug)
+            {
+                let doc = new DOMParser().parseFromString(text, "image/svg+xml");
+                let svgRootElement = doc.querySelector('svg');
+                document.body.append(svgRootElement);
+            }
             
             return text;
         }
@@ -225,10 +234,10 @@ module qec {
             return bounds;
         }
 
-        getCameras(elt: SVGGraphicsElement): cameraDTO[]
+        getCameras(svg: SVGSVGElement): cameraDTO[]
         {
             let cameras:cameraDTO[] = [];
-            let groups = elt.querySelectorAll("g");
+            let groups = svg.querySelectorAll("g");
             groups.forEach(x => {
                 
                 let label = this.getLabel(x);
@@ -237,12 +246,22 @@ module qec {
                     let cam = new cameraDTO() ;
                     cam.position = this.getXYZByLabel(x, 'position');
                     cam.target = this.getXYZByLabel(x, 'target');
+
+                    cam.position[1] = this.toLeftHanded(cam.position[1], svg.viewBox.baseVal.height);
+                    cam.target[1] = this.toLeftHanded(cam.target[1], svg.viewBox.baseVal.height);
+
                     cam.up = [0, 0, 1];
                     cameras.push(cam);
                 }
                 
             });
             return cameras;
+        }
+
+        toLeftHanded(y:number, height:number)
+        {
+            //return y;
+            return height - y;
         }
 
         getXYZByLabel(elt:SVGGraphicsElement, name:string) : number[]

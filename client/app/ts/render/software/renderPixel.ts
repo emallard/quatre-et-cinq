@@ -21,8 +21,8 @@ module qec {
         MAX_DIST_FROM_CAMERA = 1000;
         MAX_STEPS = 100;
         c_fSmooth = 0.70;
-        EPS_NORMAL_1 = 0.03;
-        EPS_NORMAL_2 = 0.03;
+        EPS_NORMAL_1 = 0.5;
+        EPS_NORMAL_2 = 0.5;
         EPS_INTERSECT = 0.001;
 
         shadows = false;

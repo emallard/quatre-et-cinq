@@ -62,16 +62,19 @@ module qec {
             this.topDfCanvas.drawUserCanvasForTop(topImage, this.topBounds, margin);
             this.profileDfCanvas.drawUserCanvasForTop(profileImage, this.profileBounds, margin);
 
-            
+            let showDebug = false;
+            if (showDebug)
             {
-                let debugCanvas = document.createElement('canvas');
-                document.body.appendChild(debugCanvas);
-                this.topDfCanvas.debugInfoInExistingCanvas(debugCanvas);
-            }
-            {
-                let debugCanvas = document.createElement('canvas');
-                document.body.appendChild(debugCanvas);
-                this.profileDfCanvas.debugInfoInExistingCanvas(debugCanvas);
+                {
+                    let debugCanvas = document.createElement('canvas');
+                    document.body.appendChild(debugCanvas);
+                    this.topDfCanvas.debugInfoInExistingCanvas(debugCanvas);
+                }
+                {
+                    let debugCanvas = document.createElement('canvas');
+                    document.body.appendChild(debugCanvas);
+                    this.profileDfCanvas.debugInfoInExistingCanvas(debugCanvas);
+                }
             }
 
             this.topDfCanvas.update();
