@@ -7,7 +7,7 @@ module qec{
         b : any;
     }
 
-    export class sdIntersection implements signedDistance, canCreate<sdUnionDTO>
+    export class sdIntersection implements signedDistance, canCreate<sdIntersectionDTO>
     {
         array : signedDistance[] = [];
 

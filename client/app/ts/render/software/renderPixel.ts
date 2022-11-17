@@ -18,10 +18,11 @@ module qec {
         
         out = vec4.create();
 
+        MAX_DIST_FROM_CAMERA = 1000;
         MAX_STEPS = 100;
         c_fSmooth = 0.70;
-        EPS_NORMAL_1 = 0.01;
-        EPS_NORMAL_2 = 0.01;
+        EPS_NORMAL_1 = 0.03;
+        EPS_NORMAL_2 = 0.03;
         EPS_INTERSECT = 0.001;
 
         shadows = false;
@@ -46,7 +47,7 @@ module qec {
 
         showBoundingBox = false;
         reflection = false;
-        rayToBounds = true;
+        rayToBounds = false;//true;
 
         init(settings:renderSettings)
         {
@@ -108,7 +109,7 @@ module qec {
                 #else
             */
 
-            var t = this.intersectDist(sd, ro, rd, 0, 100);
+            var t = this.intersectDist(sd, ro, rd, 0, this.MAX_DIST_FROM_CAMERA);
 
             if (t>0.0) 
             {    

@@ -3,20 +3,17 @@ module qec {
     export class directionalLightDTO
     {
         type:string;
-        position:number[];
         direction:number[];
         intensity:number;
     }
 
     export class directionalLight implements ilight
     {
-        position = vec3.create();
         direction = vec3.create();
-        intensity = 1;
+        intensity = 0.5;
 
         createFrom(dto:directionalLightDTO)
         {
-            vec3FromArray(this.position, dto.position);
             vec3FromArray(this.direction, dto.direction);
             this.intensity = dto.intensity;
 

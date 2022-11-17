@@ -3,8 +3,7 @@ module qec{
     export class sdUnionDTO
     {
         type:string;
-        a : any;
-        b : any;
+        array: any[];
     }
 
     export class sdUnion implements signedDistance, canCreate<sdUnionDTO>
@@ -14,8 +13,7 @@ module qec{
 
         createFrom(dto:sdUnionDTO)
         {
-            this.array[0] = <signedDistance> (dto.a['__instance']);
-            this.array[1] = <signedDistance> (dto.b['__instance']);
+            this.array = dto.array.map(x => <signedDistance> (x['__instance']));
         }
 
 

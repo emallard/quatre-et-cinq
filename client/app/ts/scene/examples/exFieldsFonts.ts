@@ -54,8 +54,7 @@ module qec
 
         union : sdUnionDTO = {
             type: 'sdUnionDTO',
-            a: this.plane,
-            b: this.fontFields,
+            array: [this.plane, this.fontFields],
         }
 
         render : scRendererDTO = {

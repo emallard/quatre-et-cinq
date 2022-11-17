@@ -15,6 +15,7 @@ module qec
             this.creators.push(c);
         }
 
+        /*
         protected register2<T>(predicate:(dto:T)=>boolean, canCreate: {new() : canCreate<T>})
         {
             this.registerInstantiate<T>(predicate, dto => { var n = new canCreate(); n.createFrom(dto); return n;})
@@ -25,8 +26,32 @@ module qec
             var c:creator = { predicate: predicate, instantiate: instantiate };
             this.creators.push(c);
         }
+        */
 
+        public create(dto:any)
+        {
+            if (dto['__instance'] != null)
+                return;
 
+            if (typeof dto === 'string'
+                    || typeof dto === 'number'
+                    || dto instanceof String
+                    || dto instanceof Number
+                    || dto instanceof Float32Array
+                    || dto instanceof Int32Array
+                    || dto instanceof Int8Array)
+                {
+                    return;
+                }
+            for (let key in dto)
+            {
+                this.create(dto[key]);
+            }
+            if (!Array.isArray(dto))
+                dto.__instance = this.createOne(dto);
+        }
+
+        /*
         public create(sceneDTO:any)
         {
             var i = 0;
@@ -63,7 +88,7 @@ module qec
                 
                 //var dto2 = dto;
                 // create object
-                var instance = this.createOne(key, dto);
+                var instance = this.createOneOrArray(key, dto);
                 
                 // register it as a field in 'this'
                 this[key] = instance;
@@ -74,6 +99,7 @@ module qec
                 //if (this.debugInfo) console.log('OK' , instance);
             }
         }
+        */
 
         protected replaceBySceneReferences(dto:any):Object
         {
@@ -121,7 +147,23 @@ module qec
             return false;
         }
 
-        public createOne(key:string, dto:any):Object
+        /*
+        public createOneOrArray(dto:any)
+        {
+            if (Array.isArray(dto))
+            {
+                let created = [];
+                for (let i=0; dto.length; ++i)
+                {
+                    created.push(this.createOne(dto[i]));
+                }
+                return created;
+            }
+            else
+                this.createOne(dto);
+        }*/
+
+        public createOne(dto:any):Object
         {
             for (var i=0; i<this.creators.length; ++i)
             {
@@ -131,7 +173,7 @@ module qec
                     return c.instantiate(dto);
                 }
             }
-            throw "Can't create scene object " + key;
+            //throw "Can't create scene object " + key;
         }
     }
 

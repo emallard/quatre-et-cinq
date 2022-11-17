@@ -14,14 +14,12 @@ module qec
 
         keyLight: directionalLightDTO = {
             type: 'directionalLightDTO',
-            position: [-2, -2, 0],
             direction : [1, 1, -2],
             intensity : 0.8
         };
 
         fillLight: directionalLightDTO = {
             type: 'directionalLightDTO',
-            position: [2, -2, 0],
             direction : [-1, 1, -1],
             intensity : 0.2
         };

@@ -3,7 +3,7 @@ module qec
     
     export class scImageDTO
     {
-        type:string;
+        type:string = 'scImageDTO';
         src:string;
     }
 

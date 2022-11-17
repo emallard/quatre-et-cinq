@@ -15,6 +15,7 @@ module qec {
             s.register('sdBorderDTO', sdBorder);
             s.register('sdBoxDTO', sdBox);
             s.register('sdFieldsDTO', sdFields);
+            s.register('sdFields2DTO', sdFields2);
             s.register('sdGridDTO', sdGrid);
             s.register('sdGrid2DTO', sdGrid2);
             s.register('sdIntersectionDTO', sdIntersection);
@@ -33,12 +34,6 @@ module qec {
         public create(sceneDTO:any, done:()=>void)
         {
             this.loadImages(sceneDTO, ()=>this.createStep2(sceneDTO, done));
-            //this.loadDistanceFields(sceneDTO, ()=>this.createStep2(sceneDTO, done));
-        }
-
-        public createOne(sceneDTO:any, name:string)
-        {
-            return this.sceneBase.createOne(name, sceneDTO[name]);
         }
 
         private createStep2(sceneDTO:any, done:()=>void)
@@ -75,17 +70,31 @@ module qec {
         {
             console.log('load images');
             var run = new runAll();
-            for (var key in sceneDTO)
-            {
-                var dto = sceneDTO[key];
-                if (dto['type'] == 'scImageDTO')
-                {
-                    this.addLoadImage(run, <scImageDTO> dto);
-                }
-            }
+            this.rec(run, sceneDTO);
             run.run(done);
         }
 
+        private rec(run:runAll, x:any):void
+        {
+            if (typeof x === 'string'
+                || typeof x === 'number'
+                || x instanceof String
+                || x instanceof Number)
+            {
+                return;
+            }
+            if (x['type'] == 'scImageDTO')
+            {
+                this.addLoadImage(run, <scImageDTO> x);
+            }
+            else
+            {
+                for (var key in x)
+                {
+                    this.rec(run, x[key]);
+                }
+            }
+        };
 
         private addLoadImage(run:runAll, dto:scImageDTO)
         {
@@ -97,33 +106,6 @@ module qec {
                 scImg.createAsyncFrom(dto, _done);
             });
         }
-
-        /*
-        private loadDistanceFields(sceneDTO:any, done:()=>void)
-        {
-            var run = new runAll();
-            for (var key in sceneDTO)
-            {
-                var dto = sceneDTO[key];
-                if (dto['type'] == 'scFloatTextureDTO')
-                {
-                    this.addLoadDistanceField(run, <scFloatTextureDTO> dto);
-                }
-            }
-            run.run(done);
-        }
-
-        private addLoadDistanceField(run:runAll, dto:scFloatTextureDTO)
-        {
-            console.log('Loading distanceField : ' + dto['src']);
-            run.push((_done) => 
-            {    
-                var df = new scFloatTexture();
-                (<any> dto).__instance = df;
-                df.createAsyncFrom(dto, _done);
-            });
-        }
-        */
     }
 
 }

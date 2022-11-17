@@ -40,8 +40,7 @@ module qec
 
         union : sdUnionDTO = {
             type: 'sdUnionDTO',
-            a: this.plane,
-            b: this.sphere,
+            array: [this.plane, this.sphere],
         }
 
         render : scRendererDTO = {
