@@ -8,8 +8,16 @@ module qec {
         topImage:scImageDTO;
         topBounds:number[];
         
+        // origin
         profileOrigin: number[];
+
+        // radius
+        isRadial:boolean;
+        radius:number;
+
+        // axis
         profileAxis: number[];
+
         profileImage:scImageDTO;
         profileBounds: number[];
 
@@ -35,6 +43,9 @@ module qec {
         profileOrigin:Float32Array;
         profileAxis:Float32Array;
         
+        isRadial:boolean;
+        radius: number;
+
         private sdBox:sdBox;
         private debug:boolean;
 
@@ -50,9 +61,17 @@ module qec {
             //this.thickness = dto.thickness;
             this.profileOrigin = new Float32Array(dto.profileOrigin);
             this.profileAxis = new Float32Array(dto.profileAxis);
-            vec2.normalize(this.profileAxis, this.profileAxis);
+            this.isRadial = dto.isRadial;
+            if (this.isRadial)
+            {
+                this.radius = dto.radius;
+            }
+            else
+            {
+                vec2.normalize(this.profileAxis, this.profileAxis);
+            }
             this.profileBounds = new Float32Array(dto.profileBounds);
-
+            
             // crée la float texture            
             var topImage = dto.topImage['__instance'].image;
             var profileImage = dto.profileImage['__instance'].image;
@@ -180,12 +199,25 @@ module qec {
             
             let originToPointX = p[0]-this.profileOrigin[0];
             let originToPointY = p[1]-this.profileOrigin[1];
-            let dotProduct = originToPointX*this.profileAxis[0] + originToPointY*this.profileAxis[1];
+            
 
-            var u2 = (dotProduct - this.profileBounds[0]) / (this.profileBounds[2] - this.profileBounds[0]);
-            var v2 = (p[2] - this.profileBounds[1]) / (this.profileBounds[3] - this.profileBounds[1]);
-            var d3 = this.getFieldDistanceWithSprite(this.profileTexture, u2, v2, this.profileSpriteBounds)
-            if (d3 > d) d = d3;
+            // Axis:
+            if (!this.isRadial)
+            {
+                let dotProduct = originToPointX*this.profileAxis[0] + originToPointY*this.profileAxis[1];
+                let u2 = (dotProduct - this.profileBounds[0]) / (this.profileBounds[2] - this.profileBounds[0]);
+                let v2 = (p[2] - this.profileBounds[1]) / (this.profileBounds[3] - this.profileBounds[1]);
+                let d3 = this.getFieldDistanceWithSprite(this.profileTexture, u2, v2, this.profileSpriteBounds)
+                if (d3 > d) d = d3;
+            }
+            else
+            {
+                let length = Math.sqrt(originToPointX*originToPointX + originToPointY*originToPointY);
+                let u2 = (length - this.profileBounds[0]) / (this.profileBounds[2] - this.profileBounds[0]);
+                let v2 = (p[2] - this.profileBounds[1]) / (this.profileBounds[3] - this.profileBounds[1]);
+                let d3 = this.getFieldDistanceWithSprite(this.profileTexture, u2, v2, this.profileSpriteBounds)
+                if (d3 > d) d = d3;
+            }
             
             /*            
             var dToUpperPlane = p[2] - this.thickness;

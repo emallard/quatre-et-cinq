@@ -120,21 +120,43 @@ module qec {
                 };
 
                 // profile line in realBounds matrix
-                let start = this.getXY(thicknessElt, "start");
-                let end = this.getXY(thicknessElt, "end");
-                start.y = this.toLeftHanded(start.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
-                end.y = this.toLeftHanded(end.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
+                let width = 0;
+                let startElt = this.getByLabel(thicknessElt, "start");
+                if (startElt != null)
+                {
+                    let start = this.getXY(thicknessElt, "start");
+                    let end = this.getXY(thicknessElt, "end");
+                    start.y = this.toLeftHanded(start.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
+                    end.y = this.toLeftHanded(end.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
 
-                start.x -= cx;
-                start.y -= cy;
-                end.x -= cx;
-                end.y -= cy;
+                    start.x -= cx;
+                    start.y -= cy;
+                    end.x -= cx;
+                    end.y -= cy;
+                    
+                    sdFields.profileOrigin = [start.x, start.y];
+                    sdFields.profileAxis = [end.x - start.x, end.y - start.y];
 
+                    width = vec2.length(new Float32Array(sdFields.profileAxis));
+                }
+                else
+                {
+                    let radius = this.getXYR(thicknessElt, "radius");
+                    radius.y = this.toLeftHanded(radius.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
+                    radius.x -= cx;
+                    radius.y -= cy;
+
+                    sdFields.isRadial = true;
+                    sdFields.radius = radius.r;
+                    sdFields.profileOrigin = [radius.x, radius.y];
+
+                    width = sdFields.radius;
+                }
                 
-                sdFields.profileOrigin = [start.x, start.y];
-                sdFields.profileAxis = [end.x - start.x, end.y - start.y];
-
-                let width = vec2.length(new Float32Array(sdFields.profileAxis));
+                // height
+                let heightElt = this.getByLabel(thicknessElt, 'height');
+                let tspan = heightElt.children.item(0);
+                let height = parseFloat(tspan.textContent);
 
                 /*
                 let height = 0;
@@ -151,7 +173,7 @@ module qec {
                 let svgForProfile = this.createSvgFromPoints(Math.ceil(width), Math.ceil(height), profilePoints);
                 */
                 
-                let [profileSrc, profileBounds] = this.getFrame(thicknessElt);
+                let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height);
                 
                 sdFields.profileImage = new scImageDTO();
                 sdFields.profileImage.src = "data:image/svg+xml;base64," + btoa(profileSrc);
@@ -335,17 +357,39 @@ module qec {
             return [p.x, p.y, desc];
         }
 
-        getFrame(eltThickness:SVGGraphicsElement) : [string, number[]]
+        getXYR(elt:SVGGraphicsElement, name:string) : XYR
+        {
+            let positionElt = this.getByLabel(elt, name);
+
+            let cx = parseFloat(positionElt.getAttribute('cx'));
+            let cy = parseFloat(positionElt.getAttribute('cy'));
+            let rx = parseFloat(positionElt.getAttribute('rx'));
+            let p = elt.ownerSVGElement.createSVGPoint();
+            p.x = cx;
+            p.y = cy;
+
+            let r = elt.ownerSVGElement.createSVGPoint();
+            r.x = p.x + rx;
+            r.y = p.y;
+
+            while (!(elt instanceof SVGSVGElement))
+            {
+                let trans = elt.transform.baseVal.consolidate();
+                if (trans != null)
+                {
+                    p = p.matrixTransform(trans.matrix);
+                    r = r.matrixTransform(trans.matrix);
+                }
+                elt = <SVGGraphicsElement> elt.parentNode;
+            }
+
+            return {x: p.x, y:p.y, r: vec2.length(vec2.fromValues(r.x-p.x, r.y-p.y))};
+        }
+
+        getFrame(eltThickness:SVGGraphicsElement, width:number, height:number) : [string, number[]]
         {
             let frameElt = this.getByLabel(eltThickness, 'frame');
-            let startElt = this.getXYDescByLabel(eltThickness, 'start');
-            let endElt = this.getXYDescByLabel(eltThickness, 'end');
-            let heightElt = this.getByLabel(eltThickness, 'height');
-            let tspan = heightElt.children.item(0);
-            let height = parseFloat(tspan.textContent);
-            let widthX = endElt[0]-startElt[0];
-            let widthY = endElt[1]-startElt[1];
-            let width = Math.sqrt(widthX*widthX + widthY*widthY);
+
 
             let origin = frameElt.ownerSVGElement.createSVGPoint();
             origin.x = parseFloat(frameElt.getAttribute('x'));
@@ -557,5 +601,11 @@ module qec {
     interface XY{
         x:number;
         y:number;
+    }
+
+    interface XYR{
+        x:number;
+        y:number;
+        r:number;
     }
 }
