@@ -41,6 +41,8 @@ module qec {
         inverseTransform = mat4.identity(mat4.create());
         private tmp = vec3.create();
 
+        thickness:number;
+
         createFrom(dto:sdFields2DTO)
         {
             this.topBounds = new Float32Array(dto.topBounds);
@@ -58,11 +60,11 @@ module qec {
             console.log(JSON.stringify(dto.topImage));
             console.log(profileImage);
 */
-            var margin = 0.05;
+            var margin = 2;
             this.topDfCanvas.drawUserCanvasForTop(topImage, this.topBounds, margin);
             this.profileDfCanvas.drawUserCanvasForTop(profileImage, this.profileBounds, margin);
 
-            let showDebug = false;
+            let showDebug = true;
             if (showDebug)
             {
                 {
@@ -78,7 +80,7 @@ module qec {
             }
 
             this.topDfCanvas.update();
-            //this.profileDfCanvas.update();
+            this.profileDfCanvas.update();
 
 /*
             this.topDfCanvas.debugInfoInCanvas();
@@ -87,6 +89,8 @@ module qec {
             $('.debug').append(this.topDfCanvas.canvas);
             $('.debug').append(this.profileDfCanvas.canvas);
 */
+
+            this.thickness = this.profileBounds[3];
             this.init(this.topDfCanvas.floatTexture,
                       vec4.fromValues(0,0,1,1),
                       new Float32Array(this.topDfCanvas.totalBounds),
@@ -109,11 +113,11 @@ module qec {
             this.topTexture = topTexture;
             this.topBounds = new Float32Array(topBounds);
             this.topSpriteBounds = new Float32Array(topSpriteBounds);
-            /*
+            
             this.profileTexture = profileTexture;
             this.profileBounds = new Float32Array(profileBounds);
             this.profileSpriteBounds = new Float32Array(profileSpriteBounds);
-            */
+            
             this.sdBox = new sdBox();
             this.sdBox.setHalfSize(
                 0.5*(this.topBounds[2] - this.topBounds[0]), 
@@ -172,17 +176,23 @@ module qec {
             */                
             //var u2 = p[1] + 1;
             
-            /*
-            var u2 = (p[1] - this.profileBounds[0]) / (this.profileBounds[2] - this.profileBounds[0]);
-            var v2 = p[2];
+            // project point on axis to compute
+            
+            let originToPointX = p[0]-this.profileOrigin[0];
+            let originToPointY = p[1]-this.profileOrigin[1];
+            let dotProduct = originToPointX*this.profileAxis[0] + originToPointY*this.profileAxis[1];
+
+            var u2 = (dotProduct - this.profileBounds[0]) / (this.profileBounds[2] - this.profileBounds[0]);
+            var v2 = (p[2] - this.profileBounds[1]) / (this.profileBounds[3] - this.profileBounds[1]);
             var d3 = this.getFieldDistanceWithSprite(this.profileTexture, u2, v2, this.profileSpriteBounds)
             if (d3 > d) d = d3;
-            */
             
-            var dToUpperPlane = p[2] - this.profileBounds[3];
+            /*            
+            var dToUpperPlane = p[2] - this.thickness;
             var dToLowerPlane = 0 - p[2];
             if (dToUpperPlane > d) d = dToUpperPlane;
             if (dToLowerPlane > d) d = dToLowerPlane;
+            */
 
             return d;
             
