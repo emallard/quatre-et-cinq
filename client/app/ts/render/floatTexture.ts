@@ -5,6 +5,7 @@ module qec {
         width:number;
         height:number;
         data:Float32Array;
+        threeDataTexture: any // THREE.DataTexture;
     }
 
     export function createFloatTextureFromDistanceField(df:distanceField)

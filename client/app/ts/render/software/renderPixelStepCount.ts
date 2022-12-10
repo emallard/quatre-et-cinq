@@ -4,7 +4,6 @@ module qec {
     {
         debug = false;
 
-        sd:signedDistance;
         out = vec4.create();
 
         MAX_STEPS = 100;
@@ -26,9 +25,11 @@ module qec {
         showBoundingBox = false; 
         rayToBounds = false;
 
-        init(settings:renderSettings)
+        getDist: (Float32Array) => number;
+
+        updateShader(settings:renderSettings)
         {
-            this.sd = settings.sd;
+            this.getDist = new renderPixelGetDist().generateGetDist(settings.sdArray);
         }
 
         render (ro:Float32Array, rd:Float32Array, debugInfo:boolean = false):Float32Array 
@@ -40,7 +41,7 @@ module qec {
         private doRender (ro:Float32Array, rd:Float32Array):Float32Array 
         {
             if (this.debug) console.log('ro', ro, 'rd', rd);
-            this.rayMarch(this.sd, ro, rd, this.out);
+            this.rayMarch(this.getDist, ro, rd, this.out);
             /*
             #ifdef FX_REFLECTION
             if (currHit) {
@@ -55,7 +56,7 @@ module qec {
 
 
         stepCount = [0];
-        rayMarch (sd:signedDistance, ro:Float32Array, rd:Float32Array, out:Float32Array) 
+        rayMarch (sd:(Float32Array)=>number, ro:Float32Array, rd:Float32Array, out:Float32Array) 
         {
             /*
             #ifdef CHECK_BOUNDS
@@ -89,7 +90,7 @@ module qec {
 
 
         intersectPos = vec3.create();
-        intersectDist(sd:signedDistance, ro:Float32Array, rd:Float32Array, tMin:number, tMax:number, stepCount:number[]) : number
+        intersectDist(sd:(Float32Array)=>number, ro:Float32Array, rd:Float32Array, tMin:number, tMax:number, stepCount:number[]) : number
         {  
             var t = tMin;
             var dist = -1.0;
@@ -102,10 +103,13 @@ module qec {
                 this.intersectPos[2] = ro[2] + rd[2]*t;
 
                 var dt:number;
+                /*
                 if (this.rayToBounds)
                     dt = sd.getDist2(this.intersectPos, rd, this.showBoundingBox, this.debug);// * this.c_fSmooth;
                 else
                     dt = sd.getDist(this.intersectPos, this.showBoundingBox, this.debug);// * this.c_fSmooth;
+                */
+               dt = sd(this.intersectPos);
 
                 if (this.debug) console.log('march #'+i + ' : ' + dt + ' : ' + vec3.str(this.intersectPos));
 

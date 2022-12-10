@@ -55,8 +55,8 @@ vec3 applyLight(vec3 lightPos, float intensity, int isShadow, vec3 color, vec3 p
     float specular = intensity * getSpecular(pos, normal, toLight, rd);
     
     float shadow = 1.0;
-    if (isShadow == 1)
-        shadow = getShadow(pos, toLight, lightDist);
+    //if (isShadow == 1)
+    //    shadow = getShadow(pos, toLight, lightDist);
     
     float KD = 0.7; float KS = 0.5; 
     return shadow * ( KS*specular + KD*diffuse * color);

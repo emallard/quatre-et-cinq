@@ -31,8 +31,12 @@ module qec
                 //document.body.appendChild(canvas);
             }
             
-            
-            packer.repack(allDfCanvas.map(c=>c.floatTexture));
+            let sprites = allDfCanvas.map(c=> {
+                let s = new textureSprite();
+                s.originalTexture = c.floatTexture;
+                return s;
+            });
+            packer.repack(sprites);
 
             packer.debugInfoInBody(255);
             

@@ -1,15 +1,15 @@
 module qec {
     export class index3 {
         element: HTMLElement;
+        updater: updater;
         renderer: irenderer;
         rendererParallel: parallelRenderer;
-        texturePacker: texturePacker;
 
-        /*
-        sd:signedDistance;
-        light:spotLight;
-        cam: camera;
-        */
+        // overidden by:
+        // p2.isParallel = getParameterByName('isParallel') == '1';
+        // p2.isHardware = getParameterByName('isHardware') == '1';
+        // p2.renderSteps = getParameterByName('renderSteps') == '1';
+
         isParallel = false;
         isHardware = false;
         renderSteps = false;
@@ -29,9 +29,18 @@ module qec {
             new svgSceneLoader().loadUrl('data/'+sceneName, sceneDTO =>
             {
                 console.log('createScene continues');
-                var sr = new simpleRenderer();
-                sr.setRenderSteps(this.renderSteps);
-                this.renderer = sr;
+                this.updater = new updater();
+                if (this.isHardware)
+                {
+                    this.renderer = new hardwareRenderer();
+                    this.updater.texturePacker.isHardware = true;
+                }
+                else
+                {   
+                    let sr = new simpleRenderer();
+                    sr.setRenderSteps(this.renderSteps);
+                    this.renderer = sr;
+                }
                 
                 this.renderer.setContainerAndSize(this.element, 600, 600);
     
@@ -42,11 +51,7 @@ module qec {
 
                 let scene = new qec.scene();
                 scene.create(sceneDTO, () => {
-
-                    var union = new sdUnion();
-                    union.array = sceneDTO.objects.map(x => x['__instance']);
-
-                    this.renderSettings.sd = union;
+                    this.renderSettings.sdArray = sceneDTO.objects.map(x => x['__instance']);
                     this.renderSettings.camera = sceneDTO.cameras[0]['__instance'];
 
                     let lightDto = new directionalLightDTO();
@@ -70,8 +75,13 @@ module qec {
             });
         }
 
+
         render() {
-            this.renderer.render(this.renderSettings);
+            this.updater.update(this.renderSettings.sdArray, () => 
+            {
+                this.renderer.updateShader(this.renderSettings);
+                this.renderer.render(this.renderSettings);
+            });
         }
 
         debug(x: number, y: number) {

@@ -1,12 +1,18 @@
+//#define MAX_DIST_FROM_CAMERA 100.0;
+//#define MAX_STEPS 25
+//#define EPS_INTERSECT 0.001
+//#define EPS_NORMAL_1 0.01
+//#define EPS_NORMAL_2 0.01
+//#define EPS_INTERSECT 0.001
 
-#define MAX_STEPS 25
-#define EPS_INTERSECT 0.001
-#define EPS_NORMAL_1 0.01
-#define EPS_NORMAL_2 0.01
-#define EPS_INTERSECT 0.001
+#define MAX_DIST_FROM_CAMERA 10000.0
+#define MAX_STEPS 100
+#define c_fSmooth 1.0
+#define EPS_NORMAL_1 0.5
+#define EPS_NORMAL_2 0.5
+#define EPS_INTERSECT 0.1
 
-float gMin = 0.0;
-float gMax = 100.0;
+
 #define KA 0.5
 #define KD 0.5
 
@@ -31,24 +37,24 @@ struct RayMarch
 };
 
 float intersectDist(in vec3 ro, in vec3 rd, in float multiplier) {  
+
   float t = 4.0*EPS_INTERSECT;
-  float dist = -1.0;
   
   for(int i=0; i<MAX_STEPS; ++i)
   {
-    //float dt = multiplier * getDist(ro + rd*t);
-    float dt = multiplier * getDist2(ro + rd*t, rd);
+    float dt = c_fSmooth * getDist(ro + rd*t);
     
     if(dt < EPS_INTERSECT) {
-      dist = t;
-      break;
+      return t;
     }
     t += dt;    
-    if(t > gMax)
-      break;
+    if(t > MAX_DIST_FROM_CAMERA)
+    {
+      return -1.0;
+    }
   }
 
-  return dist;
+  return -1.0;
 }
 
 
@@ -92,7 +98,8 @@ RayMarch rayMarch (in vec3 ro, in vec3 rd, float multiplier) {
         */
 
         // refractionOut = 1.0f/refractionIn
-        col = getLight(u_shadows, col, pos, normal, rd);
+        //col = getLight(u_shadows, col, pos, normal, rd);
+        col = getLight(0, col, pos, normal, rd);
 
         result.noIntersection = 0;
         result.t = t;
@@ -105,7 +112,8 @@ RayMarch rayMarch (in vec3 ro, in vec3 rd, float multiplier) {
     }
 
     result.noIntersection = 1;
-    result.color = GetSkyGradient(rd);
+    result.color = vec3(0.0,0.0,0.0);
+    //result.color = GetSkyGradient(rd);
     //return vec3(0.0,0.0,0.0);
 
     return result;
@@ -113,9 +121,7 @@ RayMarch rayMarch (in vec3 ro, in vec3 rd, float multiplier) {
 
 vec3 render (in vec3 ro, in vec3 rd) {
     RayMarch r1 = rayMarch(ro, rd, 1.0);
-
-    //if (r1.noIntersection == 1)
-      return r1.color;
+    return r1.color;
 /*
     float refractionIn = 0.9;
     vec3 rd2 = refract(r1.rd, r1.normal, refractionIn);

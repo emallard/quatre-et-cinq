@@ -19,7 +19,7 @@ module qec {
             this.camera = dto.camera['__instance'];
             this.settings.boundingBoxes = false;
             this.settings.shadows = false;
-            this.settings.sd = dto.distance['__instance'];
+            this.settings.sdArray = [dto.distance['__instance']];
             this.settings.camera = this.camera;
             this.settings.spotLights = dto.spotLights.map(l => l['__instance']);
             this.settings.directionalLights = dto.directionalLights.map(l => l['__instance']);

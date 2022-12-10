@@ -46,7 +46,8 @@ module qec {
         {
             this.initDone = false;
             this.onInitDone = onInitDone;
-            var sd = (<sdFields> rp.sd);
+            // TODO broken
+            var sd = (<sdFields> <any> rp.sd);
             var msgOut = new renderWorkerInitMessage();
             
             msgOut.topTexture = sd.topTexture;

@@ -10,10 +10,11 @@ module qec
 
     export class texturePacker
     {
+        repackMode = 0;
+        isHardware: boolean = false;
+
         allBigTextures: floatTexture[] = [];
         allSprites : textureSprite[] = [];
-
-        repackMode = 3;
 
         getSprite(texture:floatTexture) : textureSprite
         {
@@ -27,6 +28,7 @@ module qec
             return found;
         }
 
+        /*
         repackSdRec(rootSignedDistance:signedDistance)
         {
             var floatTextures:floatTexture[] = [];
@@ -40,31 +42,43 @@ module qec
                 }
             });
             this.repack(floatTextures);
-        }
+        }*/
 
-        repack(floatTextures:floatTexture[])
+        repack(sprites:textureSprite[])
         {
+            console.log('texturepacker.repack');
+
             if (this.repackMode == 0)
-                this.repack0(floatTextures);
+                this.repack0(sprites);
             else if (this.repackMode == 1)
-                this.repack1(floatTextures);
+                this.repack1(sprites);
             else if (this.repackMode == 2)
-                this.repack2(floatTextures);
+                this.repack2(sprites);
             else if (this.repackMode == 3)
-                this.repack3(floatTextures);
+                this.repack3(sprites);
+
+            // update threejs
+            if (this.isHardware)
+            {
+                console.log('texturepacker.isHardware');
+                this.allBigTextures.forEach((t, i) => {
+                    var dataTexture = new THREE.DataTexture(t.data, t.width, t.height, THREE.RGBAFormat, THREE.FloatType);
+                    dataTexture.needsUpdate = true;
+                    t.threeDataTexture = dataTexture;
+                });
+            }
         }
 
-        repack0(floatTextures:floatTexture[])
+        repack0(sprites:textureSprite[])
         {
             this.allBigTextures = [];
             this.allSprites = [];
 
-            for (var i=0; i < floatTextures.length; ++i)
+            for (var i=0; i < sprites.length; ++i)
             {
-                var texture = floatTextures[i];
+                let sprite = sprites[i];
+                var texture = sprite.originalTexture;
 
-                var sprite = new textureSprite();
-                sprite.originalTexture = texture;
                 sprite.bigTexture = texture;
                 vec4.set(sprite.bounds, 0, 0, 1, 1);
                 this.allSprites.push(sprite);
@@ -75,17 +89,17 @@ module qec
             }
         }
 
-        repack1(floatTextures:floatTexture[])
+        repack1(sprites:textureSprite[])
         {
-
-            console.log('repack mode 1 ' + floatTextures.length + ' textures');
+            console.log('repack mode 1 ' + sprites.length + ' textures');
 
             this.allBigTextures = [];
             this.allSprites = [];
 
-            for (var i=0; i < floatTextures.length; ++i)
+            for (var i=0; i < sprites.length; ++i)
             {
-                var texture = floatTextures[i];
+                let sprite = sprites[i];
+                var texture = sprite.originalTexture;
                 var bigTexture = new floatTexture(); 
                 bigTexture.width = 400;
                 bigTexture.height = 400;
@@ -104,8 +118,6 @@ module qec
                     }
                 }
 
-                var sprite = new textureSprite();
-                sprite.originalTexture = texture;
                 sprite.bigTexture = bigTexture;
                 
                 var xMax = texture.width / bigTexture.width;
@@ -124,10 +136,10 @@ module qec
             }
         }
 
-        repack2(floatTextures:floatTexture[])
+        repack2(sprites:textureSprite[])
         {
 
-            console.log('repack mode 2 ' + floatTextures.length + ' textures');
+            console.log('repack mode 2 ' + sprites.length + ' textures');
             this.allBigTextures = [];
             this.allSprites = [];
 
@@ -135,13 +147,14 @@ module qec
             var h = 400;//floatTextures[0].height;
             
             var bigTexture = new floatTexture();
-            bigTexture.width = w * floatTextures.length;
+            bigTexture.width = w * sprites.length;
             bigTexture.height = h;
             bigTexture.data = new Float32Array(bigTexture.width *  bigTexture.height * 4);
             
-            for (var i=0; i < floatTextures.length; ++i)
+            for (var i=0; i < sprites.length; ++i)
             {
-                var texture = floatTextures[i];
+                let sprite = sprites[i];
+                var texture = sprite.originalTexture;
                 
                 for (var x=0; x < texture.width; x++)
                 {
@@ -156,14 +169,12 @@ module qec
                     }
                 }
 
-                var sprite = new textureSprite();
-                sprite.originalTexture = texture;
                 sprite.bigTexture = bigTexture;
                 
                 // sprite bounds
-                var xMin = i/(floatTextures.length);
+                var xMin = i/(sprites.length);
                 var yMin = 0;
-                var xMax = (i + (texture.width / 400)) / floatTextures.length;
+                var xMax = (i + (texture.width / 400)) / sprites.length;
                 var yMax = (texture.height / 400);
                 
                 var offsetX = 1/bigTexture.width;
@@ -178,10 +189,10 @@ module qec
         }
 
 
-        repack3(floatTextures:floatTexture[])
+        repack3(sprites:textureSprite[])
         {
 
-            console.log('repack mode 3 ' + floatTextures.length + ' textures');
+            console.log('repack mode 3 ' + sprites.length + ' textures');
             this.allBigTextures = [];
             this.allSprites = [];
 
@@ -190,9 +201,9 @@ module qec
             
             var indexInFloatTextures = 0;
             var maxSpriteInBigTexture = 10;
-            while (indexInFloatTextures < floatTextures.length)
+            while (indexInFloatTextures < sprites.length)
             {
-                var spriteCountInBigTexture = Math.min(maxSpriteInBigTexture, floatTextures.length - indexInFloatTextures);
+                var spriteCountInBigTexture = Math.min(maxSpriteInBigTexture, sprites.length - indexInFloatTextures);
                 var bigTexture = new floatTexture();
                 bigTexture.width = w * spriteCountInBigTexture;
                 bigTexture.height = h;
@@ -205,9 +216,10 @@ module qec
 
             var bigTextureIndex = 0;
             var spriteIndex = 0;
-            for (var i=0; i < floatTextures.length; ++i)
+            for (var i=0; i < sprites.length; ++i)
             {
-                var texture = floatTextures[i];
+                var sprite = sprites[i];
+                let texture = sprite.originalTexture;
                 var bigTexture = this.allBigTextures[bigTextureIndex];
                 
                 for (var x=0; x < texture.width; x++)
@@ -223,8 +235,6 @@ module qec
                     }
                 }
 
-                var sprite = new textureSprite();
-                sprite.originalTexture = texture;
                 sprite.bigTexture = bigTexture;
                 
                 // sprite bounds

@@ -40,7 +40,7 @@ module qec {
             return scene;
         }
 
-        getSdFields(elt: SVGGraphicsElement, done:(x:sdFields2DTO[])=>void)
+        getSdFields(elt: SVGGraphicsElement, done:(x:any[])=>void)
         {
             let all:sdFields2DTO[] = [];
             let groups = elt.querySelectorAll("g");
@@ -55,7 +55,7 @@ module qec {
             r.run(() => done(all));
         }
 
-        getSdFieldsOne(thicknessElt: SVGGraphicsElement, done:(x:sdFields2DTO)=>void)
+        getSdFieldsOne(thicknessElt: SVGGraphicsElement, done:(x:any)=>void)
         {
             let parent = <SVGGraphicsElement> thicknessElt.parentNode;
 
@@ -63,10 +63,12 @@ module qec {
 
             let src = this.extractSvgIgnoringThickness(parent);
 
-            let sdFields = new sdFields2DTO();
+            /*
+            let sdFields = new sdFields1DTO();
             sdFields.topImage = new scImageDTO();
             sdFields.topImage.src = src;
             sdFields.topBounds = [];
+            */
 
 
             let img = new Image();
@@ -97,31 +99,40 @@ module qec {
                 // document.body.appendChild(svgRootElement);
 
                 var svg_xml = (new XMLSerializer()).serializeToString(svgRootElement);
-                sdFields.topImage = new scImageDTO();
-                sdFields.topImage.src = "data:image/svg+xml;base64," + btoa(svg_xml);
+                let topImage = new scImageDTO();
+                topImage.src = "data:image/svg+xml;base64," + btoa(svg_xml);
 
                 let cx = (realBounds[0]+realBounds[2])/2;
                 let cy = (realBounds[1]+realBounds[3])/2;
                 let halfWidth = (realBounds[2]-realBounds[0])/2;
                 let halfHeight = (realBounds[3]-realBounds[1])/2;
-                sdFields.topBounds = [-halfWidth, -halfHeight, halfWidth, halfHeight];
-                sdFields.transform = mat4.create();
+                let topBounds = [-halfWidth, -halfHeight, halfWidth, halfHeight];
+                let transform = mat4.create();
 
                 cy = this.toLeftHanded(cy, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
-                mat4.translate(sdFields.transform , sdFields.transform, vec3.fromValues(cx, cy, 0));
+
+                // height
+                let heightElt = this.getByLabel(thicknessElt, 'height');
+                let tspan = heightElt.children.item(0);
+                let textContentSplit = tspan.textContent.split(',');
+                let z = parseFloat(textContentSplit[0]);
+                let height = parseFloat(textContentSplit[1]);
+
+                // transform
+                mat4.translate(transform , transform, vec3.fromValues(cx, cy, z));
 
                 // material
                 let color = this.getColorIgnoringThickness(parent);
                 if (color == null)
                     color = [0.5, 0.5, 0.5];
-                sdFields.material = {
+                let material = {
                     type:'materialDTO',
                     diffuse : color
                 };
 
                 // profile line in realBounds matrix
-                let width = 0;
                 let startElt = this.getByLabel(thicknessElt, "start");
+                let radiusElt = this.getByLabel(thicknessElt, "radius");
                 if (startElt != null)
                 {
                     let start = this.getXY(thicknessElt, "start");
@@ -134,11 +145,72 @@ module qec {
                     end.x -= cx;
                     end.y -= cy;
                     
-                    sdFields.profileOrigin = [start.x, start.y];
-                    sdFields.profileAxis = [end.x - start.x, end.y - start.y];
+                    let profileOrigin = [start.x, start.y];
+                    let profileAxis = [end.x - start.x, end.y - start.y];
 
-                    width = vec2.length(new Float32Array(sdFields.profileAxis));
+                    let width = vec2.length(new Float32Array(profileAxis));
+                    let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height);
+                    let profileImage = new scImageDTO();
+                    profileImage.src = "data:image/svg+xml;base64," + btoa(profileSrc);
+
+                    
+
+                    let sdFields:sdFields2DTO = {
+                        type: sdFields2DTO.TYPE,
+                        material: material,
+                        transform: transform,
+                        topImage: topImage,
+                        topBounds: topBounds,
+                    
+                        profileImage:profileImage,
+                        profileBounds:profileBounds,
+
+                        profileOrigin: profileOrigin,
+                        profileAxis: profileAxis,
+                    };
+                    done(sdFields);
                 }
+                else if (radiusElt != null)
+                {
+                    let radius = this.getXYR(thicknessElt, "radius");
+                    radius.y = this.toLeftHanded(radius.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
+                    radius.x -= cx;
+                    radius.y -= cy;
+
+                    let width = radius.r;
+                    let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height);
+                    let profileImage = new scImageDTO();
+                    profileImage.src = "data:image/svg+xml;base64," + btoa(profileSrc);
+
+                    let sdFields:sdFields2RadialDTO = {
+                        type: sdFields2RadialDTO.TYPE,
+                        material: material,
+                        transform: transform,
+                        topImage: topImage,
+                        topBounds: topBounds,
+                    
+                        profileImage:profileImage,
+                        profileBounds:profileBounds,
+
+                        center: [radius.x, radius.y],
+                        radius: radius.r
+                    };
+                    done(sdFields);
+                }
+                else
+                {
+                    let sdFields:sdFields1DTO = {
+                        type: sdFields1DTO.TYPE,
+                        topImage: topImage,
+                        topBounds: topBounds,
+                        thickness: height,
+                        
+                        material: material,
+                        transform:transform
+                    }
+                    done(sdFields);
+                }
+                /*
                 else
                 {
                     let radius = this.getXYR(thicknessElt, "radius");
@@ -153,33 +225,11 @@ module qec {
                     width = sdFields.radius;
                 }
                 
-                // height
-                let heightElt = this.getByLabel(thicknessElt, 'height');
-                let tspan = heightElt.children.item(0);
-                let height = parseFloat(tspan.textContent);
+                */
 
                 /*
-                let height = 0;
-                let profilePoints = [];
-                for (let i=0; i<start.points.length; i+=2)
-                {
-                    let x = start.points[i] * width;
-                    let y = start.points[i+1];
-                    profilePoints.push(x, y);
-                    if (y > height)
-                        height = y;
-                }
-
-                let svgForProfile = this.createSvgFromPoints(Math.ceil(width), Math.ceil(height), profilePoints);
+                
                 */
-                
-                let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height);
-                
-                sdFields.profileImage = new scImageDTO();
-                sdFields.profileImage.src = "data:image/svg+xml;base64," + btoa(profileSrc);
-                sdFields.profileBounds = profileBounds;
-
-                done(sdFields);
             }
             img.src = "data:image/svg+xml;base64," + btoa(src);
         }
@@ -550,22 +600,21 @@ module qec {
                         return rgb;
                 }
             }
-            else
+            
+            for (let i=0; i<elt.childNodes.length; ++i)
             {
-                for (let i=0; i<elt.childNodes.length; ++i)
+                let child = elt.childNodes.item(i);
+                if (child instanceof SVGGraphicsElement)
                 {
-                    let child = elt.childNodes.item(i);
-                    if (child instanceof SVGGraphicsElement)
+                    if (this.getLabel(child) != 'thickness')
                     {
-                        if (this.getLabel(child) != 'thickness')
-                        {
-                            let childColor = this.getColorIgnoringThickness(child);
-                            if (childColor != null)
-                            return childColor;
-                        }
+                        let childColor = this.getColorIgnoringThickness(child);
+                        if (childColor != null)
+                        return childColor;
                     }
                 }
             }
+            
             return null;
         }
 

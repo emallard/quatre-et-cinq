@@ -12,6 +12,7 @@ module qec {
                 resources.run = new runAll();
             resources.run.push((_done) => resources.doReq('app/ts/render/hardware/10_sd.glsl', _done));
             resources.run.push((_done) => resources.doReq('app/ts/render/hardware/11_sdFields.glsl', _done));
+            resources.run.push((_done) => resources.doReq('app/ts/render/hardware/12_sdFields2.glsl', _done));
             resources.run.push((_done) => resources.doReq('app/ts/render/hardware/20_light.glsl', _done));
             resources.run.push((_done) => resources.doReq('app/ts/render/hardware/30_renderPixel.glsl', _done));
             

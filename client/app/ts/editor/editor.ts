@@ -188,11 +188,13 @@ module qec {
 
             }
 
+            /*
             if (this.sdHoleUnion.array.length == 0)
                 this.renderSettings.sd = this.sdUnion;
             else
                 this.renderSettings.sd = this.sdUnionWithHoleSd;//this.sdSubtraction;
             this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length, this.texturePacker);
+            */
         }
 
         private updateSprites() {
@@ -222,7 +224,7 @@ module qec {
         private render() {
             if (this.renderer == null)
                 return;
-            this.renderSettings.sd = this.sdUnion;
+            this.renderSettings.sdArray = this.sdUnion.array;
             //console.log("render");
             this.renderer.render(this.renderSettings);
             //this.renderer.renderDebug(100, 100, this.rp, this.cam);

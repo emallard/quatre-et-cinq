@@ -15,7 +15,9 @@ module qec {
             s.register('sdBorderDTO', sdBorder);
             s.register('sdBoxDTO', sdBox);
             s.register('sdFieldsDTO', sdFields);
+            s.register('sdFields1DTO', sdFields1);
             s.register('sdFields2DTO', sdFields2);
+            s.register(sdFields2RadialDTO.TYPE, sdFields2Radial);
             s.register('sdGridDTO', sdGrid);
             s.register('sdGrid2DTO', sdGrid2);
             s.register('sdIntersectionDTO', sdIntersection);
@@ -33,7 +35,8 @@ module qec {
 
         public create(sceneDTO:any, done:()=>void)
         {
-            this.loadImages(sceneDTO, ()=>this.createStep2(sceneDTO, done));
+            //this.loadImages(sceneDTO, ()=>this.createStep2(sceneDTO, done));
+            this.createStep2(sceneDTO, done);
         }
 
         private createStep2(sceneDTO:any, done:()=>void)

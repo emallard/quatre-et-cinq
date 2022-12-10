@@ -1,25 +1,20 @@
 module qec {
 
 
-    export class sdFields2DTO
+    export class sdFields1DTO
     {
-        static TYPE:string = 'sdFields2DTO';
+        static TYPE:string = 'sdFields1DTO';
         type:string = sdFields1DTO.TYPE;
         topImage:scImageDTO;
         topBounds:number[];
+        thickness:number;
         
-        profileImage:scImageDTO;
-        profileBounds:number[];
-
-        profileOrigin: number[];
-        profileAxis: number[];
-
         material: materialDTO;
         transform:Float32Array;
     }
 
-    
-    export class sdFields2 implements signedDistance, iTop, iProfile
+
+    export class sdFields1 implements iTop, signedDistance
     {
         uniqueName:string = uniqueName.new();
 
@@ -29,47 +24,31 @@ module qec {
         topSrc:string;
         topBounds:Float32Array;
         topUpdated:boolean;
-
-        profileSrc:string;
-        profileBounds:Float32Array;
-        profileOrigin:Float32Array;
-        profileAxis:Float32Array;
-        profileUpdated:boolean;
-
         boundingBox: Float32Array;
+
+        thickness:number;
 
         topTexture:floatTexture;
         topTextureUpdated:boolean;
 
-        profileTexture:floatTexture;
-        profileTextureUpdated:boolean;
-
         // after texture packer
         topSprite:textureSprite;
-        profileSprite:textureSprite;
-
-
-        createFrom(dto:sdFields2DTO)
+        
+        createFrom(dto:sdFields1DTO)
         {
             this.topBounds = new Float32Array(dto.topBounds);
+            this.thickness = dto.thickness;
             this.topSrc = dto.topImage.src;
-            this.profileSrc = dto.profileImage.src;
-            this.profileBounds = new Float32Array(dto.profileBounds);
-            this.profileOrigin = new Float32Array(dto.profileOrigin);
-            this.profileAxis = new Float32Array(dto.profileAxis);
-            vec2.normalize(this.profileAxis, this.profileAxis);
-
             this.material.createFrom(dto.material);
             this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
 
             this.boundingBox = new Float32Array([
                 0.5*(this.topBounds[2] - this.topBounds[0]), 
                 0.5*(this.topBounds[3] - this.topBounds[1]), 
-                0.5*(this.profileBounds[3] - this.profileBounds[1])]);
+                0.5*(this.thickness)]);
 
             // update flag
             this.topUpdated = true;
-            this.profileUpdated = true;
         }
 
         getDist3(minDist:number, pos: Float32Array, boundingBox:boolean, debug:boolean):number

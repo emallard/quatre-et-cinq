@@ -2,12 +2,14 @@ module qec{
 
     export class sdUnionDTO
     {
-        type:string;
+        static TYPE:string = 'sdUnionDTO';
+        type:string = sdUnionDTO.TYPE;
         array: any[];
     }
 
     export class sdUnion implements signedDistance, canCreate<sdUnionDTO>
     {
+        uniqueName:string = uniqueName.new();
         array : signedDistance[] = [];
         inverseTransform = mat4.identity(mat4.create());
 
@@ -32,13 +34,23 @@ module qec{
             var d = 66666;
             var l = this.array.length;
             for (var i=0; i < l; ++i)
-                d = Math.min(d, this.array[i].getDist(pos, boundingBox, debug));
+            {
+                //let distBB = (<sdFields2> this.array[i]).getDistToBoundingBox(pos);
+                //if (distBB < d)
+                //    d = Math.min(d, this.array[i].getDist(pos, boundingBox, debug));
+                d = (<sdFields2> this.array[i]).getDist3(d, pos, boundingBox, debug);
+            }
 
             return d;
         }
 
+        newMaterial = new material();
         getMaterial(pos: Float32Array)
         {
+            this.newMaterial.diffuse[0] = 72/255;
+            this.newMaterial.diffuse[1] = 145/255;
+            this.newMaterial.diffuse[2] = 243/255;
+            return this.newMaterial;
             var min = 666;
             var minMat:material;
             var l = this.array.length;
@@ -52,7 +64,7 @@ module qec{
                 }
             }
             if (minMat == null)
-                return new material();
+                return this.newMaterial;
             return minMat;
         }
 

@@ -3,7 +3,7 @@ module qec
 
     export class renderSettings
     {
-        sd:signedDistance; 
+        sdArray:signedDistance[];
         
         directionalLights:directionalLight[] = [];
         spotLights:spotLight[] = [];

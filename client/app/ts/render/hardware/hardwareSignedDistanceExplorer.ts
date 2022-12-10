@@ -4,21 +4,22 @@ module qec
     {
         sd: signedDistance;
         index:number;
-        sdFieldIndex = -1;
     }
 
     
     export class hardwareSignedDistanceExplorer
     {
-
         array:hardwareSignedDistance[] = [];
         recCount:number;
-        sdFieldsCount:number;
+
+        hdFields2Count:number;
+        hdFields2RadialCount:number;
 
         explore(sd: signedDistance)
         {
             this.recCount = 0;
-            this.sdFieldsCount = 0;
+            this.hdFields2Count = 0;
+            this.hdFields2RadialCount = 0;
             this.array = [];    
             this.exploreRec(sd);
         }
@@ -29,18 +30,14 @@ module qec
             if (this.getHsd(sd) != null)
                 return;
             
-            var hsd = new hardwareSignedDistance();
+            let hsd: hardwareSignedDistance;
+            
             this.array.push(hsd);
-
             hsd.sd = sd;
             hsd.index = this.recCount;
             this.recCount++;
 
-            if (sd instanceof sdFields)
-            {
-                hsd.sdFieldIndex = this.sdFieldsCount;
-                this.sdFieldsCount++;
-            }
+            /*
             else if (sd instanceof sdUnion)
             {
                 for (var i=0; i < sd.array.length; ++i)
@@ -60,14 +57,7 @@ module qec
             {
                 this.exploreRec(sd.sd);
             }
-        }
-
-        getSdFieldsCount():number {
-            var c = 0;
-            for (var i=0; i < this.array.length; ++i)
-                if (this.array[i].sd instanceof sdFields)
-                    c++;
-            return c;
+            */
         }
 
         getHsd(sd: signedDistance)

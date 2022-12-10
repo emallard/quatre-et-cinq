@@ -110,7 +110,7 @@ module qec {
             {
                 var scrend = this.sc.get<scRenderer>(o=>o instanceof scRenderer, 'render');
                 this.renderPixel = new renderPixel();
-                this.renderPixel.init(scrend.settings);
+                this.renderPixel.updateShader(scrend.settings);
                 this.camera = scrend.camera;
 
                 console.log('renderWorker init DTO OK');

@@ -10,8 +10,8 @@ module qec {
 
         optimizedBounds = vec4.create();
 
-        dfMaxWidth = 400;
-        dfMaxHeight = 400;
+        dfMaxWidth = 800;
+        dfMaxHeight = 800;
 
         constructor() {
             this.canvas = document.createElement('canvas');

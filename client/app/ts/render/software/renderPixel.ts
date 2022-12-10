@@ -3,7 +3,7 @@ module qec {
     export interface irenderPixel
     {
         //init(sd:signedDistance, light:pointLight, shadows:boolean);
-        init(settings:renderSettings);
+        updateShader(settings:renderSettings);
         render (ro:Float32Array, rd:Float32Array, debugInfo:boolean):Float32Array ;
     }
 
@@ -11,19 +11,19 @@ module qec {
     {
         debug = false;
 
-        sd:signedDistance;
+        sd:signedDistance[];
 
         directionalLights:directionalLight[];
         spotLights:spotLight[];
         
         out = vec4.create();
 
-        MAX_DIST_FROM_CAMERA = 1000;
+        MAX_DIST_FROM_CAMERA = 10000;
         MAX_STEPS = 100;
         c_fSmooth = 0.70;
         EPS_NORMAL_1 = 0.5;
         EPS_NORMAL_2 = 0.5;
-        EPS_INTERSECT = 0.001;
+        EPS_INTERSECT = 0.1;
 
         shadows = false;
         SS_K = 15.0;
@@ -49,9 +49,11 @@ module qec {
         reflection = false;
         rayToBounds = false;//true;
 
-        init(settings:renderSettings)
+        getDist: (Float32Array) => number;
+
+        updateShader(settings:renderSettings)
         {
-            this.sd = settings.sd;
+            this.getDist = new renderPixelGetDist().generateGetDist(settings.sdArray);
             this.directionalLights = settings.directionalLights;
             this.spotLights = settings.spotLights;
             this.shadows = settings.shadows;
@@ -67,7 +69,7 @@ module qec {
         {
             if (this.debug) console.log('ro', ro, 'rd', rd);
             
-            var hit = this.rayMarch(this.sd, ro, rd, this.out, this.outPos, this.outNormal);
+            var hit = this.rayMarch(this.getDist, ro, rd, this.out, this.outPos, this.outNormal);
             
             if (hit && this.reflection)
             {
@@ -78,7 +80,7 @@ module qec {
                 if (this.debug) 
                     console.log('reflect: reflRo', this.reflRo, 'reflRd', this.reflRd);
                 
-                hit = this.rayMarch(this.sd, this.reflRo, this.reflRd, this.reflCol, this.outPos, this.outNormal);
+                hit = this.rayMarch(this.getDist, this.reflRo, this.reflRd, this.reflCol, this.outPos, this.outNormal);
                 if (hit)
                 {
                     if (this.debug) 
@@ -95,7 +97,7 @@ module qec {
         }
 
 
-        rayMarch (sd:signedDistance, ro:Float32Array, rd:Float32Array, 
+        rayMarch (sd:(Float32Array)=>number, ro:Float32Array, rd:Float32Array, 
                   outColor:Float32Array, outPos:Float32Array, outNormal) :boolean
         {
             /*
@@ -127,7 +129,17 @@ module qec {
 
                 this.getNormal(sd, this.pos2, outNormal);
 
-                this.sd.getMaterial(outPos).getColor(this.sdColor);
+                //for (var j=0; j < 3; ++j)
+                //    outColor[j] = outNormal[j];
+
+                
+                //this.sd.getMaterial(outPos).getColor(this.sdColor);
+                this.sdColor[0] = 1;
+                this.sdColor[1] = 1;
+                this.sdColor[2] = 1;
+
+                for (var j=0; j < 3; ++j)
+                    outColor[j] = 0.2*this.sdColor[j];
 
                 var KD = 0.7;
                 var KS = 0.5;
@@ -144,6 +156,7 @@ module qec {
                     for (var j=0; j < 3; ++j)
                         outColor[j] += this.outLighting[2] * ( KS*this.outLighting[1] + KD*this.outLighting[0] * this.sdColor[j]);
                 }
+                
             }
             else
             {
@@ -156,7 +169,7 @@ module qec {
 
         intersectPos = vec3.create();
 
-        intersectDist(sd:signedDistance, ro:Float32Array, rd:Float32Array, tMin:number, tMax:number) : number
+        intersectDist(sd:(Float32Array)=>number, ro:Float32Array, rd:Float32Array, tMin:number, tMax:number) : number
         {  
             var t = tMin;
             var dist = -1.0;
@@ -168,10 +181,13 @@ module qec {
 
                 var dt:number;
             
+                /*
                 if (this.rayToBounds)
                     dt = sd.getDist2(this.intersectPos, rd, this.showBoundingBox, this.debug);// * this.c_fSmooth;
                 else
                     dt = sd.getDist(this.intersectPos, this.showBoundingBox, this.debug);// * this.c_fSmooth;
+                */
+               dt = sd(this.intersectPos);
 
                 if(dt < this.EPS_INTERSECT) {
                     dist = t;
@@ -188,7 +204,7 @@ module qec {
         }
 
 
-        getNormal(sd:signedDistance, pos:Float32Array, out:Float32Array) 
+        getNormal(sd:(Float32Array)=>number, pos:Float32Array, out:Float32Array) 
         {        
             out[0] = this.getNormalAt(sd, pos, 0);
             out[1] = this.getNormalAt(sd, pos, 1);
@@ -197,15 +213,15 @@ module qec {
         }
 
         
-        getNormalAt(sd:signedDistance, pos:Float32Array, index:number) : number
+        getNormalAt(sd:(Float32Array)=>number, pos:Float32Array, index:number) : number
         {
             if (this.debug) console.log('Compute Normal');
             var eps = this.EPS_NORMAL_2;
             vec3.copy(this.distEpsPos, pos);
             this.distEpsPos[index] += eps;
-            var a = sd.getDist(this.distEpsPos, this.showBoundingBox, this.debug);
+            var a = sd(this.distEpsPos);//, this.showBoundingBox, this.debug);
             this.distEpsPos[index] -= 2*eps;
-            var b = sd.getDist(this.distEpsPos, this.showBoundingBox, this.debug);
+            var b = sd(this.distEpsPos);//, this.showBoundingBox, this.debug);
             return a - b;
         }
 
@@ -262,6 +278,9 @@ module qec {
 
         ssTmp = vec3.create();
         getShadow (pos:Float32Array, toLight:Float32Array, lightDist:number) : number {
+
+            return 0;
+            /*
             var shadow = 1.0;
             var t = this.SS_EPS;
             var dt;
@@ -289,8 +308,9 @@ module qec {
             }
             
             return MathClamp(shadow, 0.0, 1.0);
+            */
         }
-
+        
 
         reflect(out:Float32Array, d:Float32Array, n:Float32Array)
         {

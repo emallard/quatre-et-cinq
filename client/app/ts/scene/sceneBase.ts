@@ -51,6 +51,19 @@ module qec
                 dto.__instance = this.createOne(dto);
         }
 
+        public createOne(dto:any):Object
+        {
+            for (var i=0; i<this.creators.length; ++i)
+            {
+                var c = this.creators[i];
+                if (c.predicate(dto))
+                {
+                    return c.instantiate(dto);
+                }
+            }
+            //throw "Can't create scene object " + key;
+        }
+
         /*
         public create(sceneDTO:any)
         {
@@ -101,6 +114,7 @@ module qec
         }
         */
 
+        /*
         protected replaceBySceneReferences(dto:any):Object
         {
             var copy = {};
@@ -146,7 +160,7 @@ module qec
             }
             return false;
         }
-
+        */
         /*
         public createOneOrArray(dto:any)
         {
@@ -163,18 +177,7 @@ module qec
                 this.createOne(dto);
         }*/
 
-        public createOne(dto:any):Object
-        {
-            for (var i=0; i<this.creators.length; ++i)
-            {
-                var c = this.creators[i];
-                if (c.predicate(dto))
-                {
-                    return c.instantiate(dto);
-                }
-            }
-            //throw "Can't create scene object " + key;
-        }
+        
     }
 
     export class creator
