@@ -5,8 +5,7 @@ module qec {
     {
         static TYPE:string = 'sdFields1DTO';
         type:string = sdFields1DTO.TYPE;
-        topImage:scImageDTO;
-        topBounds:number[];
+        top:partTopDTO;
         thickness:number;
         
         material: materialDTO;
@@ -21,34 +20,24 @@ module qec {
         transform:Float32Array;
         inverseTransform = mat4.identity(mat4.create());
         material = new material();
-        topSrc:string;
-        topBounds:Float32Array;
-        topUpdated:boolean;
+
         boundingBox: Float32Array;
 
         thickness:number;
 
-        topTexture:floatTexture;
-        topTextureUpdated:boolean;
-
-        // after texture packer
-        topSprite:textureSprite;
+        top:partTop = new partTop();
         
         createFrom(dto:sdFields1DTO)
         {
-            this.topBounds = new Float32Array(dto.topBounds);
+            this.top.createFrom(dto.top);
             this.thickness = dto.thickness;
-            this.topSrc = dto.topImage.src;
             this.material.createFrom(dto.material);
             this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
 
             this.boundingBox = new Float32Array([
-                0.5*(this.topBounds[2] - this.topBounds[0]), 
-                0.5*(this.topBounds[3] - this.topBounds[1]), 
+                0.5*(this.top.topBounds[2] - this.top.topBounds[0]), 
+                0.5*(this.top.topBounds[3] - this.top.topBounds[1]), 
                 0.5*(this.thickness)]);
-
-            // update flag
-            this.topUpdated = true;
         }
 
         getDist3(minDist:number, pos: Float32Array, boundingBox:boolean, debug:boolean):number

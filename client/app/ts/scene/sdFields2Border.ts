@@ -5,12 +5,10 @@ module qec {
     {
         static TYPE:string = 'sdFields2BorderDTO';
         type:string = sdFields2BorderDTO.TYPE;
-        topImage:scImageDTO;
-        topBounds:number[];
+        top:partTopDTO;
         thickness:number;
         
-        borderImage:scImageDTO;
-        borderBounds:number[];
+        border:partBorderDTO;
 
         material: materialDTO;
         transform:Float32Array;
@@ -24,50 +22,30 @@ module qec {
         transform:Float32Array;
         inverseTransform = mat4.identity(mat4.create());
         material = new material();
-        topSrc:string;
-        topBounds:Float32Array;
-        topUpdated:boolean;
+        top:partTop = new partTop();
 
         thickness: number;
 
-        borderSrc:string;
-        borderBounds:Float32Array;
-        borderUpdated:boolean;
+        border: partBorder = new partBorder();
 
         boundingBox: Float32Array;
-
-        topTexture:floatTexture;
-        topTextureUpdated:boolean;
-
-        borderTexture:floatTexture;
-        borderTextureUpdated:boolean;
-
-        // after texture packer
-        topSprite:textureSprite;
-        borderSprite:textureSprite;
 
 
         createFrom(dto:sdFields2BorderDTO)
         {
-            this.topBounds = new Float32Array(dto.topBounds);
-            this.topSrc = dto.topImage.src;
+            this.top.createFrom(dto.top);
 
             this.thickness = dto.thickness;
 
-            this.borderSrc = dto.borderImage.src;
-            this.borderBounds = new Float32Array(dto.borderBounds);
+            this.border.createFrom(dto.border);
 
             this.material.createFrom(dto.material);
             this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
 
             this.boundingBox = new Float32Array([
-                0.5*(this.topBounds[2] - this.topBounds[0]), 
-                0.5*(this.topBounds[3] - this.topBounds[1]), 
+                0.5*(this.top.topBounds[2] - this.top.topBounds[0]), 
+                0.5*(this.top.topBounds[3] - this.top.topBounds[1]), 
                 0.5*(this.thickness)]);
-
-            // update flag
-            this.topUpdated = true;
-            this.borderUpdated = true;
         }
 
         getDist3(minDist:number, pos: Float32Array, boundingBox:boolean, debug:boolean):number

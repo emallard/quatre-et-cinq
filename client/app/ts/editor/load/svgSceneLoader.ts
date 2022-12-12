@@ -107,6 +107,8 @@ module qec {
                 let halfWidth = (realBounds[2]-realBounds[0])/2;
                 let halfHeight = (realBounds[3]-realBounds[1])/2;
                 let topBounds = [-halfWidth, -halfHeight, halfWidth, halfHeight];
+                let top: partTopDTO = {topImage: topImage, topBounds: topBounds};
+
                 let transform = mat4.create();
 
                 cy = this.toLeftHanded(cy, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
@@ -134,7 +136,7 @@ module qec {
                 let startElt = this.getByLabel(thicknessElt, "start");
                 let radiusElt = this.getByLabel(thicknessElt, "radius");
                 let borderFrameElt = this.getByLabel(thicknessElt, "border_frame");
-                if (startElt != null)
+                if (startElt != null && borderFrameElt != null)
                 {
                     let start = this.getXY(thicknessElt, "start");
                     let end = this.getXY(thicknessElt, "end");
@@ -150,22 +152,45 @@ module qec {
                     let profileAxis = [end.x - start.x, end.y - start.y];
 
                     let width = vec2.length(new Float32Array(profileAxis));
-                    let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height, '');
-                    let profileImage = new scImageDTO();
-                    profileImage.src = "data:image/svg+xml;base64," + btoa(profileSrc);
-
                     
+                    let sdFields:sdFields2ProfileBorderDTO = {
+                        type: sdFields2ProfileBorderDTO.TYPE,
+                        material: material,
+                        transform: transform,
+                        top: top,
+                        profile: this.createProfile(thicknessElt, width, height),
+
+                        profileOrigin: profileOrigin,
+                        profileAxis: profileAxis,
+
+                        border: this.createBorder(thicknessElt),
+                    };
+                    done(sdFields);
+                }
+                else if (startElt != null)
+                {
+                    let start = this.getXY(thicknessElt, "start");
+                    let end = this.getXY(thicknessElt, "end");
+                    start.y = this.toLeftHanded(start.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
+                    end.y = this.toLeftHanded(end.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
+
+                    start.x -= cx;
+                    start.y -= cy;
+                    end.x -= cx;
+                    end.y -= cy;
+                    
+                    let profileOrigin = [start.x, start.y];
+                    let profileAxis = [end.x - start.x, end.y - start.y];
+                    let width = vec2.length(new Float32Array(profileAxis));
 
                     let sdFields:sdFields2DTO = {
                         type: sdFields2DTO.TYPE,
                         material: material,
                         transform: transform,
-                        topImage: topImage,
-                        topBounds: topBounds,
-                    
-                        profileImage:profileImage,
-                        profileBounds:profileBounds,
+                        
+                        top: top,
 
+                        profile: this.createProfile(thicknessElt, width, height),
                         profileOrigin: profileOrigin,
                         profileAxis: profileAxis,
                     };
@@ -179,19 +204,15 @@ module qec {
                     radius.y -= cy;
 
                     let width = radius.r;
-                    let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height, '');
-                    let profileImage = new scImageDTO();
-                    profileImage.src = "data:image/svg+xml;base64," + btoa(profileSrc);
-
+                    
                     let sdFields:sdFields2RadialDTO = {
                         type: sdFields2RadialDTO.TYPE,
                         material: material,
                         transform: transform,
-                        topImage: topImage,
-                        topBounds: topBounds,
-                    
-                        profileImage:profileImage,
-                        profileBounds:profileBounds,
+                        
+                        top: top,
+
+                        profile: this.createProfile(thicknessElt, width, height),
 
                         center: [radius.x, radius.y],
                         radius: radius.r
@@ -200,25 +221,11 @@ module qec {
                 }
                 else if (borderFrameElt != null)
                 {
-                    // height
-                    let borderDimensionsElt = this.getByLabel(thicknessElt, 'border_dimensions');
-                    let borderDimensionstspan = borderDimensionsElt.children.item(0);
-                    let borderDimensionsTextContentSplit = borderDimensionstspan.textContent.split(',');
-                    let borderWidth = parseFloat(borderDimensionsTextContentSplit[0]);
-                    let borderHeight = parseFloat(borderDimensionsTextContentSplit[1]);
-                    let [borderSrc, borderBounds] = this.getFrame(thicknessElt, borderWidth, borderHeight, 'border_');
-                    let borderImage = new scImageDTO();
-                    borderImage.src = "data:image/svg+xml;base64," + btoa(borderSrc);
-
-
                     let sdFields:sdFields2BorderDTO = {
                         type: sdFields2BorderDTO.TYPE,
-                        topImage: topImage,
-                        topBounds: topBounds,
+                        top: top,
                         thickness: height,
-                        
-                        borderImage: borderImage,
-                        borderBounds: borderBounds,
+                        border: this.createBorder(thicknessElt),
                         
                         material: material,
                         transform:transform
@@ -229,37 +236,44 @@ module qec {
                 {
                     let sdFields:sdFields1DTO = {
                         type: sdFields1DTO.TYPE,
-                        topImage: topImage,
-                        topBounds: topBounds,
+                        top: top,
                         thickness: height,
-                        
                         material: material,
                         transform:transform
                     }
                     done(sdFields);
                 }
-                /*
-                else
-                {
-                    let radius = this.getXYR(thicknessElt, "radius");
-                    radius.y = this.toLeftHanded(radius.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
-                    radius.x -= cx;
-                    radius.y -= cy;
-
-                    sdFields.isRadial = true;
-                    sdFields.radius = radius.r;
-                    sdFields.profileOrigin = [radius.x, radius.y];
-
-                    width = sdFields.radius;
-                }
-                
-                */
-
-                /*
-                
-                */
             }
             img.src = "data:image/svg+xml;base64," + btoa(src);
+        }
+
+        createProfile(thicknessElt: SVGGraphicsElement, width:number, height: number):partProfileDTO
+        {
+            let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height, '');
+            let profileImage = new scImageDTO();
+            profileImage.src = "data:image/svg+xml;base64," + btoa(profileSrc);
+            return {
+                profileImage: profileImage,
+                profileBounds : profileBounds,
+            }
+        }
+
+        createBorder(thicknessElt: SVGGraphicsElement):partBorderDTO
+        {
+            // height
+            let borderDimensionsElt = this.getByLabel(thicknessElt, 'border_dimensions');
+            let borderDimensionstspan = borderDimensionsElt.children.item(0);
+            let borderDimensionsTextContentSplit = borderDimensionstspan.textContent.split(',');
+            let borderWidth = parseFloat(borderDimensionsTextContentSplit[0]);
+            let borderHeight = parseFloat(borderDimensionsTextContentSplit[1]);
+            let [borderSrc, borderBounds] = this.getFrame(thicknessElt, borderWidth, borderHeight, 'border_');
+            let borderImage = new scImageDTO();
+            borderImage.src = "data:image/svg+xml;base64," + btoa(borderSrc);
+
+            return {
+                borderImage: borderImage,
+                borderBounds: borderBounds,
+            }
         }
 
         createSvgFromPoints(width:number, height: number, points:number[]):string

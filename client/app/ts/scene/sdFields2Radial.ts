@@ -5,14 +5,10 @@ module qec {
     {
         static TYPE:string = 'sdFields2RadialDTO';
         type:string = sdFields2RadialDTO.TYPE;
-        topImage:scImageDTO;
-        topBounds:number[];
-        
+        top:partTopDTO;
+        profile:partProfileDTO;
         center: number[];
         radius:number;
-
-        profileImage:scImageDTO;
-        profileBounds: number[];
 
         material: materialDTO;
         transform:Float32Array;
@@ -26,36 +22,18 @@ module qec {
         transform:Float32Array;
         inverseTransform = mat4.identity(mat4.create());
         material = new material();
-        topSrc:string;
-        topBounds:Float32Array;
-        topUpdated:boolean;
-
-        profileSrc:string;
-        profileBounds:Float32Array;
-        profileUpdated:boolean;
+        top:partTop = new partTop();
+        profile:partProfile = new partProfile();
 
         center:Float32Array;
         radius:number;
 
         boundingBox: Float32Array;
 
-        topTexture:floatTexture;
-        topTextureUpdated:boolean;
-
-        profileTexture:floatTexture;
-        profileTextureUpdated:boolean;
-
-        // after texture packer
-        topSprite:textureSprite;
-        profileSprite:textureSprite;
-
-
         createFrom(dto:sdFields2RadialDTO)
         {
-            this.topBounds = new Float32Array(dto.topBounds);
-            this.topSrc = dto.topImage.src;
-            this.profileSrc = dto.profileImage.src;
-            this.profileBounds = new Float32Array(dto.profileBounds);
+            this.top.createFrom(dto.top);
+            this.profile.createFrom(dto.profile);
             this.center = new Float32Array(dto.center);
             this.radius = dto.radius;
 
@@ -63,13 +41,9 @@ module qec {
             this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
 
             this.boundingBox = new Float32Array([
-                0.5*(this.topBounds[2] - this.topBounds[0]), 
-                0.5*(this.topBounds[3] - this.topBounds[1]), 
-                0.5*(this.profileBounds[3] - this.profileBounds[1])]);
-
-            // update flag
-            this.topUpdated = true;
-            this.profileUpdated = true;
+                0.5*(this.top.topBounds[2] - this.top.topBounds[0]), 
+                0.5*(this.top.topBounds[3] - this.top.topBounds[1]), 
+                0.5*(this.profile.profileBounds[3] - this.profile.profileBounds[1])]);
         }
 
         getDist2(pos: Float32Array, rd:Float32Array, boundingBox:boolean, debug:boolean):number

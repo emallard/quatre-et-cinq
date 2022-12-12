@@ -48,14 +48,14 @@ module qec {
                     p[2] += 0.5*p2.z;
 
                     vec2 uv = vec2(
-                        (p[0] - ${sd.topBounds[0].toFixed(3)}) / (${(sd.topBounds[2] - sd.topBounds[0]).toFixed(3)}),
-                        (p[1] - ${sd.topBounds[1].toFixed(3)}) / (${(sd.topBounds[3] - sd.topBounds[1]).toFixed(3)})
+                        (p[0] - ${sd.top.topBounds[0].toFixed(3)}) / (${(sd.top.topBounds[2] - sd.top.topBounds[0]).toFixed(3)}),
+                        (p[1] - ${sd.top.topBounds[1].toFixed(3)}) / (${(sd.top.topBounds[3] - sd.top.topBounds[1]).toFixed(3)})
                     );
 
                     vec2 _uv = clamp(uv, 0.0, 1.0);
                     vec2 uv2 = vec2 (
-                                    mix(${sd.topSprite.bounds[0].toFixed(3)}, ${sd.topSprite.bounds[2].toFixed(3)}, _uv.x),
-                                    mix(${sd.topSprite.bounds[1].toFixed(3)}, ${sd.topSprite.bounds[3].toFixed(3)}, _uv.y)
+                                    mix(${sd.top.topSprite.bounds[0].toFixed(3)}, ${sd.top.topSprite.bounds[2].toFixed(3)}, _uv.x),
+                                    mix(${sd.top.topSprite.bounds[1].toFixed(3)}, ${sd.top.topSprite.bounds[3].toFixed(3)}, _uv.y)
                     );
                     vec4 textureColor = texture2D(${name}.topTexture, uv2);
                     float d0 = textureColor[0];
@@ -89,7 +89,7 @@ module qec {
                 value: {
                     diffuse: v,
                     inverseTransform: m,
-                    topTexture: sd.topSprite.bigTexture.threeDataTexture,
+                    topTexture: sd.top.topSprite.bigTexture.threeDataTexture,
                     boundingBox: boundingBox
                 }
             };

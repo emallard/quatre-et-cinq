@@ -1,43 +1,46 @@
 module qec {
 
 
-    export class sdFields2DTO
+    export class sdFields2ProfileBorderDTO
     {
-        static TYPE:string = 'sdFields2DTO';
+        static TYPE:string = 'sdFields2ProfileBorderDTO';
         type:string = sdFields1DTO.TYPE;
-
         top:partTopDTO;
+        
         profile:partProfileDTO;
         profileOrigin: number[];
         profileAxis: number[];
+
+        border: partBorderDTO;
 
         material: materialDTO;
         transform:Float32Array;
     }
 
     
-    export class sdFields2 implements signedDistance, iTop, iProfile
+    export class sdFields2ProfileBorder implements signedDistance, iTop, iProfile, iBorder
     {
         uniqueName:string = uniqueName.new();
 
         transform:Float32Array;
         inverseTransform = mat4.identity(mat4.create());
         material = new material();
-
         top:partTop = new partTop();
         profile:partProfile = new partProfile();
         profileOrigin: Float32Array;
         profileAxis: Float32Array;
-        
+        border: partBorder = new partBorder();
+
         boundingBox: Float32Array;
 
-        createFrom(dto:sdFields2DTO)
+        createFrom(dto:sdFields2ProfileBorderDTO)
         {
             this.top.createFrom(dto.top);
             this.profile.createFrom(dto.profile);
             this.profileOrigin = new Float32Array(dto.profileOrigin);
             this.profileAxis = new Float32Array(dto.profileAxis);
             vec2.normalize(this.profileAxis, this.profileAxis);
+            this.border.createFrom(dto.border);
 
             this.material.createFrom(dto.material);
             this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
