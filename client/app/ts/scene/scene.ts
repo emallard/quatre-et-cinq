@@ -18,6 +18,8 @@ module qec {
             s.register('sdFields1DTO', sdFields1);
             s.register('sdFields2DTO', sdFields2);
             s.register(sdFields2RadialDTO.TYPE, sdFields2Radial);
+            s.register(sdFields2BorderDTO.TYPE, sdFields2Border);
+
             s.register('sdGridDTO', sdGrid);
             s.register('sdGrid2DTO', sdGrid2);
             s.register('sdIntersectionDTO', sdIntersection);

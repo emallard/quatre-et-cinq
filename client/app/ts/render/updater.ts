@@ -30,7 +30,8 @@ module qec
             {
                 if (sd instanceof sdFields1 
                     || sd instanceof sdFields2
-                    || sd instanceof sdFields2Radial)
+                    || sd instanceof sdFields2Radial
+                    || sd instanceof sdFields2Border)
                 {
                     let top = <iTop>sd;
                     run.push(x => this.updateTop(top, x));
@@ -40,6 +41,11 @@ module qec
                 {
                     let profile = <iProfile>sd;
                     run.push(x => this.updateProfile(profile, x));
+                }
+                if (sd instanceof sdFields2Border)
+                {
+                    let border = <iBorder>sd;
+                    run.push(x => this.updateBorder(border, x));
                 }
             }
             run.run(done);
@@ -115,6 +121,41 @@ module qec
             }
         }
         
+        updateBorder(sd:iBorder, done: () => void)
+        {
+            if (sd.borderUpdated)
+            {
+                console.log('update border' + sd.uniqueName);
+
+                sd.borderUpdated = false;
+                this.needRepack = true;
+
+                var margin = 2;
+
+                // load image
+                let img = new Image();
+                img.onload = () => {
+                    let topDfCanvas = new distanceFieldCanvas();                    
+                    topDfCanvas.drawUserCanvasForProfile(img, sd.borderBounds, margin);
+                    topDfCanvas.update();
+
+                    vec4.copy(sd.borderBounds, topDfCanvas.totalBounds);
+
+                    topDfCanvas.debugInfoInCanvas();
+                    document.body.append(topDfCanvas.canvas);
+
+                    sd.borderTexture = topDfCanvas.floatTexture;
+                    sd.borderTextureUpdated = true;
+                    done();
+                };
+                img.src = sd.borderSrc;
+            }
+            else
+            {
+                done();
+            }
+        }
+
         updateSprites(array:signedDistance[])
         {
             let allSprites: textureSprite[] = [];
@@ -122,7 +163,8 @@ module qec
             {
                 if (sd instanceof sdFields1 
                     || sd instanceof sdFields2 
-                    || sd instanceof sdFields2Radial)
+                    || sd instanceof sdFields2Radial
+                    || sd instanceof sdFields2Border)
                 {
                     sd.topSprite = new textureSprite();
                     sd.topSprite.originalTexture = sd.topTexture;
@@ -134,6 +176,12 @@ module qec
                     sd.profileSprite = new textureSprite();
                     sd.profileSprite.originalTexture = sd.profileTexture;
                     allSprites.push(sd.profileSprite);
+                }
+                if ( sd instanceof sdFields2Border)
+                {
+                    sd.borderSprite = new textureSprite();
+                    sd.borderSprite.originalTexture = sd.borderTexture;
+                    allSprites.push(sd.borderSprite);
                 }
             }
             this.texturePacker.repack(allSprites);

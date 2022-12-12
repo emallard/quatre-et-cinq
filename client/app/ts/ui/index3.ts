@@ -55,7 +55,7 @@ module qec {
                     this.renderSettings.camera = sceneDTO.cameras[0]['__instance'];
 
                     let lightDto = new directionalLightDTO();
-                    lightDto.direction= [1, -1, -1];
+                    lightDto.direction= [1, 1, -1];
                     lightDto.intensity = 1;
 
                     let light = new directionalLight();

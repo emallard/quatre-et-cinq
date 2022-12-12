@@ -27,6 +27,11 @@ module qec {
                     let captured:sdFields2Radial = sd;
                     inner.push((x,y) => this.getDistFields2Radial(captured, x, y));
                 }
+                else if (sd instanceof sdFields2Border)
+                {
+                    let captured:sdFields2Border = sd;
+                    inner.push((x,y) => this.getDistFields2Border(captured, x, y));
+                }
                 else
                 {
                     throw new Error("Not Implemented");
@@ -38,7 +43,7 @@ module qec {
         getDistFields1(hd: sdFields1, pos:Float32Array, d:number)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
-            this.tmp[2] -= 0.5*(hd.thickness)
+            this.tmp[2] -= hd.boundingBox[2];
             let boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
 
             if (boxDist > d)
@@ -47,7 +52,7 @@ module qec {
             if (boxDist > 2)
                 return boxDist;
 
-            this.tmp[2] += 0.5*(hd.thickness)
+            this.tmp[2] += hd.boundingBox[2];
             var p = this.tmp;
             
             
@@ -67,7 +72,7 @@ module qec {
         getDistFields2(hd: sdFields2, pos:Float32Array, d:number)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
-            this.tmp[2] -= 0.5*(hd.profileBounds[3] - hd.profileBounds[1])
+            this.tmp[2] -= hd.boundingBox[2];
             let boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
 
             
@@ -78,7 +83,7 @@ module qec {
                 return boxDist;
             
 
-            this.tmp[2] += 0.5*(hd.profileBounds[3] - hd.profileBounds[1])
+            this.tmp[2] += hd.boundingBox[2];
             var p = this.tmp;
             
             
@@ -97,13 +102,13 @@ module qec {
             let v2 = (p[2] - hd.profileBounds[1]) / (hd.profileBounds[3] - hd.profileBounds[1]);
             let d1 = this.getFieldDistanceWithSprite(hd.profileSprite.bigTexture, u2, v2, hd.profileSprite.bounds)
 
-            return Math.min(d, Math.max(d1, boxDist));
+            return Math.min(d, Math.max(d0, d1, boxDist));
         }
 
         getDistFields2Radial(hd: sdFields2Radial, pos:Float32Array, d:number)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
-            this.tmp[2] -= 0.5*(hd.profileBounds[3] - hd.profileBounds[1])
+            this.tmp[2] -= hd.boundingBox[2];
             let boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
 
             
@@ -114,7 +119,7 @@ module qec {
                 return boxDist;
             
 
-            this.tmp[2] += 0.5*(hd.profileBounds[3] - hd.profileBounds[1])
+            this.tmp[2] += hd.boundingBox[2];
             var p = this.tmp;
             
             
@@ -134,6 +139,41 @@ module qec {
             let d1 = this.getFieldDistanceWithSprite(hd.profileSprite.bigTexture, u2, v2, hd.profileSprite.bounds)
 
             return Math.min(d, Math.max(d0, d1, boxDist));
+        }
+
+        getDistFields2Border(hd: sdFields2Border, pos:Float32Array, d:number)
+        {
+            vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
+            this.tmp[2] -= hd.boundingBox[2];
+            let boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
+
+            
+            if (boxDist > d)
+                return d;
+
+            if (boxDist > 2)
+                return boxDist;
+            
+
+            this.tmp[2] += hd.boundingBox[2];
+            var p = this.tmp;
+            
+            
+            var u = (p[0] - hd.topBounds[0]) / (hd.topBounds[2] - hd.topBounds[0]);
+            var v = (p[1] - hd.topBounds[1]) / (hd.topBounds[3] - hd.topBounds[1]);
+            var d0 = this.getFieldDistanceWithSprite(hd.topSprite.bigTexture, u, v, hd.topSprite.bounds);
+
+            let u2 = (d0 - (-hd.borderBounds[2])) / ((-hd.borderBounds[0]) - (-hd.borderBounds[2]));
+
+            let distanceFromTop = p[2] - hd.thickness;
+            //let depthFromBottom = p[2];
+            //let depth = Math.min(depthFromTop, depthFromBottom);
+            //let depth = depthFromTop;
+            let v2 = (distanceFromTop - (-hd.borderBounds[3])) / ((-hd.borderBounds[1]) - (-hd.borderBounds[3]));
+
+            var d1 = this.getFieldDistanceWithSprite(hd.borderSprite.bigTexture, u2, v2, hd.borderSprite.bounds);
+            
+            return Math.min(d, d1);//Math.max(d1, boxDist));
         }
 
         getUnionDist(pos:Float32Array, inner: ((Float32Array, number) => number)[]) : number

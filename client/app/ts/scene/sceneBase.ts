@@ -61,7 +61,8 @@ module qec
                     return c.instantiate(dto);
                 }
             }
-            //throw "Can't create scene object " + key;
+            //console.error(dto);
+            //throw Error("Can't create scene object ");
         }
 
         /*

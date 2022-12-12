@@ -92,8 +92,23 @@ module qec {
             ctx.drawImage(img, 0, 0, img.width, img.height, offsetX, offsetY, newImgWidth, newImgHeight);
 
             // draw left margin if profile
+            /*
             if (profile)
+            {
                 ctx.drawImage(img, 0, 0, 1, img.height, 0, offsetY, offsetX, newImgHeight);
+            }
+            */
+            if (profile)
+            {
+                // draw left margin if profile
+                ctx.drawImage(img, 0, 0, 1, img.height, 0, offsetY, offsetX, newImgHeight);
+
+                // draw bottom margin if profile
+                ctx.drawImage(img, 0, img.height - 1, img.width, 1, offsetX, dfHeight-offsetY, newImgWidth, offsetY);
+
+                // bottom left
+                ctx.drawImage(img, 0, img.height - 1, 1, 1, 0, dfHeight-offsetY, offsetX, offsetY);
+            }
 
             if (this.distanceField == null) {
                 this.distanceField = new distanceField();

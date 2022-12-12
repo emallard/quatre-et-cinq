@@ -133,6 +133,7 @@ module qec {
                 // profile line in realBounds matrix
                 let startElt = this.getByLabel(thicknessElt, "start");
                 let radiusElt = this.getByLabel(thicknessElt, "radius");
+                let borderFrameElt = this.getByLabel(thicknessElt, "border_frame");
                 if (startElt != null)
                 {
                     let start = this.getXY(thicknessElt, "start");
@@ -149,7 +150,7 @@ module qec {
                     let profileAxis = [end.x - start.x, end.y - start.y];
 
                     let width = vec2.length(new Float32Array(profileAxis));
-                    let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height);
+                    let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height, '');
                     let profileImage = new scImageDTO();
                     profileImage.src = "data:image/svg+xml;base64," + btoa(profileSrc);
 
@@ -178,7 +179,7 @@ module qec {
                     radius.y -= cy;
 
                     let width = radius.r;
-                    let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height);
+                    let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height, '');
                     let profileImage = new scImageDTO();
                     profileImage.src = "data:image/svg+xml;base64," + btoa(profileSrc);
 
@@ -195,6 +196,33 @@ module qec {
                         center: [radius.x, radius.y],
                         radius: radius.r
                     };
+                    done(sdFields);
+                }
+                else if (borderFrameElt != null)
+                {
+                    // height
+                    let borderDimensionsElt = this.getByLabel(thicknessElt, 'border_dimensions');
+                    let borderDimensionstspan = borderDimensionsElt.children.item(0);
+                    let borderDimensionsTextContentSplit = borderDimensionstspan.textContent.split(',');
+                    let borderWidth = parseFloat(borderDimensionsTextContentSplit[0]);
+                    let borderHeight = parseFloat(borderDimensionsTextContentSplit[1]);
+                    let [borderSrc, borderBounds] = this.getFrame(thicknessElt, borderWidth, borderHeight, 'border_');
+                    let borderImage = new scImageDTO();
+                    borderImage.src = "data:image/svg+xml;base64," + btoa(borderSrc);
+
+
+                    let sdFields:sdFields2BorderDTO = {
+                        type: sdFields2BorderDTO.TYPE,
+                        topImage: topImage,
+                        topBounds: topBounds,
+                        thickness: height,
+                        
+                        borderImage: borderImage,
+                        borderBounds: borderBounds,
+                        
+                        material: material,
+                        transform:transform
+                    }
                     done(sdFields);
                 }
                 else
@@ -436,9 +464,9 @@ module qec {
             return {x: p.x, y:p.y, r: vec2.length(vec2.fromValues(r.x-p.x, r.y-p.y))};
         }
 
-        getFrame(eltThickness:SVGGraphicsElement, width:number, height:number) : [string, number[]]
+        getFrame(eltThickness:SVGGraphicsElement, width:number, height:number, prefix:string) : [string, number[]]
         {
-            let frameElt = this.getByLabel(eltThickness, 'frame');
+            let frameElt = this.getByLabel(eltThickness, prefix + 'frame');
 
 
             let origin = frameElt.ownerSVGElement.createSVGPoint();
@@ -465,7 +493,7 @@ module qec {
                 frameElt = <SVGGraphicsElement> frameElt.parentNode;
             }
             
-            let shapeElt = this.getByLabel(eltThickness, 'shape');
+            let shapeElt = this.getByLabel(eltThickness, prefix + 'shape');
             let [clonedRoot, clonedGroup] = this.extractIgnoringThickness(shapeElt);
 
             let matrix = clonedRoot.createSVGMatrix();
@@ -485,7 +513,7 @@ module qec {
             clonedRoot.setAttribute('height', ''+height+'mm');
             clonedRoot.setAttribute('viewBox', '0 0 '+ width + ' ' + height);
             var svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
-            console.log("profile SVG");
+            console.log("frame SVG");
             console.log(svg_xml);
             return [svg_xml, [0, 0, width, height]];
         }
