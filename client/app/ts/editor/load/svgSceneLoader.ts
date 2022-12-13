@@ -210,7 +210,7 @@ module qec {
                         material: material,
                         transform: transform,
                         
-                        top: top,
+                    top: top,
 
                         profile: this.createProfile(thicknessElt, width, height),
 
@@ -527,8 +527,8 @@ module qec {
             clonedRoot.setAttribute('height', ''+height+'mm');
             clonedRoot.setAttribute('viewBox', '0 0 '+ width + ' ' + height);
             var svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
-            console.log("frame SVG");
-            console.log(svg_xml);
+            //console.log("frame SVG");
+            //console.log(svg_xml);
             return [svg_xml, [0, 0, width, height]];
         }
         parsePoint(pt:DOMPoint, s:string, rel:DOMPoint)

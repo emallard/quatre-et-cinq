@@ -125,7 +125,7 @@ module qec {
                 this.lineDrawer.drawLine(canvasPoints, this.tmpProfileCanvas);
 
             // draw for distance field
-            this.profile.drawUserCanvasForProfile(this.tmpProfileCanvas, this.profileBounds, 0.1);
+            this.profile.drawUserCanvasForBorder(this.tmpProfileCanvas, this.profileBounds, 0.1);
             this.profile.update();
 
         }

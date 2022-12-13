@@ -38,6 +38,11 @@ module qec
                     let captured = <iProfile>sd;
                     run.push(x => this.updateProfile(captured, x));
                 }
+                if (instanceOfProfileTopBottom(sd))
+                {
+                    let captured = <iProfileTopBottom>sd;
+                    run.push(x => this.updateProfileTopBottom(captured, x));
+                }
                 if (instanceOfBorder(sd))
                 {
                     let captured = <iBorder>sd;
@@ -45,6 +50,50 @@ module qec
                 }
             }
             run.run(done);
+        }
+
+        updateSprites(array:signedDistance[])
+        {
+            let allSprites: textureSprite[] = [];
+            for (let sd of array)
+            {
+                if (instanceOfTop(sd))
+                {
+                    let top = sd.top;
+                    top.topSprite = new textureSprite();
+                    top.topSprite.originalTexture = top.topTexture;
+                    allSprites.push(top.topSprite);
+                }
+                if (instanceOfProfile(sd))
+                {
+                    let profile = sd.profile;
+                    profile.profileSprite = new textureSprite();
+                    profile.profileSprite.originalTexture = profile.profileTexture;
+                    allSprites.push(profile.profileSprite);
+                }
+                if (instanceOfProfileTopBottom(sd))
+                {
+                    let profile = sd.profileTopBottom;
+                    {
+                        profile.profileTopSprite = new textureSprite();
+                        profile.profileTopSprite.originalTexture = profile.profileTopTexture;
+                        allSprites.push(profile.profileTopSprite);
+                    }
+                    {
+                        profile.profileBottomSprite = new textureSprite();
+                        profile.profileBottomSprite.originalTexture = profile.profileBottomTexture;
+                        allSprites.push(profile.profileBottomSprite);
+                    }
+                }
+                if (instanceOfBorder(sd))
+                {
+                    let b = sd.border;
+                    b.borderSprite = new textureSprite();
+                    b.borderSprite.originalTexture = b.borderTexture;
+                    allSprites.push(b.borderSprite);
+                }
+            }
+            this.texturePacker.repack(allSprites);
         }
 
         updateTop(sd:iTop, done: () => void)
@@ -118,6 +167,58 @@ module qec
                 done();
             }
         }
+
+        updateProfileTopBottom(sd:iProfileTopBottom, done: () => void)
+        {
+            let profile = sd.profileTopBottom;
+            if (profile.profileUpdated)
+            {
+                console.log('update profile top-bottom' + sd.uniqueName);
+
+                profile.profileUpdated = false;
+                this.needRepack = true;
+
+                var margin = 2;
+
+                // load image
+                let img = new Image();
+                img.onload = () => {
+                    {
+                        let topDfCanvas = new distanceFieldCanvas();                    
+                        topDfCanvas.drawUserCanvasForProfileTop(img, profile.profileBounds, margin);
+                        topDfCanvas.update();
+
+                        // to be done only once
+                        // vec4.copy(profile.profileBounds, topDfCanvas.totalBounds);
+
+                        topDfCanvas.debugInfoInCanvas();
+                        document.body.append(topDfCanvas.canvas);
+
+                        profile.profileTopTexture = topDfCanvas.floatTexture;
+                    }
+                    {
+                        let topDfCanvas = new distanceFieldCanvas();                    
+                        topDfCanvas.drawUserCanvasForProfileBottom(img, profile.profileBounds, margin);
+                        topDfCanvas.update();
+
+                        vec4.copy(profile.profileBounds, topDfCanvas.totalBounds);
+
+                        topDfCanvas.debugInfoInCanvas();
+                        document.body.append(topDfCanvas.canvas);
+
+                        profile.profileBottomTexture = topDfCanvas.floatTexture;
+                    }
+                    profile.profileTextureUpdated = true;
+
+                    done();
+                };
+                img.src = profile.profileSrc;
+            }
+            else
+            {
+                done();
+            }
+        }
         
         updateBorder(sd:iBorder, done: () => void)
         {
@@ -135,7 +236,7 @@ module qec
                 let img = new Image();
                 img.onload = () => {
                     let topDfCanvas = new distanceFieldCanvas();                    
-                    topDfCanvas.drawUserCanvasForProfile(img, b.borderBounds, margin);
+                    topDfCanvas.drawUserCanvasForBorder(img, b.borderBounds, margin);
                     topDfCanvas.update();
 
                     vec4.copy(b.borderBounds, topDfCanvas.totalBounds);
@@ -154,37 +255,5 @@ module qec
                 done();
             }
         }
-
-        updateSprites(array:signedDistance[])
-        {
-            let allSprites: textureSprite[] = [];
-            for (let sd of array)
-            {
-                if (instanceOfTop(sd))
-                {
-                    let top = sd.top;
-                    top.topSprite = new textureSprite();
-                    top.topSprite.originalTexture = top.topTexture;
-                    allSprites.push(top.topSprite);
-                }
-                if (instanceOfProfile(sd))
-                {
-                    let profile = sd.profile;
-                    profile.profileSprite = new textureSprite();
-                    profile.profileSprite.originalTexture = profile.profileTexture;
-                    allSprites.push(profile.profileSprite);
-                }
-                if (instanceOfBorder(sd))
-                {
-                    let b = sd.border;
-                    b.borderSprite = new textureSprite();
-                    b.borderSprite.originalTexture = b.borderTexture;
-                    allSprites.push(b.borderSprite);
-                }
-            }
-            this.texturePacker.repack(allSprites);
-        }
-
-        
     }
 }

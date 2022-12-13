@@ -18,7 +18,7 @@ module qec {
     }
 
     
-    export class sdFields2ProfileBorder implements signedDistance, iTop, iProfile, iBorder
+    export class sdFields2ProfileBorder implements signedDistance, iTop, iProfileTopBottom, iBorder
     {
         uniqueName:string = uniqueName.new();
 
@@ -26,7 +26,7 @@ module qec {
         inverseTransform = mat4.identity(mat4.create());
         material = new material();
         top:partTop = new partTop();
-        profile:partProfile = new partProfile();
+        profileTopBottom:partProfileTopBottom = new partProfileTopBottom();
         profileOrigin: Float32Array;
         profileAxis: Float32Array;
         border: partBorder = new partBorder();
@@ -36,7 +36,7 @@ module qec {
         createFrom(dto:sdFields2ProfileBorderDTO)
         {
             this.top.createFrom(dto.top);
-            this.profile.createFrom(dto.profile);
+            this.profileTopBottom.createFrom(dto.profile);
             this.profileOrigin = new Float32Array(dto.profileOrigin);
             this.profileAxis = new Float32Array(dto.profileAxis);
             vec2.normalize(this.profileAxis, this.profileAxis);
@@ -48,7 +48,7 @@ module qec {
             this.boundingBox = new Float32Array([
                 0.5*(this.top.topBounds[2] - this.top.topBounds[0]), 
                 0.5*(this.top.topBounds[3] - this.top.topBounds[1]), 
-                0.5*(this.profile.profileBounds[3] - this.profile.profileBounds[1])]);
+                0.5*(this.profileTopBottom.profileBounds[3] - this.profileTopBottom.profileBounds[1])]);
         }
 
         getDist3(minDist:number, pos: Float32Array, boundingBox:boolean, debug:boolean):number

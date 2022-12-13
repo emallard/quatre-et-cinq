@@ -42,14 +42,22 @@ module qec {
         }
 
         drawUserCanvasForTop(img: HTMLCanvasElement | HTMLImageElement, _bounds: Float32Array, margin: number) {
-            this.drawUserCanvasBase(img, _bounds, margin, false);
+            this.drawUserCanvasBase(img, _bounds, margin, false, distanceFieldBorderType.all);
         }
 
-        drawUserCanvasForProfile(img: HTMLCanvasElement | HTMLImageElement, _bounds: Float32Array, margin: number) {
-            this.drawUserCanvasBase(img, _bounds, margin, true);
+        drawUserCanvasForProfileTop(img: HTMLCanvasElement | HTMLImageElement, _bounds: Float32Array, margin: number) {
+            this.drawUserCanvasBase(img, _bounds, margin, false, distanceFieldBorderType.top);
         }
 
-        private drawUserCanvasBase(img: HTMLCanvasElement | HTMLImageElement, _bounds: Float32Array, margin: number, profile: boolean) {
+        drawUserCanvasForProfileBottom(img: HTMLCanvasElement | HTMLImageElement, _bounds: Float32Array, margin: number) {
+            this.drawUserCanvasBase(img, _bounds, margin, false, distanceFieldBorderType.bottom);
+        }
+
+        drawUserCanvasForBorder(img: HTMLCanvasElement | HTMLImageElement, _bounds: Float32Array, margin: number) {
+            this.drawUserCanvasBase(img, _bounds, margin, true, distanceFieldBorderType.all);
+        }
+
+        private drawUserCanvasBase(img: HTMLCanvasElement | HTMLImageElement, _bounds: Float32Array, margin: number, border: boolean, borderType:distanceFieldBorderType) {
             this.totalBounds = vec4.fromValues(_bounds[0] - margin, _bounds[1] - margin, _bounds[2] + margin, _bounds[3] + margin);
 
             var boundW = _bounds[2] - _bounds[0];
@@ -98,7 +106,7 @@ module qec {
                 ctx.drawImage(img, 0, 0, 1, img.height, 0, offsetY, offsetX, newImgHeight);
             }
             */
-            if (profile)
+            if (border)
             {
                 // draw left margin if profile
                 ctx.drawImage(img, 0, 0, 1, img.height, 0, offsetY, offsetX, newImgHeight);
@@ -106,12 +114,13 @@ module qec {
                 // draw bottom margin if profile
                 ctx.drawImage(img, 0, img.height - 1, img.width, 1, offsetX, dfHeight-offsetY, newImgWidth, offsetY);
 
-                // bottom left
+                // draw bottom left
                 ctx.drawImage(img, 0, img.height - 1, 1, 1, 0, dfHeight-offsetY, offsetX, offsetY);
             }
 
             if (this.distanceField == null) {
                 this.distanceField = new distanceField();
+                this.distanceField.setBorderType(borderType);
             }
             var df = this.distanceField;
             var imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
@@ -206,19 +215,21 @@ module qec {
                     img.src = src1;
                 }
         */
+
+        debugScale = 255;
         public debugInfoInExistingCanvas(canvas: HTMLCanvasElement) {
             canvas.width = this.canvas.width;
             canvas.height = this.canvas.height;
             var ctx = canvas.getContext('2d');
             var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            this.distanceField.fillImageData(imageData.data, 2550);
+            this.distanceField.fillImageData(imageData.data, this.debugScale);
             ctx.putImageData(imageData, 0, 0, 0, 0, canvas.width, canvas.height);
         }
 
         public debugInfoInCanvas() {
             var ctx = this.canvas.getContext('2d');
             var imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-            this.distanceField.fillImageData(imageData.data, 2550);
+            this.distanceField.fillImageData(imageData.data, this.debugScale);
             ctx.putImageData(imageData, 0, 0, 0, 0, this.canvas.width, this.canvas.height);
         }
 

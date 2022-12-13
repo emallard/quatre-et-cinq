@@ -1,5 +1,10 @@
 module qec {
 
+    export enum distanceFieldBorderType
+    {
+        all, top, bottom
+    }
+
     export class distanceField
     {
         N:number;
@@ -7,6 +12,7 @@ module qec {
         L:Uint16Array;
         public D:Float32Array;
 
+        borderType = distanceFieldBorderType.all;
         halfSize = vec2.create();
         maxDepth:number;
         
@@ -61,15 +67,33 @@ module qec {
             }
         }
 
+        setBorderType(borderType:distanceFieldBorderType)
+        {
+            this.borderType = borderType;
+        }
+
         initFromImageData(data:any, dataWidth:number, dataHeight:number, halfWidth:number, halfHeight:number)
         {
             this.initCommon(dataWidth, dataHeight, halfWidth, halfHeight);
+            if (this.borderType == distanceFieldBorderType.all)
+                this.initBorderAll(data);
+            else if (this.borderType == distanceFieldBorderType.top)
+                this.initBorderTop(data);
+            else if (this.borderType == distanceFieldBorderType.bottom)
+                this.initBorderBottom(data);
+            else
+                throw new Error('distanceFieldBorderType not Implemented');
+            this.compute();
+        }
+
+        initBorderAll(data:any)
+        {
             for (var i=0; i < this.M; ++i)
             {
                 for (var j=0; j < this.N; ++j)
                 {
                     //if (data[4 * (j * this.M + i)] > 0)
-                    if (this.isBorderImageData(data, dataWidth, dataHeight, i, j))
+                    if (this.isBorderImageData(data, this.M, this.N, i, j))
                     {
                         this.setL(i,j,0,0)
                     }
@@ -79,8 +103,60 @@ module qec {
                     }
                 }
             }
+        }
 
+        initBorderTop(data:any)
+        {
+            console.log('initBorderTop');
+            for (var i=0; i < this.M; ++i)
+            {
+                let inside = false;
+                for (var j=this.N-1; j >= 0; --j)
+                {
+                    if (this.isPixelSet(data, this.M, this.N, i,j))
+                    {
+                        if (!inside)
+                            this.setL(i,j,0,0)
+                        else
+                            this.setL(i,j,1024,1024)
+                        inside = true;
+                    }
+                    else
+                    {
+                        inside = false;
+                        this.setL(i,j,1024,1024)
+                    }
+                }
+            }
+        }
 
+        initBorderBottom(data:any)
+        {
+            console.log('initBorderBottom');
+            for (var i=0; i < this.M; ++i)
+            {
+                let inside = false;
+                for (var j=0; j < this.N; ++j)
+                {
+                    if (this.isPixelSet(data, this.M, this.N, i,j))
+                    {
+                        if (!inside)
+                            this.setL(i,j,0,0)
+                        else
+                            this.setL(i,j,1024,1024)
+                        inside = true;                        
+                    }
+                    else
+                    {
+                        inside = false;
+                        this.setL(i,j,1024,1024)
+                    }
+                }
+            }
+        }
+        
+        compute()
+        {
             for (var j=1; j < this.N; ++j) {
                 //console.log('1st pass: ' + j);
                 for (var i = 0; i < this.M; ++i) {

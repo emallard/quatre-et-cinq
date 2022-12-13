@@ -184,13 +184,20 @@ module qec {
 
             // Axis:
             let dotProduct = originToPointX*hd.profileAxis[0] + originToPointY*hd.profileAxis[1];
-            let d1 = this.getDistProfile(hd.profile, p, dotProduct);
 
-            // TODO
-            /*
-            let distanceFromTop = p[2] - hd.thickness;
-            let d1 = this.getDistBorder(hd.border, d0, distanceFromTop);
-            */
+            let dTop = this.getDistProfile2(hd.profileTopBottom.profileTopSprite, hd.profileTopBottom.profileBounds, p, dotProduct);
+            let dBottom = this.getDistProfile2(hd.profileTopBottom.profileBottomSprite, hd.profileTopBottom.profileBounds, p, dotProduct);
+
+            let d1 = 0;
+            if (Math.abs(dTop) < Math.abs(dBottom))
+            {
+                d1 = this.getDistBorder(hd.border, d0, dTop);
+            }
+            else
+            {
+                d1 = dBottom;
+            }
+            
 
             return Math.min(d, Math.max(d0, d1, boxDist));
         }
@@ -208,6 +215,14 @@ module qec {
             let v2 = (p[2] - profile.profileBounds[1]) / (profile.profileBounds[3] - profile.profileBounds[1]);
             return this.getFieldDistanceWithSprite(profile.profileSprite.bigTexture, u2, v2, profile.profileSprite.bounds)
         }
+
+        getDistProfile2(sprite:textureSprite, profileBounds:Float32Array, p:Float32Array, length:number)
+        {
+            let u2 = (length - profileBounds[0]) / (profileBounds[2] - profileBounds[0]);
+            let v2 = (p[2] - profileBounds[1]) / (profileBounds[3] - profileBounds[1]);
+            return this.getFieldDistanceWithSprite(sprite.bigTexture, u2, v2, sprite.bounds)
+        }
+
         getDistBorder(b:partBorder, d0:number, distanceFromTop:number):number
         {
             let u2 = (d0 - (-b.borderBounds[2])) / ((-b.borderBounds[0]) - (-b.borderBounds[2]));

@@ -48,7 +48,7 @@ module qec {
 */
             var margin = 0.05;
             this.topDfCanvas.drawUserCanvasForTop(topImage, this.topBounds, margin);
-            this.profileDfCanvas.drawUserCanvasForProfile(profileImage, this.profileBounds, margin);
+            this.profileDfCanvas.drawUserCanvasForBorder(profileImage, this.profileBounds, margin);
 
             this.topDfCanvas.update();
             this.profileDfCanvas.update();
