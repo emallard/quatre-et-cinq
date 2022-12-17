@@ -9,7 +9,9 @@ module qec {
 
     export class directionalLight implements ilight
     {
+        uniqueName:string = uniqueName.new();
         direction = vec3.create();
+        invDirection = vec3.create();
         intensity = 0.5;
 
         createFrom(dto:directionalLightDTO)
@@ -18,6 +20,7 @@ module qec {
             this.intensity = dto.intensity;
 
             vec3.normalize(this.direction, this.direction);
+            vec3.scale(this.invDirection, this.direction, -1);
         }
     }
 }

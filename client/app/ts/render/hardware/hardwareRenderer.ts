@@ -20,6 +20,7 @@ module qec {
 
         sd: signedDistance[];
         text: hardwareShaderTextUnion;
+        textLights: hardwareShaderDirectionalLight;
 
         setFragmentShader(text: string) {
             this.fragmentShader = text;
@@ -35,6 +36,7 @@ module qec {
             this.initTHREE();
 
             this.text = new hardwareShaderTextUnion();
+            this.textLights = new hardwareShaderDirectionalLight();
 
             this.gShaderMaterial.uniforms.u_inverseTransforms = { type: "m4v", value: [] };
             this.gShaderMaterial.uniforms.u_diffuses = { type: "3fv", value: [] };
@@ -67,22 +69,39 @@ module qec {
 
             this.sd = settings.sdArray;
             this.text.setArray(this.sd);
+            this.textLights.setLight(settings.directionalLights[0]);
 
             console.log('hardwareRenderer.updateShader');
 
-            var generatedPart = '';
-            let structs = {};
-            this.text.declareStruct(structs);
-            for (let t in structs)
+            let generatedPart = '';
             {
-                generatedPart += `struct ${t} { ${structs[t]} };\n`;
+                let structs = {};
+                this.text.declareStruct(structs);
+                
+
+                for (let t in structs)
+                {
+                    generatedPart += `struct ${t} { ${structs[t]} };\n`;
+                }
+
+                generatedPart += this.text.declareUniforms() + '\n';
+                generatedPart += this.text.generateDist() + '\n';
+                generatedPart += this.text.generateColor() + '\n';
             }
 
-            generatedPart += this.text.declareUniforms() + '\n';
-            generatedPart += this.text.generateDist() + '\n';
-            generatedPart += this.text.generateColor() + '\n';
-            
-            var generatedLight = this.generateLight(1);
+            let generatedLight = '';
+            {
+                let structsLight = {};
+                this.textLights.declareStruct(structsLight);
+                for (let t in structsLight)
+                {
+                    generatedPart += `struct ${t} { ${structsLight[t]} };\n`;
+                }
+
+                
+                generatedLight += this.textLights.declareUniforms() + '\n';
+                generatedLight += this.textLights.generateApplyLight();
+            }
 
             this.fragmentShader = ''
                 + resources.all['app/ts/render/hardware/10_sd.glsl']
@@ -100,6 +119,7 @@ module qec {
             this.updateAllUniformsForAll();
         }
 
+        /*
         generateLight(count:number) : string
         {
             var shader = '';
@@ -114,9 +134,11 @@ module qec {
 
             return shader;
         }
+        */
 
         updateAllUniformsForAll() {
             this.text.setUniforms(this.gShaderMaterial.uniforms);
+            this.textLights.setUniforms(this.gShaderMaterial.uniforms);
         }
 
         /*

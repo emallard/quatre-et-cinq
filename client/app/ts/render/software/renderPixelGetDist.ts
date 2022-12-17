@@ -62,13 +62,7 @@ module qec {
             
             let d0 = this.getDistTop(hd.top, p);
 
-            let dToUpperPlane = p[2] - hd.thickness;
-            let dToLowerPlane = 0 - p[2];
-
-            if (dToUpperPlane > d0) d0 = dToUpperPlane;
-            if (dToLowerPlane > d0) d0 = dToLowerPlane;
-            
-            return d0;
+            return Math.max(boxDist, d0);
         }
 
         getDistFields2(hd: sdFields2, pos:Float32Array, d:number)

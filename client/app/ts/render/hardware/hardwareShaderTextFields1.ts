@@ -3,6 +3,8 @@ module qec {
     export class hardwareShaderTextFields1 implements ihardwareShaderText
     {
         sd: sdFields1;
+        structName = 'sdFields1';
+
         constructor(sd: sdFields1)
         {
             this.sd = sd;
@@ -10,8 +12,8 @@ module qec {
 
         declareStruct(declared:any):void
         {
-            if (declared['sdFields1'] == undefined)
-            declared['sdFields1'] = `
+            if (declared[this.structName] == undefined)
+            declared[this.structName] = `
                 sampler2D topTexture;
                 mat4 inverseTransform;
                 vec3 diffuse;
@@ -21,7 +23,7 @@ module qec {
 
         declareUniforms(): string
         {
-            return `uniform sdFields1 u_sd_${this.sd.uniqueName};`
+            return `uniform ${this.structName} u_sd_${this.sd.uniqueName};`
         }
 
         generateDist(assignColor:boolean): string
@@ -34,42 +36,37 @@ module qec {
 
                 vec3 p = p2.xyz;
 
-                p[2] -= 0.5*p2.z;
+                p[2] -= ${name}.boundingBox[2];
                 float distToBbox = sdBox(p, ${name}.boundingBox);
                 
                 if (distToBbox < d)
                 {
-                if (distToBbox > 2.0)
-                {
-                    d = min(d, distToBbox);
+                    if (distToBbox > 2.0)
+                    {
+                        d = min(d, distToBbox);
+                    }
+                    else
+                    {
+                        p[2] += ${name}.boundingBox[2];
+
+                        vec2 uv = vec2(
+                            (p[0] - ${sd.top.topBounds[0].toFixed(3)}) / (${(sd.top.topBounds[2] - sd.top.topBounds[0]).toFixed(3)}),
+                            (p[1] - ${sd.top.topBounds[1].toFixed(3)}) / (${(sd.top.topBounds[3] - sd.top.topBounds[1]).toFixed(3)})
+                        );
+
+                        vec2 _uv = clamp(uv, 0.0, 1.0);
+                        vec2 uv2 = vec2 (
+                                        mix(${sd.top.topSprite.bounds[0].toFixed(3)}, ${sd.top.topSprite.bounds[2].toFixed(3)}, _uv.x),
+                                        mix(${sd.top.topSprite.bounds[1].toFixed(3)}, ${sd.top.topSprite.bounds[3].toFixed(3)}, _uv.y)
+                        );
+                        vec4 textureColor = texture2D(${name}.topTexture, uv2);
+                        float d0 = textureColor[0];
+                        
+                        d = min(d, max(d0, distToBbox));
+                        ${assignColor ? 'if (d == d0) { color = '+ name + '.diffuse; }' : ''}
+                    }
                 }
-                else
-                {
-                    p[2] += 0.5*p2.z;
-
-                    vec2 uv = vec2(
-                        (p[0] - ${sd.top.topBounds[0].toFixed(3)}) / (${(sd.top.topBounds[2] - sd.top.topBounds[0]).toFixed(3)}),
-                        (p[1] - ${sd.top.topBounds[1].toFixed(3)}) / (${(sd.top.topBounds[3] - sd.top.topBounds[1]).toFixed(3)})
-                    );
-
-                    vec2 _uv = clamp(uv, 0.0, 1.0);
-                    vec2 uv2 = vec2 (
-                                    mix(${sd.top.topSprite.bounds[0].toFixed(3)}, ${sd.top.topSprite.bounds[2].toFixed(3)}, _uv.x),
-                                    mix(${sd.top.topSprite.bounds[1].toFixed(3)}, ${sd.top.topSprite.bounds[3].toFixed(3)}, _uv.y)
-                    );
-                    vec4 textureColor = texture2D(${name}.topTexture, uv2);
-                    float d0 = textureColor[0];
-
-                    float dToUpperPlane = p[2] - ${sd.thickness.toFixed(3)};
-                    float dToLowerPlane = 0.0 - p[2];
-
-                    if (dToUpperPlane > d0) d0 = dToUpperPlane;
-                    if (dToLowerPlane > d0) d0 = dToLowerPlane;
-                    
-                    d = min(d, d0);
-                    ${assignColor ? 'if (d == d0) { color = '+ name + '.diffuse; }' : ''}
-                }
-                }
+                
             }
             `;
         }

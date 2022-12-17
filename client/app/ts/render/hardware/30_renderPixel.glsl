@@ -81,7 +81,7 @@ RayMarch rayMarch (in vec3 ro, in vec3 rd, float multiplier) {
         vec3 pos = ro + rd*t;
         vec3 normal = getNormal(pos-rd*EPS_NORMAL_1);
         
-        vec3 col = getColor(pos);
+        vec3 col = getColor(pos, normal);
 
         // intersect dist on reflected ray
         //reflIntersection = intersectDist(ro, rd);

@@ -152,7 +152,7 @@ module qec {
                 }
                 for (var i=0; i < this.directionalLights.length; ++i)
                 {
-                    this.getDirectionalLighting(i, outPos, outNormal, rd, this.outLighting);
+                    this.getDirectionalLighting(this.directionalLights[i], outPos, outNormal, rd, this.outLighting);
                     for (var j=0; j < 3; ++j)
                         outColor[j] += this.outLighting[2] * ( KS*this.outLighting[1] + KD*this.outLighting[0] * this.sdColor[j]);
                 }
@@ -243,10 +243,10 @@ module qec {
                 console.log('toLight:', this.diffToLight, 'normal', normal, 'diffuse', out[0], 'specular', out[1], 'shadow', out[2]);
         }
 
-        getDirectionalLighting(i:number, pos:Float32Array, normal:Float32Array, rd:Float32Array, out:Float32Array) : void
+        getDirectionalLighting(light:directionalLight, pos:Float32Array, normal:Float32Array, rd:Float32Array, out:Float32Array) : void
         {
-            var intensity = this.directionalLights[i].intensity; 
-            vec3.scale(this.diffToLight, this.directionalLights[i].direction, -1);
+            var intensity = light.intensity; 
+            vec3.scale(this.diffToLight, light.direction, -1);
 
             var lightDist = 10;
 
