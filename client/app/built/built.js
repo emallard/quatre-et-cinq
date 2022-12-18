@@ -191,11 +191,13 @@ var qec;
                     this.sdUnionWithHoleSd.array.push(sdEffect);
                 }
             }
+            /*
             if (this.sdHoleUnion.array.length == 0)
                 this.renderSettings.sd = this.sdUnion;
             else
-                this.renderSettings.sd = this.sdUnionWithHoleSd; //this.sdSubtraction;
+                this.renderSettings.sd = this.sdUnionWithHoleSd;//this.sdSubtraction;
             this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length, this.texturePacker);
+            */
         };
         editor.prototype.updateSprites = function () {
             var _this = this;
@@ -217,7 +219,7 @@ var qec;
         editor.prototype.render = function () {
             if (this.renderer == null)
                 return;
-            this.renderSettings.sd = this.sdUnion;
+            this.renderSettings.sdArray = this.sdUnion.array;
             //console.log("render");
             this.renderer.render(this.renderSettings);
             //this.renderer.renderDebug(100, 100, this.rp, this.cam);
@@ -384,7 +386,7 @@ var qec;
             else
                 this.lineDrawer.drawLine(canvasPoints, this.tmpProfileCanvas);
             // draw for distance field
-            this.profile.drawUserCanvasForProfile(this.tmpProfileCanvas, this.profileBounds, 0.1);
+            this.profile.drawUserCanvasForBorder(this.tmpProfileCanvas, this.profileBounds, 0.1);
             this.profile.update();
         };
         editorObject.prototype.setTopSrc = function (src, bounds, done) {
@@ -1414,6 +1416,7 @@ var qec;
 (function (qec) {
     var svgSceneLoader = /** @class */ (function () {
         function svgSceneLoader() {
+            this.debug = false;
         }
         svgSceneLoader.prototype.loadUrl = function (src, done) {
             var _this = this;
@@ -1457,22 +1460,22 @@ var qec;
             });
             r.run(function () { return done(all); });
         };
-        svgSceneLoader.prototype.getSdFieldsOne = function (x, done) {
+        svgSceneLoader.prototype.getSdFieldsOne = function (thicknessElt, done) {
             var _this = this;
-            var parent = x.parentNode;
+            var parent = thicknessElt.parentNode;
             console.log("getSdFieldsOne " + this.getLabel(parent));
             var src = this.extractSvgIgnoringThickness(parent);
-            var sdFields = new qec.sdFields2DTO();
-            sdFields.topImage = new qec.scImageDTO();
+            /*
+            let sdFields = new sdFields1DTO();
+            sdFields.topImage = new scImageDTO();
             sdFields.topImage.src = src;
             sdFields.topBounds = [];
-            var start = this.getXYZByLabel(x, "start");
-            //let end = this.getXYZByLabel(x, "end");
-            sdFields.thickness = start[2];
-            var canvas = document.createElement('canvas');
+            */
             var img = new Image();
             img.onload = function () {
+                // real bounds
                 console.log("img dimension : " + img.width + "," + img.height);
+                var canvas = document.createElement('canvas');
                 canvas.width = img.width;
                 canvas.height = img.height;
                 var ctx = canvas.getContext('2d');
@@ -1481,8 +1484,7 @@ var qec;
                 var pixelBounds = _this.getBoundingBoxInPx(canvas);
                 var px = 3.779528;
                 var realBounds = [pixelBounds[0] / px, pixelBounds[1] / px, pixelBounds[2] / px, pixelBounds[3] / px];
-                // changeViewBox
-                console.log("bounding box dimension in pixels : ", realBounds);
+                //console.log("bounding box dimension in pixels : ", realBounds);
                 var parser = new DOMParser();
                 var doc = parser.parseFromString(src, "image/svg+xml");
                 var svgRootElement = doc.querySelector('svg');
@@ -1492,25 +1494,175 @@ var qec;
                 // (Debug) Show the extracted SVG:
                 // document.body.appendChild(svgRootElement);
                 var svg_xml = (new XMLSerializer()).serializeToString(svgRootElement);
-                sdFields.topImage = new qec.scImageDTO();
-                sdFields.topImage.src = "data:image/svg+xml;base64," + btoa(svg_xml);
+                var topImage = new qec.scImageDTO();
+                topImage.src = "data:image/svg+xml;base64," + btoa(svg_xml);
                 var cx = (realBounds[0] + realBounds[2]) / 2;
                 var cy = (realBounds[1] + realBounds[3]) / 2;
                 var halfWidth = (realBounds[2] - realBounds[0]) / 2;
                 var halfHeight = (realBounds[3] - realBounds[1]) / 2;
-                sdFields.topBounds = [-halfWidth, -halfHeight, halfWidth, halfHeight];
-                sdFields.transform = mat4.create();
-                mat4.translate(sdFields.transform, sdFields.transform, vec3.fromValues(cx, cy, 0));
+                var topBounds = [-halfWidth, -halfHeight, halfWidth, halfHeight];
+                var top = { topImage: topImage, topBounds: topBounds };
+                var transform = mat4.create();
+                cy = _this.toLeftHanded(cy, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
+                // height
+                var heightElt = _this.getByLabel(thicknessElt, 'height');
+                var tspan = heightElt.children.item(0);
+                var textContentSplit = tspan.textContent.split(',');
+                var z = parseFloat(textContentSplit[0]);
+                var height = parseFloat(textContentSplit[1]);
+                // transform
+                mat4.translate(transform, transform, vec3.fromValues(cx, cy, z));
+                // material
                 var color = _this.getColorIgnoringThickness(parent);
                 if (color == null)
                     color = [0.5, 0.5, 0.5];
-                sdFields.material = {
+                var material = {
                     type: 'materialDTO',
                     diffuse: color
                 };
-                done(sdFields);
+                // profile line in realBounds matrix
+                var startElt = _this.getByLabel(thicknessElt, "start");
+                var radiusElt = _this.getByLabel(thicknessElt, "radius");
+                var borderFrameElt = _this.getByLabel(thicknessElt, "border_frame");
+                if (startElt != null && borderFrameElt != null) {
+                    var start = _this.getXY(thicknessElt, "start");
+                    var end = _this.getXY(thicknessElt, "end");
+                    start.y = _this.toLeftHanded(start.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
+                    end.y = _this.toLeftHanded(end.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
+                    start.x -= cx;
+                    start.y -= cy;
+                    end.x -= cx;
+                    end.y -= cy;
+                    var profileOrigin = [start.x, start.y];
+                    var profileAxis = [end.x - start.x, end.y - start.y];
+                    var width = vec2.length(new Float32Array(profileAxis));
+                    var sdFields_1 = {
+                        type: qec.sdFields2ProfileBorderDTO.TYPE,
+                        material: material,
+                        transform: transform,
+                        top: top,
+                        profile: _this.createProfile(thicknessElt, width, height),
+                        profileOrigin: profileOrigin,
+                        profileAxis: profileAxis,
+                        border: _this.createBorder(thicknessElt),
+                    };
+                    done(sdFields_1);
+                }
+                else if (startElt != null) {
+                    var start = _this.getXY(thicknessElt, "start");
+                    var end = _this.getXY(thicknessElt, "end");
+                    start.y = _this.toLeftHanded(start.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
+                    end.y = _this.toLeftHanded(end.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
+                    start.x -= cx;
+                    start.y -= cy;
+                    end.x -= cx;
+                    end.y -= cy;
+                    var profileOrigin = [start.x, start.y];
+                    var profileAxis = [end.x - start.x, end.y - start.y];
+                    var width = vec2.length(new Float32Array(profileAxis));
+                    var sdFields_2 = {
+                        type: qec.sdFields2DTO.TYPE,
+                        material: material,
+                        transform: transform,
+                        top: top,
+                        profile: _this.createProfile(thicknessElt, width, height),
+                        profileOrigin: profileOrigin,
+                        profileAxis: profileAxis,
+                    };
+                    done(sdFields_2);
+                }
+                else if (radiusElt != null) {
+                    var radius = _this.getXYR(thicknessElt, "radius");
+                    radius.y = _this.toLeftHanded(radius.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
+                    radius.x -= cx;
+                    radius.y -= cy;
+                    var width = radius.r;
+                    var sdFields_3 = {
+                        type: qec.sdFields2RadialDTO.TYPE,
+                        material: material,
+                        transform: transform,
+                        top: top,
+                        profile: _this.createProfile(thicknessElt, width, height),
+                        center: [radius.x, radius.y],
+                        radius: radius.r
+                    };
+                    done(sdFields_3);
+                }
+                else if (borderFrameElt != null) {
+                    var sdFields_4 = {
+                        type: qec.sdFields2BorderDTO.TYPE,
+                        top: top,
+                        thickness: height,
+                        border: _this.createBorder(thicknessElt),
+                        material: material,
+                        transform: transform
+                    };
+                    done(sdFields_4);
+                }
+                else {
+                    var sdFields_5 = {
+                        type: qec.sdFields1DTO.TYPE,
+                        top: top,
+                        thickness: height,
+                        material: material,
+                        transform: transform
+                    };
+                    done(sdFields_5);
+                }
             };
             img.src = "data:image/svg+xml;base64," + btoa(src);
+        };
+        svgSceneLoader.prototype.createProfile = function (thicknessElt, width, height) {
+            var _a = this.getFrame(thicknessElt, width, height, ''), profileSrc = _a[0], profileBounds = _a[1];
+            var profileImage = new qec.scImageDTO();
+            profileImage.src = "data:image/svg+xml;base64," + btoa(profileSrc);
+            return {
+                profileImage: profileImage,
+                profileBounds: profileBounds,
+            };
+        };
+        svgSceneLoader.prototype.createBorder = function (thicknessElt) {
+            // height
+            var borderDimensionsElt = this.getByLabel(thicknessElt, 'border_dimensions');
+            var borderDimensionstspan = borderDimensionsElt.children.item(0);
+            var borderDimensionsTextContentSplit = borderDimensionstspan.textContent.split(',');
+            var borderWidth = parseFloat(borderDimensionsTextContentSplit[0]);
+            var borderHeight = parseFloat(borderDimensionsTextContentSplit[1]);
+            var _a = this.getFrame(thicknessElt, borderWidth, borderHeight, 'border_'), borderSrc = _a[0], borderBounds = _a[1];
+            var borderImage = new qec.scImageDTO();
+            borderImage.src = "data:image/svg+xml;base64," + btoa(borderSrc);
+            return {
+                borderImage: borderImage,
+                borderBounds: borderBounds,
+            };
+        };
+        svgSceneLoader.prototype.createSvgFromPoints = function (width, height, points) {
+            var widthAndHeight = 'width="' + width + '" height="' + height + '"';
+            var viewbox = 'viewbox="0 0 ' + width + ' ' + height + '"';
+            var pointy = height - points[1];
+            var path = 'M ' + points[0] + ' ' + pointy + ' ';
+            for (var i = 0; i < points.length; i += 2) {
+                pointy = height - points[i + 1];
+                path = path + 'L ' + points[i] + ' ' + pointy + ' ';
+            }
+            path = path + 'Z';
+            var text = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n'
+                + '<svg '
+                + ' xmlns:svg="http://www.w3.org/2000/svg" '
+                + ' xmlns="http://www.w3.org/2000/svg" '
+                + ' xmlns:xlink="http://www.w3.org/1999/xlink" '
+                + ' ' + widthAndHeight
+                + ' ' + viewbox
+                + '><g>\n'
+                + '<path d="' + path + '" fill="black"'
+                + '/>'
+                + '\n</g></svg>';
+            if (this.debug) {
+                var doc = new DOMParser().parseFromString(text, "image/svg+xml");
+                var svgRootElement = doc.querySelector('svg');
+                document.body.append(svgRootElement);
+            }
+            return text;
         };
         svgSceneLoader.prototype.getBoundingBoxInPx = function (canvas) {
             var ctx = canvas.getContext('2d');
@@ -1542,33 +1694,70 @@ var qec;
             bounds[3] += 2;
             return bounds;
         };
-        svgSceneLoader.prototype.getCameras = function (elt) {
+        svgSceneLoader.prototype.getCameras = function (svg) {
             var _this = this;
             var cameras = [];
-            var groups = elt.querySelectorAll("g");
+            var groups = svg.querySelectorAll("g");
             groups.forEach(function (x) {
                 var label = _this.getLabel(x);
                 if (label.indexOf("camera") == 0) {
                     var cam = new qec.cameraDTO();
                     cam.position = _this.getXYZByLabel(x, 'position');
                     cam.target = _this.getXYZByLabel(x, 'target');
+                    cam.position[1] = _this.toLeftHanded(cam.position[1], svg.viewBox.baseVal.height);
+                    cam.target[1] = _this.toLeftHanded(cam.target[1], svg.viewBox.baseVal.height);
                     cam.up = [0, 0, 1];
                     cameras.push(cam);
                 }
             });
             return cameras;
         };
+        svgSceneLoader.prototype.toLeftHanded = function (y, height) {
+            //return y;
+            return height - y;
+        };
         svgSceneLoader.prototype.getXYZByLabel = function (elt, name) {
+            var values = this.getXYDescByLabel(elt, name);
+            if (values[2] == null || values[2]['z'] == null)
+                values[2] = 0;
+            else
+                values[2] = values[2]['z'];
+            return values;
+        };
+        svgSceneLoader.prototype.getXYZThicknessByLabel = function (elt, name) {
+            var o = this.getXYDescByLabel(elt, name);
+            return {
+                x: o[0],
+                y: o[1],
+                z: o[2]['z'],
+                thickness: o[2]['thickness']
+            };
+        };
+        svgSceneLoader.prototype.getXYPoints = function (elt, name) {
+            var o = this.getXYDescByLabel(elt, name);
+            return {
+                x: o[0],
+                y: o[1],
+                points: o[2]['points']
+            };
+        };
+        svgSceneLoader.prototype.getXY = function (elt, name) {
+            var o = this.getXYDescByLabel(elt, name);
+            return {
+                x: o[0],
+                y: o[1]
+            };
+        };
+        svgSceneLoader.prototype.getXYDescByLabel = function (elt, name) {
             var positionElt = this.getByLabel(elt, name);
             var descs = positionElt.getElementsByTagName("desc");
             var z = 0;
+            var desc = null;
             if (descs.length > 0) {
                 var positionDesc = descs.item(0);
                 var json = '{' + positionDesc.textContent + '}';
                 console.log('desc json : ', json);
-                var desc = JSON.parse(json);
-                if (desc['z'] != undefined)
-                    z = desc['z'];
+                desc = JSON.parse(json);
             }
             var cx = parseFloat(positionElt.getAttribute('cx'));
             var cy = parseFloat(positionElt.getAttribute('cy'));
@@ -1583,11 +1772,77 @@ var qec;
             }
             //let ctm = positionElt.getScreenCTM();
             //let p2 = ctm.transformPoint(p);
-            return [
-                p.x,
-                p.y,
-                z
-            ];
+            return [p.x, p.y, desc];
+        };
+        svgSceneLoader.prototype.getXYR = function (elt, name) {
+            var positionElt = this.getByLabel(elt, name);
+            var cx = parseFloat(positionElt.getAttribute('cx'));
+            var cy = parseFloat(positionElt.getAttribute('cy'));
+            var rx = parseFloat(positionElt.getAttribute('rx'));
+            var p = elt.ownerSVGElement.createSVGPoint();
+            p.x = cx;
+            p.y = cy;
+            var r = elt.ownerSVGElement.createSVGPoint();
+            r.x = p.x + rx;
+            r.y = p.y;
+            while (!(elt instanceof SVGSVGElement)) {
+                var trans = elt.transform.baseVal.consolidate();
+                if (trans != null) {
+                    p = p.matrixTransform(trans.matrix);
+                    r = r.matrixTransform(trans.matrix);
+                }
+                elt = elt.parentNode;
+            }
+            return { x: p.x, y: p.y, r: vec2.length(vec2.fromValues(r.x - p.x, r.y - p.y)) };
+        };
+        svgSceneLoader.prototype.getFrame = function (eltThickness, width, height, prefix) {
+            var frameElt = this.getByLabel(eltThickness, prefix + 'frame');
+            var origin = frameElt.ownerSVGElement.createSVGPoint();
+            origin.x = parseFloat(frameElt.getAttribute('x'));
+            origin.y = parseFloat(frameElt.getAttribute('y'));
+            var w = frameElt.ownerSVGElement.createSVGPoint();
+            w.x = origin.x + parseFloat(frameElt.getAttribute('width'));
+            w.y = origin.y + 0;
+            var h = frameElt.ownerSVGElement.createSVGPoint();
+            h.x = origin.x + 0;
+            h.y = origin.y + parseFloat(frameElt.getAttribute('height'));
+            while (!(frameElt instanceof SVGSVGElement)) {
+                var trans = frameElt.transform.baseVal.consolidate();
+                if (trans != null) {
+                    origin = origin.matrixTransform(trans.matrix);
+                    w = w.matrixTransform(trans.matrix);
+                    h = h.matrixTransform(trans.matrix);
+                }
+                frameElt = frameElt.parentNode;
+            }
+            var shapeElt = this.getByLabel(eltThickness, prefix + 'shape');
+            var _a = this.extractIgnoringThickness(shapeElt), clonedRoot = _a[0], clonedGroup = _a[1];
+            var matrix = clonedRoot.createSVGMatrix();
+            matrix.e = origin.x;
+            matrix.f = origin.y;
+            matrix.a = (w.x - origin.x) / width;
+            matrix.b = (w.y - origin.y) / width;
+            matrix.c = (h.x - origin.x) / height;
+            matrix.d = (h.y - origin.y) / height;
+            matrix = matrix.inverse();
+            var transform = clonedRoot.createSVGTransformFromMatrix(matrix);
+            clonedGroup.transform.baseVal.appendItem(transform);
+            clonedRoot.setAttribute('width', '' + width + 'mm');
+            clonedRoot.setAttribute('height', '' + height + 'mm');
+            clonedRoot.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+            var svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
+            //console.log("frame SVG");
+            //console.log(svg_xml);
+            return [svg_xml, [0, 0, width, height]];
+        };
+        svgSceneLoader.prototype.parsePoint = function (pt, s, rel) {
+            if (rel != null) {
+                pt.x = rel.x;
+                pt.y = rel.y;
+            }
+            var nums = s.split(',');
+            pt.x += parseFloat(nums[0]);
+            pt.y += parseFloat(nums[1]);
         };
         svgSceneLoader.prototype.getByLabel = function (elt, name) {
             var found;
@@ -1613,6 +1868,11 @@ var qec;
         };
         ///////
         svgSceneLoader.prototype.extractSvgIgnoringThickness = function (elt) {
+            var _a = this.extractIgnoringThickness(elt), clonedRoot = _a[0], g = _a[1];
+            var svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
+            return svg_xml;
+        };
+        svgSceneLoader.prototype.extractIgnoringThickness = function (elt) {
             var _this = this;
             var current = elt;
             var chain = [];
@@ -1624,64 +1884,48 @@ var qec;
             }
             var clonedRoot = chain[chain.length - 1].cloneNode(false);
             var cloned = clonedRoot;
-            //let transformList = new SVGTransformList();
-            //const translate = clonedRoot.ownerSVGElement.createSVGTransform();
-            //let accumulated = clonedRoot.transform.baseVal.getItem(0).matrix;
+            var g = clonedRoot.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "g");
+            cloned.appendChild(g);
+            cloned = g;
             for (var i = chain.length - 2; i >= 0; --i) {
                 var newCloned = chain[i].cloneNode(false);
                 cloned.appendChild(newCloned);
                 cloned = newCloned;
-                // for (let k=0; k < cloned.transform.baseVal.length; ++k)
-                // {
-                //     transformList.appendItem(cloned.transform.baseVal.getItem(k));
-                // }
             }
             elt.childNodes.forEach(function (x) {
                 if (_this.getLabel(x) != 'thickness') {
                     cloned.appendChild(x.cloneNode(true));
                 }
             });
-            //let eltCloned = elt.cloneNode(true);
-            /*
-            let rect = cloned.getBoundingClientRect();
-            console.log(rect);
-            clonedRoot.setAttribute('viewBox', ''+rect.x + ' ' + rect.y + ' ' + rect.width + ' ' + rect.height+'')
-            */
-            /*
-            console.log(boundingBox);
-            // make the bbox rect element have the same user units even though it's the last child of the root element
-            let bottomLeft = transformList.consolidate().matrix.transformPoint({x: boundingBox.bottom, y: boundingBox.left});
-            let bottomRight = transformList.consolidate().matrix.transformPoint({x: boundingBox.bottom, y: boundingBox.left});
-            let topRight = transformList.consolidate().matrix.transformPoint({x: boundingBox.top, y: boundingBox.right});
-            let topLeft = transformList.consolidate().matrix.transformPoint({x: boundingBox.top, y: boundingBox.right});
-            console.log(topRight);
-            console.log(bottomLeft);
-
-            //document.body.removeChild(clonedRoot);
-            */
-            var svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
-            return svg_xml;
+            return [clonedRoot, g];
         };
         svgSceneLoader.prototype.getColorIgnoringThickness = function (elt) {
             var style = elt.getAttribute('style');
             if (style != null) {
+                var col = '';
                 var i = style.indexOf('fill:');
                 if (i >= 0) {
-                    var col = style.substring(i + 5, i + 5 + 7);
+                    col = style.substring(i + 5, i + 5 + 7);
+                }
+                else {
+                    i = style.indexOf('stroke:');
+                    if (i >= 0) {
+                        col = style.substring(i + 7, i + 7 + 7);
+                    }
+                }
+                if (col != '') {
                     var rgb = this.hexToRgb(col);
                     if (rgb != null)
                         return rgb;
                 }
             }
-            else {
-                for (var i_1 = 0; i_1 < elt.childNodes.length; ++i_1) {
-                    var child = elt.childNodes.item(i_1);
-                    if (child instanceof SVGGraphicsElement) {
-                        if (this.getLabel(child) != 'thickness') {
-                            var childColor = this.getColorIgnoringThickness(child);
-                            if (childColor != null)
-                                return childColor;
-                        }
+            for (var i_1 = 0; i_1 < elt.childNodes.length; ++i_1) {
+                var child = elt.childNodes.item(i_1);
+                if (child instanceof SVGGraphicsElement) {
+                    if (this.getLabel(child) != 'thickness') {
+                        var childColor = this.getColorIgnoringThickness(child);
+                        if (childColor != null)
+                            return childColor;
                     }
                 }
             }
@@ -2248,13 +2492,16 @@ var qec;
     qec.directionalLightDTO = directionalLightDTO;
     var directionalLight = /** @class */ (function () {
         function directionalLight() {
+            this.uniqueName = qec.uniqueName.new();
             this.direction = vec3.create();
+            this.invDirection = vec3.create();
             this.intensity = 0.5;
         }
         directionalLight.prototype.createFrom = function (dto) {
             vec3FromArray(this.direction, dto.direction);
             this.intensity = dto.intensity;
             vec3.normalize(this.direction, this.direction);
+            vec3.scale(this.invDirection, this.direction, -1);
         };
         return directionalLight;
     }());
@@ -2262,8 +2509,15 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var distanceFieldBorderType;
+    (function (distanceFieldBorderType) {
+        distanceFieldBorderType[distanceFieldBorderType["all"] = 0] = "all";
+        distanceFieldBorderType[distanceFieldBorderType["top"] = 1] = "top";
+        distanceFieldBorderType[distanceFieldBorderType["bottom"] = 2] = "bottom";
+    })(distanceFieldBorderType = qec.distanceFieldBorderType || (qec.distanceFieldBorderType = {}));
     var distanceField = /** @class */ (function () {
         function distanceField() {
+            this.borderType = distanceFieldBorderType.all;
             this.halfSize = vec2.create();
             this.xy = new Uint32Array(2);
         }
@@ -2305,12 +2559,26 @@ var qec;
                 }
             }
         };
+        distanceField.prototype.setBorderType = function (borderType) {
+            this.borderType = borderType;
+        };
         distanceField.prototype.initFromImageData = function (data, dataWidth, dataHeight, halfWidth, halfHeight) {
             this.initCommon(dataWidth, dataHeight, halfWidth, halfHeight);
+            if (this.borderType == distanceFieldBorderType.all)
+                this.initBorderAll(data);
+            else if (this.borderType == distanceFieldBorderType.top)
+                this.initBorderTop(data);
+            else if (this.borderType == distanceFieldBorderType.bottom)
+                this.initBorderBottom(data);
+            else
+                throw new Error('distanceFieldBorderType not Implemented');
+            this.compute();
+        };
+        distanceField.prototype.initBorderAll = function (data) {
             for (var i = 0; i < this.M; ++i) {
                 for (var j = 0; j < this.N; ++j) {
                     //if (data[4 * (j * this.M + i)] > 0)
-                    if (this.isBorderImageData(data, dataWidth, dataHeight, i, j)) {
+                    if (this.isBorderImageData(data, this.M, this.N, i, j)) {
                         this.setL(i, j, 0, 0);
                     }
                     else {
@@ -2318,6 +2586,46 @@ var qec;
                     }
                 }
             }
+        };
+        distanceField.prototype.initBorderTop = function (data) {
+            console.log('initBorderTop');
+            for (var i = 0; i < this.M; ++i) {
+                var inside = false;
+                for (var j = this.N - 1; j >= 0; --j) {
+                    if (this.isPixelSet(data, this.M, this.N, i, j)) {
+                        if (!inside)
+                            this.setL(i, j, 0, 0);
+                        else
+                            this.setL(i, j, 1024, 1024);
+                        inside = true;
+                    }
+                    else {
+                        inside = false;
+                        this.setL(i, j, 1024, 1024);
+                    }
+                }
+            }
+        };
+        distanceField.prototype.initBorderBottom = function (data) {
+            console.log('initBorderBottom');
+            for (var i = 0; i < this.M; ++i) {
+                var inside = false;
+                for (var j = 0; j < this.N; ++j) {
+                    if (this.isPixelSet(data, this.M, this.N, i, j)) {
+                        if (!inside)
+                            this.setL(i, j, 0, 0);
+                        else
+                            this.setL(i, j, 1024, 1024);
+                        inside = true;
+                    }
+                    else {
+                        inside = false;
+                        this.setL(i, j, 1024, 1024);
+                    }
+                }
+            }
+        };
+        distanceField.prototype.compute = function () {
             for (var j = 1; j < this.N; ++j) {
                 //console.log('1st pass: ' + j);
                 for (var i = 0; i < this.M; ++i) {
@@ -2442,8 +2750,25 @@ var qec;
             this.floatTexture = new qec.floatTexture();
             this.totalBounds = vec4.create();
             this.optimizedBounds = vec4.create();
-            this.dfMaxWidth = 400;
-            this.dfMaxHeight = 400;
+            this.dfMaxWidth = 800;
+            this.dfMaxHeight = 800;
+            /*
+                    private loadImgs(src1:string, src2:string, callback:(img1:HTMLImageElement, img2:HTMLImageElement)=>void)
+                    {
+                        var img = new Image();
+                        img.onload = function()
+                        {
+                            var img2 = new Image();
+                            img2.onload = function()
+                            {
+                                callback(img, img2);
+                            }
+                            img2.src = src2;
+                        }
+                        img.src = src1;
+                    }
+            */
+            this.debugScale = 255;
             this.canvas = document.createElement('canvas');
         }
         distanceFieldCanvas.prototype.setDistanceFieldMaxSize = function (maxWidth, maxHeight) {
@@ -2466,12 +2791,18 @@ var qec;
             this.updateFloatTexture();
         };
         distanceFieldCanvas.prototype.drawUserCanvasForTop = function (img, _bounds, margin) {
-            this.drawUserCanvasBase(img, _bounds, margin, false);
+            this.drawUserCanvasBase(img, _bounds, margin, false, qec.distanceFieldBorderType.all);
         };
-        distanceFieldCanvas.prototype.drawUserCanvasForProfile = function (img, _bounds, margin) {
-            this.drawUserCanvasBase(img, _bounds, margin, true);
+        distanceFieldCanvas.prototype.drawUserCanvasForProfileTop = function (img, _bounds, margin) {
+            this.drawUserCanvasBase(img, _bounds, margin, false, qec.distanceFieldBorderType.top);
         };
-        distanceFieldCanvas.prototype.drawUserCanvasBase = function (img, _bounds, margin, profile) {
+        distanceFieldCanvas.prototype.drawUserCanvasForProfileBottom = function (img, _bounds, margin) {
+            this.drawUserCanvasBase(img, _bounds, margin, false, qec.distanceFieldBorderType.bottom);
+        };
+        distanceFieldCanvas.prototype.drawUserCanvasForBorder = function (img, _bounds, margin) {
+            this.drawUserCanvasBase(img, _bounds, margin, true, qec.distanceFieldBorderType.all);
+        };
+        distanceFieldCanvas.prototype.drawUserCanvasBase = function (img, _bounds, margin, border, borderType) {
             this.totalBounds = vec4.fromValues(_bounds[0] - margin, _bounds[1] - margin, _bounds[2] + margin, _bounds[3] + margin);
             var boundW = _bounds[2] - _bounds[0];
             var boundH = _bounds[3] - _bounds[1];
@@ -2503,10 +2834,23 @@ var qec;
             ctx.clearRect(0, 0, dfWidth, dfHeight);
             ctx.drawImage(img, 0, 0, img.width, img.height, offsetX, offsetY, newImgWidth, newImgHeight);
             // draw left margin if profile
+            /*
             if (profile)
+            {
                 ctx.drawImage(img, 0, 0, 1, img.height, 0, offsetY, offsetX, newImgHeight);
+            }
+            */
+            if (border) {
+                // draw left margin if profile
+                ctx.drawImage(img, 0, 0, 1, img.height, 0, offsetY, offsetX, newImgHeight);
+                // draw bottom margin if profile
+                ctx.drawImage(img, 0, img.height - 1, img.width, 1, offsetX, dfHeight - offsetY, newImgWidth, offsetY);
+                // draw bottom left
+                ctx.drawImage(img, 0, img.height - 1, 1, 1, 0, dfHeight - offsetY, offsetX, offsetY);
+            }
             if (this.distanceField == null) {
                 this.distanceField = new qec.distanceField();
+                this.distanceField.setBorderType(borderType);
             }
             var df = this.distanceField;
             var imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
@@ -2577,34 +2921,18 @@ var qec;
             img.onload = function () { callback(img); };
             img.src = src1;
         };
-        /*
-                private loadImgs(src1:string, src2:string, callback:(img1:HTMLImageElement, img2:HTMLImageElement)=>void)
-                {
-                    var img = new Image();
-                    img.onload = function()
-                    {
-                        var img2 = new Image();
-                        img2.onload = function()
-                        {
-                            callback(img, img2);
-                        }
-                        img2.src = src2;
-                    }
-                    img.src = src1;
-                }
-        */
         distanceFieldCanvas.prototype.debugInfoInExistingCanvas = function (canvas) {
             canvas.width = this.canvas.width;
             canvas.height = this.canvas.height;
             var ctx = canvas.getContext('2d');
             var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            this.distanceField.fillImageData(imageData.data, 2550);
+            this.distanceField.fillImageData(imageData.data, this.debugScale);
             ctx.putImageData(imageData, 0, 0, 0, 0, canvas.width, canvas.height);
         };
         distanceFieldCanvas.prototype.debugInfoInCanvas = function () {
             var ctx = this.canvas.getContext('2d');
             var imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-            this.distanceField.fillImageData(imageData.data, 2550);
+            this.distanceField.fillImageData(imageData.data, this.debugScale);
             ctx.putImageData(imageData, 0, 0, 0, 0, this.canvas.width, this.canvas.height);
         };
         return distanceFieldCanvas;
@@ -2739,6 +3067,62 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var rotateLoop = /** @class */ (function () {
+        function rotateLoop() {
+            this.rotates = [];
+            this.t = 0;
+        }
+        rotateLoop.prototype.setRenderSettings = function (rs) {
+            this.rs = rs;
+            var camTarget = vec3.fromValues(this.rs.camera.target[0], this.rs.camera.target[1], 0);
+            var invCameraTarget = mat4.create();
+            mat4.identity(invCameraTarget);
+            mat4.translate(invCameraTarget, invCameraTarget, camTarget);
+            mat4.invert(invCameraTarget, invCameraTarget);
+            console.log('this.rs.SdArray ', this.rs.sdArray);
+            for (var _i = 0, _a = this.rs.sdArray; _i < _a.length; _i++) {
+                var x = _a[_i];
+                if (x['transform'] != undefined) {
+                    var r = new rotateOne();
+                    r.sd = x;
+                    mat4.copy(r.transformInit, x['transform']);
+                    mat4.multiply(r.transformFromCamTarget, invCameraTarget, r.transformInit);
+                    mat4.identity(r.transformRotate);
+                    this.rotates.push(r);
+                }
+            }
+            ;
+        };
+        rotateLoop.prototype.update = function (dt) {
+            var camTarget = vec3.fromValues(this.rs.camera.target[0], this.rs.camera.target[1], 0);
+            this.t += dt;
+            var dr = mat4.create();
+            mat4.fromZRotation(dr, this.t * Math.PI * 2.0 / 10.0);
+            for (var _i = 0, _a = this.rotates; _i < _a.length; _i++) {
+                var r = _a[_i];
+                mat4.copy(r.transformRotate, dr);
+                mat4.identity(r.sd.transform);
+                mat4.translate(r.sd.transform, r.sd.transform, camTarget);
+                mat4.multiply(r.sd.transform, r.sd.transform, r.transformRotate);
+                mat4.multiply(r.sd.transform, r.sd.transform, r.transformFromCamTarget);
+                mat4.invert(r.sd.inverseTransform, r.sd.transform);
+            }
+        };
+        return rotateLoop;
+    }());
+    qec.rotateLoop = rotateLoop;
+    var rotateOne = /** @class */ (function () {
+        function rotateOne() {
+            this.transformInit = mat4.create();
+            this.transformFromCamTarget = mat4.create();
+            this.transformRotate = mat4.create();
+        }
+        return rotateOne;
+    }());
+    qec.rotateOne = rotateOne;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var spotLightDTO = /** @class */ (function () {
         function spotLightDTO() {
         }
@@ -2772,9 +3156,10 @@ var qec;
     qec.textureSprite = textureSprite;
     var texturePacker = /** @class */ (function () {
         function texturePacker() {
+            this.repackMode = 0;
+            this.isHardware = false;
             this.allBigTextures = [];
             this.allSprites = [];
-            this.repackMode = 3;
         }
         texturePacker.prototype.getSprite = function (texture) {
             var found = this.allSprites.find(function (t) { return t.originalTexture == texture; });
@@ -2784,35 +3169,47 @@ var qec;
             var found = this.allBigTextures.indexOf(texture);
             return found;
         };
-        texturePacker.prototype.repackSdRec = function (rootSignedDistance) {
-            var floatTextures = [];
-            var expl = new qec.hardwareSignedDistanceExplorer();
+        /*
+        repackSdRec(rootSignedDistance:signedDistance)
+        {
+            var floatTextures:floatTexture[] = [];
+            var expl = new hardwareSignedDistanceExplorer();
             expl.explore(rootSignedDistance);
-            expl.array.forEach(function (hsd) {
-                var sd = hsd.sd;
-                if (sd instanceof qec.sdFields) {
+            expl.array.forEach(hsd => {
+                var sd:signedDistance = hsd.sd;
+                if (sd instanceof sdFields)
+                {
                     floatTextures.push(sd.topTexture, sd.profileTexture);
                 }
             });
             this.repack(floatTextures);
-        };
-        texturePacker.prototype.repack = function (floatTextures) {
+        }*/
+        texturePacker.prototype.repack = function (sprites) {
+            console.log('texturepacker.repack');
             if (this.repackMode == 0)
-                this.repack0(floatTextures);
+                this.repack0(sprites);
             else if (this.repackMode == 1)
-                this.repack1(floatTextures);
+                this.repack1(sprites);
             else if (this.repackMode == 2)
-                this.repack2(floatTextures);
+                this.repack2(sprites);
             else if (this.repackMode == 3)
-                this.repack3(floatTextures);
+                this.repack3(sprites);
+            // update threejs
+            if (this.isHardware) {
+                console.log('texturepacker.isHardware');
+                this.allBigTextures.forEach(function (t, i) {
+                    var dataTexture = new THREE.DataTexture(t.data, t.width, t.height, THREE.RGBAFormat, THREE.FloatType);
+                    dataTexture.needsUpdate = true;
+                    t.threeDataTexture = dataTexture;
+                });
+            }
         };
-        texturePacker.prototype.repack0 = function (floatTextures) {
+        texturePacker.prototype.repack0 = function (sprites) {
             this.allBigTextures = [];
             this.allSprites = [];
-            for (var i = 0; i < floatTextures.length; ++i) {
-                var texture = floatTextures[i];
-                var sprite = new textureSprite();
-                sprite.originalTexture = texture;
+            for (var i = 0; i < sprites.length; ++i) {
+                var sprite = sprites[i];
+                var texture = sprite.originalTexture;
                 sprite.bigTexture = texture;
                 vec4.set(sprite.bounds, 0, 0, 1, 1);
                 this.allSprites.push(sprite);
@@ -2820,12 +3217,13 @@ var qec;
                 console.log('sprite pushed #' + i + ' ' + vec4.str(sprite.bounds));
             }
         };
-        texturePacker.prototype.repack1 = function (floatTextures) {
-            console.log('repack mode 1 ' + floatTextures.length + ' textures');
+        texturePacker.prototype.repack1 = function (sprites) {
+            console.log('repack mode 1 ' + sprites.length + ' textures');
             this.allBigTextures = [];
             this.allSprites = [];
-            for (var i = 0; i < floatTextures.length; ++i) {
-                var texture = floatTextures[i];
+            for (var i = 0; i < sprites.length; ++i) {
+                var sprite = sprites[i];
+                var texture = sprite.originalTexture;
                 var bigTexture = new qec.floatTexture();
                 bigTexture.width = 400;
                 bigTexture.height = 400;
@@ -2840,8 +3238,6 @@ var qec;
                         bigTexture.data[4 * qb + 3] = texture.data[4 * q + 3];
                     }
                 }
-                var sprite = new textureSprite();
-                sprite.originalTexture = texture;
                 sprite.bigTexture = bigTexture;
                 var xMax = texture.width / bigTexture.width;
                 var yMax = texture.height / bigTexture.height;
@@ -2853,18 +3249,19 @@ var qec;
                 console.log('sprite pushed #' + i + ' ' + vec4.str(sprite.bounds));
             }
         };
-        texturePacker.prototype.repack2 = function (floatTextures) {
-            console.log('repack mode 2 ' + floatTextures.length + ' textures');
+        texturePacker.prototype.repack2 = function (sprites) {
+            console.log('repack mode 2 ' + sprites.length + ' textures');
             this.allBigTextures = [];
             this.allSprites = [];
             var w = 400; //floatTextures[0].width;
             var h = 400; //floatTextures[0].height;
             var bigTexture = new qec.floatTexture();
-            bigTexture.width = w * floatTextures.length;
+            bigTexture.width = w * sprites.length;
             bigTexture.height = h;
             bigTexture.data = new Float32Array(bigTexture.width * bigTexture.height * 4);
-            for (var i = 0; i < floatTextures.length; ++i) {
-                var texture = floatTextures[i];
+            for (var i = 0; i < sprites.length; ++i) {
+                var sprite = sprites[i];
+                var texture = sprite.originalTexture;
                 for (var x = 0; x < texture.width; x++) {
                     for (var y = 0; y < texture.height; y++) {
                         var q = y * texture.width + x;
@@ -2875,13 +3272,11 @@ var qec;
                         bigTexture.data[4 * qb + 3] = texture.data[4 * q + 3];
                     }
                 }
-                var sprite = new textureSprite();
-                sprite.originalTexture = texture;
                 sprite.bigTexture = bigTexture;
                 // sprite bounds
-                var xMin = i / (floatTextures.length);
+                var xMin = i / (sprites.length);
                 var yMin = 0;
-                var xMax = (i + (texture.width / 400)) / floatTextures.length;
+                var xMax = (i + (texture.width / 400)) / sprites.length;
                 var yMax = (texture.height / 400);
                 var offsetX = 1 / bigTexture.width;
                 var offsetY = 1 / bigTexture.height;
@@ -2891,16 +3286,16 @@ var qec;
             }
             this.allBigTextures.push(bigTexture);
         };
-        texturePacker.prototype.repack3 = function (floatTextures) {
-            console.log('repack mode 3 ' + floatTextures.length + ' textures');
+        texturePacker.prototype.repack3 = function (sprites) {
+            console.log('repack mode 3 ' + sprites.length + ' textures');
             this.allBigTextures = [];
             this.allSprites = [];
             var w = 400; //floatTextures[0].width;
             var h = 400; //floatTextures[0].height;
             var indexInFloatTextures = 0;
             var maxSpriteInBigTexture = 10;
-            while (indexInFloatTextures < floatTextures.length) {
-                var spriteCountInBigTexture = Math.min(maxSpriteInBigTexture, floatTextures.length - indexInFloatTextures);
+            while (indexInFloatTextures < sprites.length) {
+                var spriteCountInBigTexture = Math.min(maxSpriteInBigTexture, sprites.length - indexInFloatTextures);
                 var bigTexture = new qec.floatTexture();
                 bigTexture.width = w * spriteCountInBigTexture;
                 bigTexture.height = h;
@@ -2911,8 +3306,9 @@ var qec;
             }
             var bigTextureIndex = 0;
             var spriteIndex = 0;
-            for (var i = 0; i < floatTextures.length; ++i) {
-                var texture = floatTextures[i];
+            for (var i = 0; i < sprites.length; ++i) {
+                var sprite = sprites[i];
+                var texture = sprite.originalTexture;
                 var bigTexture = this.allBigTextures[bigTextureIndex];
                 for (var x = 0; x < texture.width; x++) {
                     for (var y = 0; y < texture.height; y++) {
@@ -2924,8 +3320,6 @@ var qec;
                         bigTexture.data[4 * qb + 3] = texture.data[4 * q + 3];
                     }
                 }
-                var sprite = new textureSprite();
-                sprite.originalTexture = texture;
                 sprite.bigTexture = bigTexture;
                 // sprite bounds
                 var xMin = (spriteIndex * 400) / (bigTexture.width);
@@ -2957,11 +3351,267 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var updater = /** @class */ (function () {
+        function updater() {
+            this.texturePacker = new qec.texturePacker();
+        }
+        updater.prototype.update = function (array, done) {
+            var _this = this;
+            console.log('updater.update');
+            this.updateImages(array, function () {
+                if (_this.needRepack)
+                    _this.updateSprites(array);
+                done();
+            });
+        };
+        updater.prototype.updateImages = function (array, done) {
+            var _this = this;
+            var run = new qec.runAll();
+            var _loop_1 = function (sd) {
+                if (qec.instanceOfTop(sd)) {
+                    var captured_1 = sd;
+                    run.push(function (x) { return _this.updateTop(captured_1, x); });
+                }
+                if (qec.instanceOfProfile(sd)) {
+                    var captured_2 = sd;
+                    run.push(function (x) { return _this.updateProfile(captured_2, x); });
+                }
+                if (qec.instanceOfProfileTopBottom(sd)) {
+                    var captured_3 = sd;
+                    run.push(function (x) { return _this.updateProfileTopBottom(captured_3, x); });
+                }
+                if (qec.instanceOfBorder(sd)) {
+                    var captured_4 = sd;
+                    run.push(function (x) { return _this.updateBorder(captured_4, x); });
+                }
+            };
+            for (var _i = 0, array_1 = array; _i < array_1.length; _i++) {
+                var sd = array_1[_i];
+                _loop_1(sd);
+            }
+            run.run(done);
+        };
+        updater.prototype.updateSprites = function (array) {
+            var allSprites = [];
+            for (var _i = 0, array_2 = array; _i < array_2.length; _i++) {
+                var sd = array_2[_i];
+                if (qec.instanceOfTop(sd)) {
+                    var top_1 = sd.top;
+                    top_1.topSprite = new qec.textureSprite();
+                    top_1.topSprite.originalTexture = top_1.topTexture;
+                    allSprites.push(top_1.topSprite);
+                }
+                if (qec.instanceOfProfile(sd)) {
+                    var profile = sd.profile;
+                    profile.profileSprite = new qec.textureSprite();
+                    profile.profileSprite.originalTexture = profile.profileTexture;
+                    allSprites.push(profile.profileSprite);
+                }
+                if (qec.instanceOfProfileTopBottom(sd)) {
+                    var profile = sd.profileTopBottom;
+                    {
+                        profile.profileTopSprite = new qec.textureSprite();
+                        profile.profileTopSprite.originalTexture = profile.profileTopTexture;
+                        allSprites.push(profile.profileTopSprite);
+                    }
+                    {
+                        profile.profileBottomSprite = new qec.textureSprite();
+                        profile.profileBottomSprite.originalTexture = profile.profileBottomTexture;
+                        allSprites.push(profile.profileBottomSprite);
+                    }
+                }
+                if (qec.instanceOfBorder(sd)) {
+                    var b = sd.border;
+                    b.borderSprite = new qec.textureSprite();
+                    b.borderSprite.originalTexture = b.borderTexture;
+                    allSprites.push(b.borderSprite);
+                }
+            }
+            this.texturePacker.repack(allSprites);
+        };
+        updater.prototype.updateTop = function (sd, done) {
+            var top = sd.top;
+            if (top.topUpdated) {
+                console.log('update top ' + sd.uniqueName);
+                top.topUpdated = false;
+                this.needRepack = true;
+                var margin = 2;
+                // load image
+                var img_1 = new Image();
+                img_1.onload = function () {
+                    var topDfCanvas = new qec.distanceFieldCanvas();
+                    topDfCanvas.drawUserCanvasForTop(img_1, top.topBounds, margin);
+                    topDfCanvas.update();
+                    vec4.copy(top.topBounds, topDfCanvas.totalBounds);
+                    topDfCanvas.debugInfoInCanvas();
+                    document.body.append(topDfCanvas.canvas);
+                    top.topTexture = topDfCanvas.floatTexture;
+                    top.topTextureUpdated = true;
+                    done();
+                };
+                img_1.src = top.topSrc;
+            }
+            else {
+                done();
+            }
+        };
+        updater.prototype.updateProfile = function (sd, done) {
+            var profile = sd.profile;
+            if (profile.profileUpdated) {
+                console.log('update profile' + sd.uniqueName);
+                profile.profileUpdated = false;
+                this.needRepack = true;
+                var margin = 2;
+                // load image
+                var img_2 = new Image();
+                img_2.onload = function () {
+                    var topDfCanvas = new qec.distanceFieldCanvas();
+                    topDfCanvas.drawUserCanvasForTop(img_2, profile.profileBounds, margin);
+                    topDfCanvas.update();
+                    vec4.copy(profile.profileBounds, topDfCanvas.totalBounds);
+                    topDfCanvas.debugInfoInCanvas();
+                    document.body.append(topDfCanvas.canvas);
+                    profile.profileTexture = topDfCanvas.floatTexture;
+                    profile.profileTextureUpdated = true;
+                    done();
+                };
+                img_2.src = profile.profileSrc;
+            }
+            else {
+                done();
+            }
+        };
+        updater.prototype.updateProfileTopBottom = function (sd, done) {
+            var profile = sd.profileTopBottom;
+            if (profile.profileUpdated) {
+                console.log('update profile top-bottom' + sd.uniqueName);
+                profile.profileUpdated = false;
+                this.needRepack = true;
+                var margin = 2;
+                // load image
+                var img_3 = new Image();
+                img_3.onload = function () {
+                    {
+                        var topDfCanvas = new qec.distanceFieldCanvas();
+                        topDfCanvas.drawUserCanvasForProfileTop(img_3, profile.profileBounds, margin);
+                        topDfCanvas.update();
+                        // to be done only once
+                        // vec4.copy(profile.profileBounds, topDfCanvas.totalBounds);
+                        topDfCanvas.debugInfoInCanvas();
+                        document.body.append(topDfCanvas.canvas);
+                        profile.profileTopTexture = topDfCanvas.floatTexture;
+                    }
+                    {
+                        var topDfCanvas = new qec.distanceFieldCanvas();
+                        topDfCanvas.drawUserCanvasForProfileBottom(img_3, profile.profileBounds, margin);
+                        topDfCanvas.update();
+                        vec4.copy(profile.profileBounds, topDfCanvas.totalBounds);
+                        topDfCanvas.debugInfoInCanvas();
+                        document.body.append(topDfCanvas.canvas);
+                        profile.profileBottomTexture = topDfCanvas.floatTexture;
+                    }
+                    profile.profileTextureUpdated = true;
+                    done();
+                };
+                img_3.src = profile.profileSrc;
+            }
+            else {
+                done();
+            }
+        };
+        updater.prototype.updateBorder = function (sd, done) {
+            var b = sd.border;
+            if (b.borderUpdated) {
+                console.log('update border' + sd.uniqueName);
+                b.borderUpdated = false;
+                this.needRepack = true;
+                var margin = 2;
+                // load image
+                var img_4 = new Image();
+                img_4.onload = function () {
+                    var topDfCanvas = new qec.distanceFieldCanvas();
+                    topDfCanvas.drawUserCanvasForBorder(img_4, b.borderBounds, margin);
+                    topDfCanvas.update();
+                    vec4.copy(b.borderBounds, topDfCanvas.totalBounds);
+                    topDfCanvas.debugInfoInCanvas();
+                    document.body.append(topDfCanvas.canvas);
+                    b.borderTexture = topDfCanvas.floatTexture;
+                    b.borderTextureUpdated = true;
+                    done();
+                };
+                img_4.src = b.borderSrc;
+            }
+            else {
+                done();
+            }
+        };
+        return updater;
+    }());
+    qec.updater = updater;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var hardwareSignedDistance = /** @class */ (function () {
+        function hardwareSignedDistance() {
+        }
+        return hardwareSignedDistance;
+    }());
+    qec.hardwareSignedDistance = hardwareSignedDistance;
+    var hardwareSignedDistanceExplorer = /** @class */ (function () {
+        function hardwareSignedDistanceExplorer() {
+            this.array = [];
+        }
+        hardwareSignedDistanceExplorer.prototype.explore = function (sd) {
+            this.recCount = 0;
+            this.hdFields2Count = 0;
+            this.hdFields2RadialCount = 0;
+            this.array = [];
+            this.exploreRec(sd);
+        };
+        hardwareSignedDistanceExplorer.prototype.exploreRec = function (sd) {
+            // stop if (signedDistance already explored)
+            if (this.getHsd(sd) != null)
+                return;
+            var hsd;
+            this.array.push(hsd);
+            hsd.sd = sd;
+            hsd.index = this.recCount;
+            this.recCount++;
+            /*
+            else if (sd instanceof sdUnion)
+            {
+                for (var i=0; i < sd.array.length; ++i)
+                    this.exploreRec(sd.array[i]);
+            }
+            else if (sd instanceof sdSubtraction)
+            {
+                for (var i=0; i < sd.array.length; ++i)
+                    this.exploreRec(sd.array[i]);
+            }
+            else if (sd instanceof sdIntersection)
+            {
+                for (var i=0; i < sd.array.length; ++i)
+                    this.exploreRec(sd.array[i]);
+            }
+            else if (sd instanceof sdBorder)
+            {
+                this.exploreRec(sd.sd);
+            }
+            */
+        };
+        hardwareSignedDistanceExplorer.prototype.getHsd = function (sd) {
+            var found = this.array.find(function (hsd) { return hsd.sd == sd; });
+            return found;
+        };
+        return hardwareSignedDistanceExplorer;
+    }());
+    qec.hardwareSignedDistanceExplorer = hardwareSignedDistanceExplorer;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var hardwareRenderer = /** @class */ (function () {
         function hardwareRenderer() {
             this.fragmentShader = '';
-            this.fakePos = vec3.create();
-            this.inverseTransform = mat4.create();
         }
         hardwareRenderer.prototype.setFragmentShader = function (text) {
             this.fragmentShader = text;
@@ -2973,8 +3623,8 @@ var qec;
             this.height = rHeight;
             console.log("set hardwareRenderer " + rWidth + "," + rHeight);
             this.initTHREE();
-            this.expl = new qec.hardwareSignedDistanceExplorer();
-            this.text = new qec.hardwareShaderText();
+            this.text = new qec.hardwareShaderTextUnion();
+            this.textLights = new qec.hardwareShaderDirectionalLight();
             this.gShaderMaterial.uniforms.u_inverseTransforms = { type: "m4v", value: [] };
             this.gShaderMaterial.uniforms.u_diffuses = { type: "3fv", value: [] };
             this.gShaderMaterial.uniforms.u_floatTextures = { type: "tv", value: [] };
@@ -2996,92 +3646,144 @@ var qec;
         };
         hardwareRenderer.prototype.showBoundingBox = function (b) {
         };
-        hardwareRenderer.prototype.updateShader = function (sd, lightCount, packer) {
+        hardwareRenderer.prototype.updateShader = function (settings) {
+            this.sd = settings.sdArray;
+            this.text.setArray(this.sd);
+            this.textLights.setLight(settings.directionalLights[0]);
             console.log('hardwareRenderer.updateShader');
-            this.expl.explore(sd);
-            var generatedPart = this.text.generateDistance(this.expl, packer)
-                + this.text.generateColor(this.expl);
-            var generatedLight = this.text.generateLight(lightCount);
+            var generatedPart = '';
+            {
+                var structs = {};
+                this.text.declareStruct(structs);
+                for (var t in structs) {
+                    generatedPart += "struct ".concat(t, " { ").concat(structs[t], " };\n");
+                }
+                generatedPart += this.text.declareUniforms() + '\n';
+                generatedPart += this.text.generateDist() + '\n';
+                generatedPart += this.text.generateColor() + '\n';
+            }
+            var generatedLight = '';
+            {
+                var structsLight = {};
+                this.textLights.declareStruct(structsLight);
+                for (var t in structsLight) {
+                    generatedPart += "struct ".concat(t, " { ").concat(structsLight[t], " };\n");
+                }
+                generatedLight += this.textLights.declareUniforms() + '\n';
+                generatedLight += this.textLights.generateApplyLight();
+            }
             this.fragmentShader = ''
                 + qec.resources.all['app/ts/render/hardware/10_sd.glsl']
-                + qec.resources.all['app/ts/render/hardware/11_sdFields.glsl']
                 + generatedPart
                 + qec.resources.all['app/ts/render/hardware/20_light.glsl']
                 + generatedLight
                 + qec.resources.all['app/ts/render/hardware/30_renderPixel.glsl'];
-            //console.log(generatedPart);
+            console.log(generatedPart);
             //console.log(generatedLight);
             this.gViewQuad.material.fragmentShader = this.fragmentShader;
             this.gViewQuad.material.needsUpdate = true;
             this.updateAllUniformsForAll();
-            this.updateAllPackedTextures(packer);
         };
+        /*
+        generateLight(count:number) : string
+        {
+            var shader = '';
+            
+            shader += 'vec3 getLight(int shadows, vec3 col, vec3 pos, vec3 normal, vec3 rd) { \n'
+            shader += '    vec3 result = vec3(0.0,0.0,0.0);\n'
+            for (var i=0; i < count; ++i)
+            {
+                shader += '    result = result + applyLight(vec3(100.0,-100.0,200.0), 1.0, shadows, col, pos, normal, rd);\n';
+            }
+            shader += '    return result;\n}\n\n';
+
+            return shader;
+        }
+        */
         hardwareRenderer.prototype.updateAllUniformsForAll = function () {
-            for (var i = 0; i < this.expl.array.length; ++i)
-                this.updateAllUniforms(this.expl.array[i].sd);
+            this.text.setUniforms(this.gShaderMaterial.uniforms);
+            this.textLights.setUniforms(this.gShaderMaterial.uniforms);
         };
-        hardwareRenderer.prototype.updateAllUniforms = function (sd) {
-            this.updateDiffuse(sd);
-            this.updateTransform(sd);
-            if (sd instanceof qec.sdFields)
-                this.updateFloatTextures(sd);
-        };
-        hardwareRenderer.prototype.updateDiffuse = function (sd) {
+        /*
+        fakePos = vec3.create();
+        inverseTransform = mat4.create();
+        updateDiffuse(sd: signedDistance) {
             var hsd = this.expl.getHsd(sd);
             var diffuse = sd.getMaterial(this.fakePos).diffuse;
             if (this.gShaderMaterial.uniforms.u_diffuses.value[hsd.index] == null)
                 this.gShaderMaterial.uniforms.u_diffuses.value[hsd.index] = new THREE.Vector3();
+
             this.gShaderMaterial.uniforms.u_diffuses.value[hsd.index].fromArray(diffuse);
-        };
-        hardwareRenderer.prototype.updateTransform = function (sd) {
+        }
+
+        updateTransform(sd: signedDistance) {
             var hsd = this.expl.getHsd(sd);
             sd.getInverseTransform(this.inverseTransform);
+
             if (this.gShaderMaterial.uniforms.u_inverseTransforms.value[hsd.index] == null)
                 this.gShaderMaterial.uniforms.u_inverseTransforms.value[hsd.index] = new THREE.Matrix4();
+
             var m = this.gShaderMaterial.uniforms.u_inverseTransforms.value[hsd.index];
             m.fromArray(this.inverseTransform);
-        };
-        hardwareRenderer.prototype.updateFloatTextures = function (sd) {
+        }
+
+        updateFloatTextures(sd: sdFields) {
             var hsd = this.expl.getHsd(sd);
+
             // bounds
             var topBounds = new THREE.Vector4();
             topBounds.fromArray(sd.topBounds);
+
             var profileBounds = new THREE.Vector4();
             profileBounds.fromArray(sd.profileBounds);
+
             this.gShaderMaterial.uniforms.u_topBounds.value[hsd.sdFieldIndex] = topBounds;
             this.gShaderMaterial.uniforms.u_profileBounds.value[hsd.sdFieldIndex] = profileBounds;
+
             var topSpriteBounds = new THREE.Vector4();
             topSpriteBounds.fromArray(sd.topSpriteBounds);
             var profileSpriteBounds = new THREE.Vector4();
             profileSpriteBounds.fromArray(sd.profileSpriteBounds);
+
             this.gShaderMaterial.uniforms.u_topTextureSpriteBounds.value[hsd.sdFieldIndex] = topSpriteBounds;
             this.gShaderMaterial.uniforms.u_profileTextureSpriteBounds.value[hsd.sdFieldIndex] = profileSpriteBounds;
-            // texture
-            // TODO suppr
-            /*
-            var topDataTexture = new THREE.DataTexture( sd.topTexture.data, sd.topTexture.width, sd.topTexture.height, THREE.RGBAFormat, THREE.FloatType);
-            topDataTexture.needsUpdate = true;
-            var profileDataTexture = new THREE.DataTexture( sd.profileTexture.data, sd.profileTexture.width, sd.profileTexture.height, THREE.RGBAFormat, THREE.FloatType);
-            profileDataTexture.needsUpdate = true;
-            this.gShaderMaterial.uniforms.u_topTextures.value[hsd.sdFieldIndex] = topDataTexture;
-            this.gShaderMaterial.uniforms.u_profileTextures.value[hsd.sdFieldIndex] = profileDataTexture;
-            */
-        };
-        hardwareRenderer.prototype.updateAllPackedTextures = function (packer) {
-            var _this = this;
-            packer.allBigTextures.forEach(function (t, i) {
+        }
+
+        updateFloatTextures2(sd: sdFields2) {
+            var hsd = this.expl.getHsd(sd);
+
+            // bounds
+            var topBounds = new THREE.Vector4();
+            topBounds.fromArray(sd.topBounds);
+
+            var profileBounds = new THREE.Vector4();
+            profileBounds.fromArray(sd.profileBounds);
+
+            this.gShaderMaterial.uniforms.u_topBounds.value[hsd.sdFieldIndex] = topBounds;
+            this.gShaderMaterial.uniforms.u_profileBounds.value[hsd.sdFieldIndex] = profileBounds;
+
+            var topSpriteBounds = new THREE.Vector4();
+            topSpriteBounds.fromArray(sd.topSpriteBounds);
+            var profileSpriteBounds = new THREE.Vector4();
+            profileSpriteBounds.fromArray(sd.profileSpriteBounds);
+
+            this.gShaderMaterial.uniforms.u_topTextureSpriteBounds.value[hsd.sdFieldIndex] = topSpriteBounds;
+            this.gShaderMaterial.uniforms.u_profileTextureSpriteBounds.value[hsd.sdFieldIndex] = profileSpriteBounds;
+        }
+
+        updateAllPackedTextures(packer: texturePacker) {
+            packer.allBigTextures.forEach((t, i) => {
                 var texture = new THREE.DataTexture(t.data, t.width, t.height, THREE.RGBAFormat, THREE.FloatType);
                 texture.needsUpdate = true;
-                _this.gShaderMaterial.uniforms.u_floatTextures.value[i] = texture;
+                this.gShaderMaterial.uniforms.u_floatTextures.value[i] = texture;
             });
-        };
+        }*/
         hardwareRenderer.prototype.renderDebug = function (x, y, settings) {
             alert('not supported');
         };
         hardwareRenderer.prototype.render = function (settings) {
             var _this = this;
             var camera = settings.camera;
-            var sd = settings.sd;
             camera.rendererInit(this.width, this.height);
             this.gShaderMaterial.uniforms.u_inversePMatrix = { type: "Matrix4fv", value: camera.inversePMatrix },
                 this.gShaderMaterial.uniforms.u_inverseTransformMatrix = { type: "Matrix4fv", value: camera.inverseTransformMatrix },
@@ -3137,314 +3839,243 @@ var qec;
             var node = new THREE.Object3D();
             node.add(this.gViewQuad);
             this.gScene.add(node);
-            //this.recompileShader();
-            // cubemap
-            /*
-            var texture = new THREE.CubeTexture();
-            var loaded = 0;
-            for (var i=0; i<6; ++i)
-            {
-                texture.images[ i ] = resources.all['data/cubemap/cubemap' + i + '.jpg'];
-            }
-            texture.needsUpdate = true;
-            this.cubemap = texture;
-            */
         };
         hardwareRenderer.prototype.setDegradation = function (coef) {
             this.gRenderer.setSize(this.width / coef, this.height / coef, false);
             this.rendererCanvas.style.width = '' + this.width + 'px';
             this.rendererCanvas.style.height = '' + this.height + 'px';
         };
+        hardwareRenderer.prototype.updateAllUniforms = function (sd) { };
+        hardwareRenderer.prototype.updateDiffuse = function (sd) { };
+        hardwareRenderer.prototype.updateTransform = function (sd) { };
+        hardwareRenderer.prototype.updateFloatTextures = function (sd) { };
+        hardwareRenderer.prototype.updateAllPackedTextures = function (packer) { };
         return hardwareRenderer;
     }());
     qec.hardwareRenderer = hardwareRenderer;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var hardwareShaderText = /** @class */ (function () {
-        function hardwareShaderText() {
+    var hardwareShaderDirectionalLight = /** @class */ (function () {
+        function hardwareShaderDirectionalLight() {
+            this.structName = 'lightDirectional';
         }
-        hardwareShaderText.prototype.generateDistance = function (expl, packer) {
-            console.log('generateDistance');
-            var shader = '';
-            var hsdArray = expl.array;
-            shader += 'uniform mat4 u_inverseTransforms[' + hsdArray.length + '];\n\n';
-            var count = expl.getSdFieldsCount();
-            /*
-            shader +=  count == 0 ? '' :
-                'uniform sampler2D u_topTextures[' + count +'];\n' +
-                'uniform sampler2D u_profileTextures[' + count + '];\n' +
-                'uniform vec4 u_topBounds[' + count +'];\n' +
-                'uniform vec4 u_profileBounds[' + count + '];\n'+
-                '\n';
-            */
-            shader += count == 0 ? '' :
-                'uniform sampler2D u_floatTextures[' + packer.allBigTextures.length + '];\n' +
-                    'uniform int  u_topTextureIndex[' + count + '];\n' +
-                    'uniform int  u_profileTextureIndex[' + count + '];\n' +
-                    'uniform vec4 u_topTextureSpriteBounds[' + count + '];\n' +
-                    'uniform vec4 u_profileTextureSpriteBounds[' + count + '];\n' +
-                    'uniform vec4 u_topBounds[' + count + '];\n' +
-                    'uniform vec4 u_profileBounds[' + count + '];\n' +
-                    '\n';
-            // declare functions
-            for (var i = hsdArray.length - 1; i >= 0; --i) {
-                shader += 'float getDist_' + i + '(vec3 pos);\n';
-                shader += 'float getDist2_' + i + '(vec3 pos, vec3 rd);\n';
-            }
-            shader += '\n';
-            // implementations
-            for (var i = hsdArray.length - 1; i >= 0; --i) {
-                shader += this.generateOneDistance(expl, packer, hsdArray[i], false);
-                shader += '\n\n';
-                shader += this.generateOneDistance(expl, packer, hsdArray[i], true);
-                shader += '\n\n';
-            }
-            shader += 'float getDist(vec3 pos) { return getDist_0(pos); }\n';
-            shader += 'float getDist2(vec3 pos, vec3 rd) { return getDist2_0(pos, rd); }\n';
-            return shader;
+        hardwareShaderDirectionalLight.prototype.setLight = function (light) {
+            this.light = light;
         };
-        hardwareShaderText.prototype.generateOneDistance = function (expl, packer, hsd, isDist2) {
-            var sd = hsd.sd;
-            console.log('generateOneDistance ' + hsd.index);
-            if (sd instanceof qec.sdFields) {
-                var m = mat4.create();
-                sd.getInverseTransform(m);
-                var topTextureIndex = packer.getTextureIndex(sd.topTexture);
-                var profileTextureIndex = packer.getTextureIndex(sd.profileTexture);
-                var text = this.getDistSignature(hsd.index, isDist2) + ' { ';
-                if (!isDist2)
-                    text += '\n  return sdFieldsWithSprites1_(pos,';
-                else
-                    text += '\n  return sdFieldsWithSprites2_(pos, rd,';
-                text += ''
-                    + '\n    u_floatTextures[' + topTextureIndex + '],'
-                    + '\n    u_floatTextures[' + profileTextureIndex + '],'
-                    + '\n    u_topTextureSpriteBounds[' + hsd.sdFieldIndex + '],'
-                    + '\n    u_profileTextureSpriteBounds[' + hsd.sdFieldIndex + '],'
-                    + '\n    u_topBounds[' + hsd.sdFieldIndex + '],'
-                    + '\n    u_profileBounds[' + hsd.sdFieldIndex + '],'
-                    + '\n    u_inverseTransforms[' + hsd.index + ']'
-                    + '\n  );}';
-                return text;
-            }
-            if (sd instanceof qec.sdBox) {
-                return this.getDistSignature(hsd.index, isDist2) + ' { '
-                    + '\n  return sdBox(pos, ' + vec3.str(sd.halfSize) + ');'
-                    + '\n}';
-            }
-            if (sd instanceof qec.sdSphere) {
-                return this.getDistSignature(hsd.index, isDist2) + ' { '
-                    + '\n  return sdSphere(pos, ' + sd.radius + ', u_inverseTransforms[' + hsd.index + ']);'
-                    + '\n}';
-            }
-            if (sd instanceof qec.sdPlane) {
-                return this.getDistSignature(hsd.index, isDist2) + ' { '
-                    + '\n  return sdPlane(pos, ' + vec3.str(sd.normal) + ');'
-                    + '\n}';
-            }
-            if (sd instanceof qec.sdGrid) {
-                return this.getDistSignature(hsd.index, isDist2) + ' { '
-                    + '\n  return sdGrid(pos, ' + vec3.str(sd.size) + ', ' + sd.thickness + ');'
-                    + '\n}';
-            }
-            if (sd instanceof qec.sdBorder) {
-                var childHsd = expl.getHsd(sd.sd);
-                var concat = '\n  float d = ' + this.getDistCall(childHsd.index, isDist2) + ';';
-                concat += '\n  return opBorder(d, ' + sd.borderIn + ');';
-                return this.getDistSignature(hsd.index, isDist2) + ' { '
-                    + concat
-                    + '\n}';
-            }
-            if (sd instanceof qec.sdUnion) {
-                var array = sd.array;
-                var concat = '  float d=666.0;\n';
-                for (var j = 0; j < array.length; ++j) {
-                    var childHsd = expl.getHsd(array[j]);
-                    concat += '  d = opU(d, ' + this.getDistCall(childHsd.index, isDist2) + ');\n';
+        hardwareShaderDirectionalLight.prototype.declareStruct = function (declared) {
+            if (declared[this.structName] == undefined)
+                declared[this.structName] = "\n                vec3 invDirection;\n                float intensity;\n            ";
+        };
+        hardwareShaderDirectionalLight.prototype.declareUniforms = function () {
+            return "uniform ".concat(this.structName, " u_light_").concat(this.light.uniqueName, ";");
+        };
+        hardwareShaderDirectionalLight.prototype.generateApplyLight = function () {
+            var name = "u_light_".concat(this.light.uniqueName);
+            var KD = 0.7;
+            var KS = 0.5;
+            return "\n                vec3 getLight(int shadows, vec3 col, vec3 pos, vec3 normal, vec3 rd) \n                {\n                    vec3 toLight = ".concat(name, ".invDirection;\n                \n                    float diffuse = ").concat(name, ".intensity * getDiffuse(pos, normal, toLight);\n                    float specular = ").concat(name, ".intensity * getSpecular(pos, normal, toLight, rd);\n                    return (0.2* col + ").concat(KS, "*specular + ").concat(KD, "*diffuse * col);\n                }\n            ");
+        };
+        hardwareShaderDirectionalLight.prototype.setUniforms = function (uniforms) {
+            var v = new THREE.Vector3();
+            v.fromArray(this.light.invDirection);
+            uniforms["u_light_".concat(this.light.uniqueName)] = {
+                value: {
+                    intensity: this.light.intensity,
+                    invDirection: v
                 }
-                return this.getDistSignature(hsd.index, isDist2) + ' { '
-                    + '\n' + concat
-                    + '  return d;'
-                    + '\n}';
-            }
-            if (sd instanceof qec.sdSubtraction) {
-                var array = sd.array;
-                var concat = '  float d=666.0;\n';
-                var childHsd0 = expl.getHsd(array[0]);
-                var childHsd1 = expl.getHsd(array[1]);
-                concat += '  d = opS(' + +this.getDistCall(childHsd0.index, isDist2) + ',' + +this.getDistCall(childHsd1.index, isDist2) + ');\n';
-                return this.getDistSignature(hsd.index, isDist2) + ' { '
-                    + '\n' + concat
-                    + '  return d;'
-                    + '\n}';
-            }
-            if (sd instanceof qec.sdIntersection) {
-                var array = sd.array;
-                var concat = '  float d=-666.0;\n';
-                for (var j = 0; j < array.length; ++j) {
-                    var childHsd = expl.getHsd(array[j]);
-                    concat += '  d = opI(d, ' + +this.getDistCall(childHsd.index, isDist2) + ');\n';
-                }
-                return this.getDistSignature(hsd.index, isDist2) + ' { '
-                    + '\n' + concat
-                    + '  return d;'
-                    + '\n}';
-            }
-            return '';
+            };
+            //console.log(uniforms[`u_sd_${sd.uniqueName}`]);
         };
-        hardwareShaderText.prototype.getDistSignature = function (index, isDist2) {
-            if (!isDist2)
-                return 'float getDist_' + index + '(vec3 pos)';
-            else
-                return 'float getDist2_' + index + '(vec3 pos, vec3 rd)';
-        };
-        hardwareShaderText.prototype.getDistCall = function (index, isDist2) {
-            if (!isDist2)
-                return 'getDist_' + index + '(pos)';
-            else
-                return 'getDist2_' + index + '(pos, rd)';
-        };
-        hardwareShaderText.prototype.generateColor = function (expl) {
-            console.log('generateColor');
-            var shader = '';
-            var hsdArray = expl.array;
-            shader += '\n\nuniform vec3 u_diffuses[' + hsdArray.length + '];\n\n';
-            for (var i = hsdArray.length - 1; i >= 0; --i) {
-                shader += 'vec3 getColor_' + i + '(vec3 pos);\n';
-            }
-            shader += '\n';
-            for (var i = hsdArray.length - 1; i >= 0; --i) {
-                shader += this.generateOneColor(expl, hsdArray[i]);
-                shader += '\n\n';
-            }
-            shader +=
-                'vec3 getColor(vec3 pos) { return getColor_0(pos); }\n';
-            return shader;
-        };
-        hardwareShaderText.prototype.generateOneColor = function (expl, hsd) {
-            var sd = hsd.sd;
-            var fakePos = vec3.create();
-            if (sd instanceof qec.sdUnion) {
-                var array = sd.array;
-                var concat = '  float d=666.0;\n  float d2;  vec3 color;\n';
-                for (var j = 0; j < array.length; ++j) {
-                    var childHsd = expl.getHsd(array[j]);
-                    concat += '  d2 = getDist_' + childHsd.index + '(pos);\n'
-                        + '  if (d2 < d) { d = d2; color = getColor_' + childHsd.index + '(pos);}\n';
-                }
-                return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
-                    + '\n' + concat
-                    + '  return color;'
-                    + '\n}';
-            }
-            else if (sd instanceof qec.sdSubtraction) {
-                var array = sd.array;
-                var concat = '  float d=666.0;\n  float d2;  vec3 color;\n';
-                var childHsd = expl.getHsd(array[0]);
-                concat += '  d2 = getDist_' + childHsd.index + '(pos);\n'
-                    + '  if (d2 < d) { d = d2; color = getColor_' + childHsd.index + '(pos);}\n';
-                return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
-                    + '\n' + concat
-                    + '  return color;'
-                    + '\n}';
-            }
-            else if (sd instanceof qec.sdIntersection) {
-                var childHsd = expl.getHsd(sd.array[0]);
-                return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
-                    + '\n' + 'return getColor_' + childHsd.index + '(pos);'
-                    //+'  return color;'
-                    + '\n}';
-            }
-            else if (sd instanceof qec.sdBorder) {
-                var childHsd = expl.getHsd(sd.sd);
-                return 'vec3 getColor_' + hsd.index + '(vec3 pos) {'
-                    + '\n' + 'return getColor_' + childHsd.index + '(pos);'
-                    //+'  return color;'
-                    + '\n}';
-            }
-            else {
-                return 'vec3 getColor_' + hsd.index + '(vec3 pos) { return u_diffuses[' + hsd.index + ']; }';
-            }
-        };
-        hardwareShaderText.prototype.generateLight = function (count) {
-            var shader = '';
-            shader += '\n\nuniform vec3 u_lightPositions[' + count + '];\n\n';
-            shader += '\n\nuniform float u_lightIntensities[' + count + '];\n\n';
-            shader += 'vec3 getLight(int shadows, vec3 col, vec3 pos, vec3 normal, vec3 rd) { \n';
-            shader += '    vec3 result = vec3(0.0,0.0,0.0);\n';
-            for (var i = 0; i < count; ++i) {
-                shader += '    result = result + applyLight(u_lightPositions[' + i + '], u_lightIntensities[' + i + '], shadows, col, pos, normal, rd);\n';
-            }
-            shader += '    return result;\n}\n\n';
-            return shader;
-        };
-        return hardwareShaderText;
+        return hardwareShaderDirectionalLight;
     }());
-    qec.hardwareShaderText = hardwareShaderText;
+    qec.hardwareShaderDirectionalLight = hardwareShaderDirectionalLight;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var hardwareSignedDistance = /** @class */ (function () {
-        function hardwareSignedDistance() {
-            this.sdFieldIndex = -1;
+    var hardwareShaderTextFields1 = /** @class */ (function () {
+        function hardwareShaderTextFields1(sd) {
+            this.structName = 'sdFields1';
+            this.sd = sd;
         }
-        return hardwareSignedDistance;
+        hardwareShaderTextFields1.prototype.declareStruct = function (declared) {
+            if (declared[this.structName] == undefined)
+                declared[this.structName] = "\n                sampler2D topTexture;\n                mat4 inverseTransform;\n                vec3 diffuse;\n                vec3 boundingBox;\n            ";
+        };
+        hardwareShaderTextFields1.prototype.declareUniforms = function () {
+            return "uniform ".concat(this.structName, " u_sd_").concat(this.sd.uniqueName, ";");
+        };
+        hardwareShaderTextFields1.prototype.generateDist = function (assignColor) {
+            var sd = this.sd;
+            var name = "u_sd_".concat(sd.uniqueName);
+            return "\n            {\n                vec4 p2 = ".concat(name, ".inverseTransform * vec4(pos, 1.0);\n\n                vec3 p = p2.xyz;\n\n                p[2] -= ").concat(name, ".boundingBox[2];\n                float distToBbox = sdBox(p, ").concat(name, ".boundingBox);\n                \n                if (distToBbox < d)\n                {\n                    if (distToBbox > 2.0)\n                    {\n                        d = min(d, distToBbox);\n                    }\n                    else\n                    {\n                        p[2] += ").concat(name, ".boundingBox[2];\n\n                        vec2 uv = vec2(\n                            (p[0] - ").concat(sd.top.topBounds[0].toFixed(3), ") / (").concat((sd.top.topBounds[2] - sd.top.topBounds[0]).toFixed(3), "),\n                            (p[1] - ").concat(sd.top.topBounds[1].toFixed(3), ") / (").concat((sd.top.topBounds[3] - sd.top.topBounds[1]).toFixed(3), ")\n                        );\n\n                        vec2 _uv = clamp(uv, 0.0, 1.0);\n                        vec2 uv2 = vec2 (\n                                        mix(").concat(sd.top.topSprite.bounds[0].toFixed(3), ", ").concat(sd.top.topSprite.bounds[2].toFixed(3), ", _uv.x),\n                                        mix(").concat(sd.top.topSprite.bounds[1].toFixed(3), ", ").concat(sd.top.topSprite.bounds[3].toFixed(3), ", _uv.y)\n                        );\n                        vec4 textureColor = texture2D(").concat(name, ".topTexture, uv2);\n                        float d0 = textureColor[0];\n                        \n                        d = min(d, max(d0, distToBbox));\n                        ").concat(assignColor ? 'if (d == d0) { color = ' + name + '.diffuse; }' : '', "\n                    }\n                }\n                \n            }\n            ");
+        };
+        hardwareShaderTextFields1.prototype.setUniforms = function (uniforms) {
+            var sd = this.sd;
+            var uniform = uniforms["u_sd_".concat(sd.uniqueName)];
+            if (uniform == undefined) {
+                uniform = {
+                    value: {
+                        diffuse: new THREE.Vector3(),
+                        inverseTransform: new THREE.Matrix4(),
+                        topTexture: null,
+                        boundingBox: new THREE.Vector3()
+                    }
+                };
+                uniforms["u_sd_".concat(sd.uniqueName)] = uniform;
+            }
+            uniform.value.diffuse.fromArray(sd.material.diffuse);
+            uniform.value.boundingBox.fromArray(sd.boundingBox);
+            uniform.value.inverseTransform.fromArray(sd.inverseTransform);
+            uniform.value.topTexture = sd.top.topSprite.bigTexture.threeDataTexture;
+            /*
+            
+            let v = new THREE.Vector3();
+            v.fromArray(sd.material.diffuse);
+            let m = new THREE.Matrix4();
+            m.fromArray(sd.inverseTransform);
+            let boundingBox = new THREE.Vector3();
+            boundingBox.fromArray(sd.boundingBox);
+
+            console.log(v);
+            uniforms[`u_sd_${sd.uniqueName}`] = {
+                value: {
+                    diffuse: v,
+                    inverseTransform: m,
+                    topTexture: sd.top.topSprite.bigTexture.threeDataTexture,
+                    boundingBox: boundingBox
+                }
+            };
+            */
+            //console.log(uniforms[`u_sd_${sd.uniqueName}`]);
+            //uniforms[`u_sd_${sd.uniqueName}.diffuse`] = v;
+            //uniforms[`u_sd_${sd.uniqueName}.inverseTransform`] = m;
+            //uniforms[`u_sd_${sd.uniqueName}.topTexture`] = sd.topSprite.bigTexture.threeDataTexture;
+            //uniforms[`u_sd_${sd.uniqueName}.boundingBox`] = boundingBox;
+            //uniforms[`u_sd_${sd.uniqueName}.topSpriteBounds`] =  sd.topSprite.bounds;
+            //uniforms[`u_sd_${sd.uniqueName}.topBounds`] = sd.topBounds;
+        };
+        return hardwareShaderTextFields1;
     }());
-    qec.hardwareSignedDistance = hardwareSignedDistance;
-    var hardwareSignedDistanceExplorer = /** @class */ (function () {
-        function hardwareSignedDistanceExplorer() {
-            this.array = [];
+    qec.hardwareShaderTextFields1 = hardwareShaderTextFields1;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var hardwareShaderTextFields2 = /** @class */ (function () {
+        function hardwareShaderTextFields2(sd) {
+            this.structName = 'sdFields2';
+            this.sd = sd;
         }
-        hardwareSignedDistanceExplorer.prototype.explore = function (sd) {
-            this.recCount = 0;
-            this.sdFieldsCount = 0;
-            this.array = [];
-            this.exploreRec(sd);
+        hardwareShaderTextFields2.prototype.declareStruct = function (declared) {
+            if (declared[this.structName] == undefined)
+                declared[this.structName] = "\n                sampler2D topTexture;\n                sampler2D profileTexture;\n                mat4 inverseTransform;\n                vec3 diffuse;\n                vec3 boundingBox;\n            ";
         };
-        hardwareSignedDistanceExplorer.prototype.exploreRec = function (sd) {
-            // stop if (signedDistance already explored)
-            if (this.getHsd(sd) != null)
-                return;
-            var hsd = new hardwareSignedDistance();
-            this.array.push(hsd);
-            hsd.sd = sd;
-            hsd.index = this.recCount;
-            this.recCount++;
-            if (sd instanceof qec.sdFields) {
-                hsd.sdFieldIndex = this.sdFieldsCount;
-                this.sdFieldsCount++;
-            }
-            else if (sd instanceof qec.sdUnion) {
-                for (var i = 0; i < sd.array.length; ++i)
-                    this.exploreRec(sd.array[i]);
-            }
-            else if (sd instanceof qec.sdSubtraction) {
-                for (var i = 0; i < sd.array.length; ++i)
-                    this.exploreRec(sd.array[i]);
-            }
-            else if (sd instanceof qec.sdIntersection) {
-                for (var i = 0; i < sd.array.length; ++i)
-                    this.exploreRec(sd.array[i]);
-            }
-            else if (sd instanceof qec.sdBorder) {
-                this.exploreRec(sd.sd);
-            }
+        hardwareShaderTextFields2.prototype.declareUniforms = function () {
+            return "uniform ".concat(this.structName, " u_sd_").concat(this.sd.uniqueName, ";");
         };
-        hardwareSignedDistanceExplorer.prototype.getSdFieldsCount = function () {
-            var c = 0;
-            for (var i = 0; i < this.array.length; ++i)
-                if (this.array[i].sd instanceof qec.sdFields)
-                    c++;
-            return c;
+        hardwareShaderTextFields2.prototype.generateDist = function (assignColor) {
+            var sd = this.sd;
+            var name = "u_sd_".concat(sd.uniqueName);
+            return "\n            {\n                vec4 p2 = ".concat(name, ".inverseTransform * vec4(pos, 1.0);\n\n                vec3 p = p2.xyz;\n\n                p[2] -= ").concat(name, ".boundingBox[2];\n                float distToBbox = sdBox(p, ").concat(name, ".boundingBox);\n                \n                if (distToBbox < d)\n                {\n                if (distToBbox > 2.0)\n                {\n                    d = min(d, distToBbox);\n                }\n                else\n                {\n                    p[2] += ").concat(name, ".boundingBox[2];\n\n                    ").concat(this.getDistTop(name + '.topTexture', sd.top, 'd0'), "\n\n                    float originToPointX = p[0]-(").concat(sd.profileOrigin[0].toFixed(3), ");\n                    float originToPointY = p[1]-(").concat(sd.profileOrigin[1].toFixed(3), ");\n\n                    // Axis:\n                    float dotProduct = originToPointX*(").concat(sd.profileAxis[0].toFixed(3), ") + originToPointY*(").concat(sd.profileAxis[1].toFixed(3), ");\n                    ").concat(this.getDistProfile(name + '.profileTexture', sd.profile, 'dotProduct', 'd1'), ";\n\n                    d = min(d, max(d0, max(d1, distToBbox)));\n                    ").concat(assignColor ? 'if (d == d0) { color = ' + name + '.diffuse; }' : '', "\n                }\n                }\n            }\n            ");
         };
-        hardwareSignedDistanceExplorer.prototype.getHsd = function (sd) {
-            var found = this.array.find(function (hsd) { return hsd.sd == sd; });
-            return found;
+        hardwareShaderTextFields2.prototype.getDistTop = function (texture, top, distanceVar) {
+            return "\n            vec2 uvTop = vec2(\n                (p[0] - ".concat(top.topBounds[0].toFixed(3), ") / (").concat((top.topBounds[2] - top.topBounds[0]).toFixed(3), "),\n                (p[1] - ").concat(top.topBounds[1].toFixed(3), ") / (").concat((top.topBounds[3] - top.topBounds[1]).toFixed(3), ")\n            );\n            ").concat(this.getFieldDistanceWithSprite(texture, 'uvTop', top.topSprite.bounds, distanceVar), "\n            ");
         };
-        return hardwareSignedDistanceExplorer;
+        hardwareShaderTextFields2.prototype.getDistProfile = function (texture, profile, length, distanceVar) {
+            return "\n                vec2 uvProfile = vec2(\n                    (".concat(length, " - ").concat(profile.profileBounds[0].toFixed(3), ") / ").concat((profile.profileBounds[2] - profile.profileBounds[0]).toFixed(3), ",\n                    (p[2] - ").concat(profile.profileBounds[1].toFixed(3), ") / ").concat((profile.profileBounds[3] - profile.profileBounds[1]).toFixed(3), "\n                );\n                ").concat(this.getFieldDistanceWithSprite(texture, 'uvProfile', profile.profileSprite.bounds, distanceVar), "\n            ");
+        };
+        hardwareShaderTextFields2.prototype.getFieldDistanceWithSprite = function (texture, uv, spriteBounds, distanceVar) {
+            return "\n            ".concat(uv, " = clamp(").concat(uv, ", 0.0, 1.0);\n\n            ").concat(uv, " = vec2 (\n                mix(").concat(spriteBounds[0].toFixed(3), ", ").concat(spriteBounds[2].toFixed(3), ", ").concat(uv, ".x),\n                mix(").concat(spriteBounds[1].toFixed(3), ", ").concat(spriteBounds[3].toFixed(3), ", ").concat(uv, ".y)\n            );\n            vec4 ").concat(distanceVar, "textureColor = texture2D(").concat(texture, ", clamp(").concat(uv, ", 0.0, 1.0));\n            float ").concat(distanceVar, " = ").concat(distanceVar, "textureColor[0];\n            ");
+        };
+        hardwareShaderTextFields2.prototype.setUniforms = function (uniforms) {
+            var sd = this.sd;
+            var uniform = uniforms["u_sd_".concat(sd.uniqueName)];
+            if (uniform == undefined) {
+                uniform = {
+                    value: {
+                        diffuse: new THREE.Vector3(),
+                        inverseTransform: new THREE.Matrix4(),
+                        boundingBox: new THREE.Vector3(),
+                        topTexture: null,
+                        profileTexture: null,
+                    }
+                };
+                uniforms["u_sd_".concat(sd.uniqueName)] = uniform;
+            }
+            uniform.value.diffuse.fromArray(sd.material.diffuse);
+            uniform.value.boundingBox.fromArray(sd.boundingBox);
+            uniform.value.inverseTransform.fromArray(sd.inverseTransform);
+            uniform.value.topTexture = sd.top.topSprite.bigTexture.threeDataTexture;
+            uniform.value.profileTexture = sd.profile.profileSprite.bigTexture.threeDataTexture;
+            //console.log(uniforms[`u_sd_${sd.uniqueName}`]);
+            //uniforms[`u_sd_${sd.uniqueName}.diffuse`] = v;
+            //uniforms[`u_sd_${sd.uniqueName}.inverseTransform`] = m;
+            //uniforms[`u_sd_${sd.uniqueName}.topTexture`] = sd.topSprite.bigTexture.threeDataTexture;
+            //uniforms[`u_sd_${sd.uniqueName}.boundingBox`] = boundingBox;
+            //uniforms[`u_sd_${sd.uniqueName}.topSpriteBounds`] =  sd.topSprite.bounds;
+            //uniforms[`u_sd_${sd.uniqueName}.topBounds`] = sd.topBounds;
+        };
+        return hardwareShaderTextFields2;
     }());
-    qec.hardwareSignedDistanceExplorer = hardwareSignedDistanceExplorer;
+    qec.hardwareShaderTextFields2 = hardwareShaderTextFields2;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var hardwareShaderTextUnion = /** @class */ (function () {
+        function hardwareShaderTextUnion() {
+        }
+        hardwareShaderTextUnion.prototype.setArray = function (array) {
+            this.inner = array.map(function (x) {
+                if (x instanceof qec.sdFields1)
+                    return new qec.hardwareShaderTextFields1(x);
+                if (x instanceof qec.sdFields2)
+                    return new qec.hardwareShaderTextFields2(x);
+                return null;
+            });
+        };
+        hardwareShaderTextUnion.prototype.declareStruct = function (declared) {
+            for (var _i = 0, _a = this.inner; _i < _a.length; _i++) {
+                var sh = _a[_i];
+                sh.declareStruct(declared);
+            }
+        };
+        hardwareShaderTextUnion.prototype.declareUniforms = function () {
+            var txt = '';
+            for (var _i = 0, _a = this.inner; _i < _a.length; _i++) {
+                var sh = _a[_i];
+                txt += sh.declareUniforms();
+            }
+            return txt;
+        };
+        hardwareShaderTextUnion.prototype.setUniforms = function (uniforms) {
+            for (var _i = 0, _a = this.inner; _i < _a.length; _i++) {
+                var sh = _a[_i];
+                sh.setUniforms(uniforms);
+            }
+        };
+        hardwareShaderTextUnion.prototype.generateDist = function () {
+            var txt = "float getDist(vec3 pos) {\n                \n                float d = 6666.0;\n                ";
+            for (var _i = 0, _a = this.inner; _i < _a.length; _i++) {
+                var sh = _a[_i];
+                txt += sh.generateDist(false);
+            }
+            txt += 'return d;}';
+            return txt;
+        };
+        hardwareShaderTextUnion.prototype.generateColor = function () {
+            var txt = "vec3 getColor(vec3 pos, vec3 normal) {\n                float d = 6666.0;\n                vec3 color = vec3(1.0,1.0,1.0);\n                //vec3 color = normal;\n                ";
+            /*
+            for (let sh of this.inner)
+            {
+                txt += sh.generateDist(true);
+            }
+            */
+            txt += 'return color;}';
+            return txt;
+        };
+        return hardwareShaderTextUnion;
+    }());
+    qec.hardwareShaderTextUnion = hardwareShaderTextUnion;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -3579,6 +4210,7 @@ var qec;
         renderClient.prototype.init = function (rp, camera, onInitDone) {
             this.initDone = false;
             this.onInitDone = onInitDone;
+            // TODO broken
             var sd = rp.sd;
             var msgOut = new qec.renderWorkerInitMessage();
             msgOut.topTexture = sd.topTexture;
@@ -3689,12 +4321,12 @@ var qec;
         function renderPixel() {
             this.debug = false;
             this.out = vec4.create();
-            this.MAX_DIST_FROM_CAMERA = 1000;
+            this.MAX_DIST_FROM_CAMERA = 10000;
             this.MAX_STEPS = 100;
             this.c_fSmooth = 0.70;
-            this.EPS_NORMAL_1 = 0.03;
-            this.EPS_NORMAL_2 = 0.03;
-            this.EPS_INTERSECT = 0.001;
+            this.EPS_NORMAL_1 = 0.5;
+            this.EPS_NORMAL_2 = 0.5;
+            this.EPS_INTERSECT = 0.1;
             this.shadows = false;
             this.SS_K = 15.0;
             this.SS_MAX_STEPS = 64;
@@ -3718,8 +4350,8 @@ var qec;
             this.diffToLight = vec3.create();
             this.ssTmp = vec3.create();
         }
-        renderPixel.prototype.init = function (settings) {
-            this.sd = settings.sd;
+        renderPixel.prototype.updateShader = function (settings) {
+            this.getDist = new qec.renderPixelGetDist().generateGetDist(settings.sdArray);
             this.directionalLights = settings.directionalLights;
             this.spotLights = settings.spotLights;
             this.shadows = settings.shadows;
@@ -3732,14 +4364,14 @@ var qec;
         renderPixel.prototype.doRender = function (ro, rd) {
             if (this.debug)
                 console.log('ro', ro, 'rd', rd);
-            var hit = this.rayMarch(this.sd, ro, rd, this.out, this.outPos, this.outNormal);
+            var hit = this.rayMarch(this.getDist, ro, rd, this.out, this.outPos, this.outNormal);
             if (hit && this.reflection) {
                 this.reflect(this.reflRd, rd, this.outNormal);
                 for (var i = 0; i < 3; ++i)
                     this.reflRo[i] = this.outPos[i] + this.reflRd[i] * this.EPS_NORMAL_1;
                 if (this.debug)
                     console.log('reflect: reflRo', this.reflRo, 'reflRd', this.reflRd);
-                hit = this.rayMarch(this.sd, this.reflRo, this.reflRd, this.reflCol, this.outPos, this.outNormal);
+                hit = this.rayMarch(this.getDist, this.reflRo, this.reflRd, this.reflCol, this.outPos, this.outNormal);
                 if (hit) {
                     if (this.debug)
                         console.log('reflect color: ', this.reflCol);
@@ -3772,7 +4404,14 @@ var qec;
                 this.pos2[1] = outPos[1] - rd[1] * this.EPS_NORMAL_1;
                 this.pos2[2] = outPos[2] - rd[2] * this.EPS_NORMAL_1;
                 this.getNormal(sd, this.pos2, outNormal);
-                this.sd.getMaterial(outPos).getColor(this.sdColor);
+                //for (var j=0; j < 3; ++j)
+                //    outColor[j] = outNormal[j];
+                //this.sd.getMaterial(outPos).getColor(this.sdColor);
+                this.sdColor[0] = 1;
+                this.sdColor[1] = 1;
+                this.sdColor[2] = 1;
+                for (var j = 0; j < 3; ++j)
+                    outColor[j] = 0.2 * this.sdColor[j];
                 var KD = 0.7;
                 var KS = 0.5;
                 for (var i = 0; i < this.spotLights.length; ++i) {
@@ -3781,7 +4420,7 @@ var qec;
                         outColor[j] += this.outLighting[2] * (KS * this.outLighting[1] + KD * this.outLighting[0] * this.sdColor[j]);
                 }
                 for (var i = 0; i < this.directionalLights.length; ++i) {
-                    this.getDirectionalLighting(i, outPos, outNormal, rd, this.outLighting);
+                    this.getDirectionalLighting(this.directionalLights[i], outPos, outNormal, rd, this.outLighting);
                     for (var j = 0; j < 3; ++j)
                         outColor[j] += this.outLighting[2] * (KS * this.outLighting[1] + KD * this.outLighting[0] * this.sdColor[j]);
                 }
@@ -3798,10 +4437,13 @@ var qec;
                 for (var j = 0; j < 3; ++j)
                     this.intersectPos[j] = ro[j] + rd[j] * t;
                 var dt;
+                /*
                 if (this.rayToBounds)
-                    dt = sd.getDist2(this.intersectPos, rd, this.showBoundingBox, this.debug); // * this.c_fSmooth;
+                    dt = sd.getDist2(this.intersectPos, rd, this.showBoundingBox, this.debug);// * this.c_fSmooth;
                 else
-                    dt = sd.getDist(this.intersectPos, this.showBoundingBox, this.debug); // * this.c_fSmooth;
+                    dt = sd.getDist(this.intersectPos, this.showBoundingBox, this.debug);// * this.c_fSmooth;
+                */
+                dt = sd(this.intersectPos);
                 if (dt < this.EPS_INTERSECT) {
                     dist = t;
                     break;
@@ -3824,9 +4466,9 @@ var qec;
             var eps = this.EPS_NORMAL_2;
             vec3.copy(this.distEpsPos, pos);
             this.distEpsPos[index] += eps;
-            var a = sd.getDist(this.distEpsPos, this.showBoundingBox, this.debug);
+            var a = sd(this.distEpsPos); //, this.showBoundingBox, this.debug);
             this.distEpsPos[index] -= 2 * eps;
-            var b = sd.getDist(this.distEpsPos, this.showBoundingBox, this.debug);
+            var b = sd(this.distEpsPos); //, this.showBoundingBox, this.debug);
             return a - b;
         };
         renderPixel.prototype.getSpotLighting = function (i, pos, normal, rd, out) {
@@ -3841,9 +4483,9 @@ var qec;
             if (this.debug)
                 console.log('toLight:', this.diffToLight, 'normal', normal, 'diffuse', out[0], 'specular', out[1], 'shadow', out[2]);
         };
-        renderPixel.prototype.getDirectionalLighting = function (i, pos, normal, rd, out) {
-            var intensity = this.directionalLights[i].intensity;
-            vec3.scale(this.diffToLight, this.directionalLights[i].direction, -1);
+        renderPixel.prototype.getDirectionalLighting = function (light, pos, normal, rd, out) {
+            var intensity = light.intensity;
+            vec3.scale(this.diffToLight, light.direction, -1);
             var lightDist = 10;
             out[0] = intensity * this.getDiffuse(pos, normal, this.diffToLight);
             out[1] = intensity * this.getSpecular(pos, normal, this.diffToLight, rd);
@@ -3865,23 +4507,36 @@ var qec;
             return specular;
         };
         renderPixel.prototype.getShadow = function (pos, toLight, lightDist) {
+            return 0;
+            /*
             var shadow = 1.0;
             var t = this.SS_EPS;
             var dt;
-            for (var i = 0; i < this.SS_MAX_STEPS; ++i) {
+
+            for(var i=0; i < this.SS_MAX_STEPS; ++i)
+            {
                 vec3.scaleAndAdd(this.ssTmp, pos, toLight, t);
+
                 if (this.rayToBounds)
-                    dt = this.sd.getDist2(this.ssTmp, toLight, this.showBoundingBox, this.debug); // * this.c_fSmooth;
+                    dt = this.sd.getDist2(this.ssTmp, toLight, this.showBoundingBox, this.debug);// * this.c_fSmooth;
                 else
-                    dt = this.sd.getDist(this.ssTmp, this.showBoundingBox, this.debug); // * c_fSmooth;
-                if (dt < this.EPS_INTERSECT) // stop if intersect object
+                    dt = this.sd.getDist(this.ssTmp, this.showBoundingBox, this.debug);// * c_fSmooth;
+
+
+                if(dt < this.EPS_INTERSECT)    // stop if intersect object
                     return 0.0;
+                
                 //shadow = Math.min(shadow, this.SS_K*(dt/t));
+                
+
                 t += dt;
-                if (t > lightDist) // stop if reach light
-                    break;
+                
+                if(t > lightDist)   // stop if reach light
+                break;
             }
+            
             return MathClamp(shadow, 0.0, 1.0);
+            */
         };
         renderPixel.prototype.reflect = function (out, d, n) {
             var dot = vec3.dot(d, n);
@@ -3891,6 +4546,198 @@ var qec;
         return renderPixel;
     }());
     qec.renderPixel = renderPixel;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var renderPixelGetDist = /** @class */ (function () {
+        function renderPixelGetDist() {
+            this.tmp = vec3.create();
+            this.tmp2 = vec3.create();
+            this.color = vec4.create();
+        }
+        renderPixelGetDist.prototype.generateGetDist = function (array) {
+            var _this = this;
+            console.log('generate get dist');
+            var inner = [];
+            var _loop_2 = function (sd) {
+                if (sd instanceof qec.sdFields1) {
+                    var captured_5 = sd;
+                    inner.push(function (x, y) { return _this.getDistFields1(captured_5, x, y); });
+                }
+                else if (sd instanceof qec.sdFields2) {
+                    var captured_6 = sd;
+                    inner.push(function (x, y) { return _this.getDistFields2(captured_6, x, y); });
+                }
+                else if (sd instanceof qec.sdFields2Radial) {
+                    var captured_7 = sd;
+                    inner.push(function (x, y) { return _this.getDistFields2Radial(captured_7, x, y); });
+                }
+                else if (sd instanceof qec.sdFields2Border) {
+                    var captured_8 = sd;
+                    inner.push(function (x, y) { return _this.getDistFields2Border(captured_8, x, y); });
+                }
+                else if (sd instanceof qec.sdFields2ProfileBorder) {
+                    var captured_9 = sd;
+                    inner.push(function (x, y) { return _this.getDistFields2ProfileBorder(captured_9, x, y); });
+                }
+                else {
+                    throw new Error("Not Implemented");
+                }
+            };
+            for (var _i = 0, array_3 = array; _i < array_3.length; _i++) {
+                var sd = array_3[_i];
+                _loop_2(sd);
+            }
+            return function (pos) { return _this.getUnionDist(pos, inner); };
+        };
+        renderPixelGetDist.prototype.getDistFields1 = function (hd, pos, d) {
+            vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
+            this.tmp[2] -= hd.boundingBox[2];
+            var boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
+            if (boxDist > d)
+                return d;
+            if (boxDist > 2)
+                return boxDist;
+            this.tmp[2] += hd.boundingBox[2];
+            var p = this.tmp;
+            var d0 = this.getDistTop(hd.top, p);
+            return Math.max(boxDist, d0);
+        };
+        renderPixelGetDist.prototype.getDistFields2 = function (hd, pos, d) {
+            vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
+            this.tmp[2] -= hd.boundingBox[2];
+            var boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
+            if (boxDist > d)
+                return d;
+            if (boxDist > 2)
+                return boxDist;
+            this.tmp[2] += hd.boundingBox[2];
+            var p = this.tmp;
+            var d0 = this.getDistTop(hd.top, p);
+            // project point on axis to compute
+            var originToPointX = p[0] - hd.profileOrigin[0];
+            var originToPointY = p[1] - hd.profileOrigin[1];
+            // Axis:
+            var dotProduct = originToPointX * hd.profileAxis[0] + originToPointY * hd.profileAxis[1];
+            var d1 = this.getDistProfile(hd.profile, p, dotProduct);
+            return Math.min(d, Math.max(d0, d1, boxDist));
+        };
+        renderPixelGetDist.prototype.getDistFields2Radial = function (hd, pos, d) {
+            vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
+            this.tmp[2] -= hd.boundingBox[2];
+            var boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
+            if (boxDist > d)
+                return d;
+            if (boxDist > 2)
+                return boxDist;
+            this.tmp[2] += hd.boundingBox[2];
+            var p = this.tmp;
+            var d0 = this.getDistTop(hd.top, p);
+            // project point on axis to compute
+            var originToPointX = p[0] - hd.center[0];
+            var originToPointY = p[1] - hd.center[1];
+            // Axis:
+            var length = Math.sqrt(originToPointX * originToPointX + originToPointY * originToPointY);
+            var d1 = this.getDistProfile(hd.profile, p, length);
+            return Math.min(d, Math.max(d0, d1, boxDist));
+        };
+        renderPixelGetDist.prototype.getDistFields2Border = function (hd, pos, d) {
+            vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
+            this.tmp[2] -= hd.boundingBox[2];
+            var boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
+            if (boxDist > d)
+                return d;
+            if (boxDist > 2)
+                return boxDist;
+            this.tmp[2] += hd.boundingBox[2];
+            var p = this.tmp;
+            var d0 = this.getDistTop(hd.top, p);
+            var distanceFromTop = p[2] - hd.thickness;
+            var d1 = this.getDistBorder(hd.border, d0, distanceFromTop);
+            return Math.min(d, d1); //Math.max(d1, boxDist));
+        };
+        renderPixelGetDist.prototype.getDistFields2ProfileBorder = function (hd, pos, d) {
+            vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
+            this.tmp[2] -= hd.boundingBox[2];
+            var boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
+            if (boxDist > d)
+                return d;
+            if (boxDist > 2)
+                return boxDist;
+            this.tmp[2] += hd.boundingBox[2];
+            var p = this.tmp;
+            var d0 = this.getDistTop(hd.top, p);
+            // project point on axis to compute
+            var originToPointX = p[0] - hd.profileOrigin[0];
+            var originToPointY = p[1] - hd.profileOrigin[1];
+            // Axis:
+            var dotProduct = originToPointX * hd.profileAxis[0] + originToPointY * hd.profileAxis[1];
+            var dTop = this.getDistProfile2(hd.profileTopBottom.profileTopSprite, hd.profileTopBottom.profileBounds, p, dotProduct);
+            var dBottom = this.getDistProfile2(hd.profileTopBottom.profileBottomSprite, hd.profileTopBottom.profileBounds, p, dotProduct);
+            var d1 = 0;
+            if (Math.abs(dTop) < Math.abs(dBottom)) {
+                d1 = this.getDistBorder(hd.border, d0, dTop);
+            }
+            else {
+                d1 = dBottom;
+            }
+            return Math.min(d, Math.max(d0, d1, boxDist));
+        };
+        renderPixelGetDist.prototype.getDistTop = function (top, p) {
+            var u = (p[0] - top.topBounds[0]) / (top.topBounds[2] - top.topBounds[0]);
+            var v = (p[1] - top.topBounds[1]) / (top.topBounds[3] - top.topBounds[1]);
+            return this.getFieldDistanceWithSprite(top.topSprite.bigTexture, u, v, top.topSprite.bounds);
+        };
+        renderPixelGetDist.prototype.getDistProfile = function (profile, p, length) {
+            var u2 = (length - profile.profileBounds[0]) / (profile.profileBounds[2] - profile.profileBounds[0]);
+            var v2 = (p[2] - profile.profileBounds[1]) / (profile.profileBounds[3] - profile.profileBounds[1]);
+            return this.getFieldDistanceWithSprite(profile.profileSprite.bigTexture, u2, v2, profile.profileSprite.bounds);
+        };
+        renderPixelGetDist.prototype.getDistProfile2 = function (sprite, profileBounds, p, length) {
+            var u2 = (length - profileBounds[0]) / (profileBounds[2] - profileBounds[0]);
+            var v2 = (p[2] - profileBounds[1]) / (profileBounds[3] - profileBounds[1]);
+            return this.getFieldDistanceWithSprite(sprite.bigTexture, u2, v2, sprite.bounds);
+        };
+        renderPixelGetDist.prototype.getDistBorder = function (b, d0, distanceFromTop) {
+            var u2 = (d0 - (-b.borderBounds[2])) / ((-b.borderBounds[0]) - (-b.borderBounds[2]));
+            var v2 = (distanceFromTop - (-b.borderBounds[3])) / ((-b.borderBounds[1]) - (-b.borderBounds[3]));
+            return this.getFieldDistanceWithSprite(b.borderSprite.bigTexture, u2, v2, b.borderSprite.bounds);
+        };
+        renderPixelGetDist.prototype.getUnionDist = function (pos, inner) {
+            var d = 66666;
+            for (var _i = 0, inner_1 = inner; _i < inner_1.length; _i++) {
+                var f = inner_1[_i];
+                d = f(pos, d);
+            }
+            return d;
+        };
+        renderPixelGetDist.prototype.getFieldDistance = function (field, u, v) {
+            u = Math.min(Math.max(u, 0), 1);
+            v = Math.min(Math.max(v, 0), 1);
+            qec.texture2D(field, u, v, this.color);
+            return this.color[0];
+        };
+        renderPixelGetDist.prototype.getFieldDistanceWithSprite = function (field, u, v, spriteBounds) {
+            u = Math.min(Math.max(u, 0), 1);
+            v = Math.min(Math.max(v, 0), 1);
+            var u2 = mix(spriteBounds[0], spriteBounds[2], u);
+            var v2 = mix(spriteBounds[1], spriteBounds[3], v);
+            return this.getFieldDistance(field, u2, v2);
+        };
+        renderPixelGetDist.prototype.getDistBoundingBox = function (pos, halfSize) {
+            var dx = Math.abs(pos[0]) - halfSize[0];
+            var dy = Math.abs(pos[1]) - halfSize[1];
+            var dz = Math.abs(pos[2]) - halfSize[2];
+            var mc = Math.max(dx, dy, dz);
+            var t = this.tmp2;
+            t[0] = Math.max(dx, 0);
+            t[1] = Math.max(dy, 0);
+            t[2] = Math.max(dz, 0);
+            return Math.min(mc, 0) + vec3.length(t);
+        };
+        return renderPixelGetDist;
+    }());
+    qec.renderPixelGetDist = renderPixelGetDist;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -3916,8 +4763,8 @@ var qec;
             this.stepCount = [0];
             this.intersectPos = vec3.create();
         }
-        renderPixelStepCount.prototype.init = function (settings) {
-            this.sd = settings.sd;
+        renderPixelStepCount.prototype.updateShader = function (settings) {
+            this.getDist = new qec.renderPixelGetDist().generateGetDist(settings.sdArray);
         };
         renderPixelStepCount.prototype.render = function (ro, rd, debugInfo) {
             if (debugInfo === void 0) { debugInfo = false; }
@@ -3927,7 +4774,7 @@ var qec;
         renderPixelStepCount.prototype.doRender = function (ro, rd) {
             if (this.debug)
                 console.log('ro', ro, 'rd', rd);
-            this.rayMarch(this.sd, ro, rd, this.out);
+            this.rayMarch(this.getDist, ro, rd, this.out);
             /*
             #ifdef FX_REFLECTION
             if (currHit) {
@@ -3974,10 +4821,13 @@ var qec;
                 this.intersectPos[1] = ro[1] + rd[1] * t;
                 this.intersectPos[2] = ro[2] + rd[2] * t;
                 var dt;
+                /*
                 if (this.rayToBounds)
-                    dt = sd.getDist2(this.intersectPos, rd, this.showBoundingBox, this.debug); // * this.c_fSmooth;
+                    dt = sd.getDist2(this.intersectPos, rd, this.showBoundingBox, this.debug);// * this.c_fSmooth;
                 else
-                    dt = sd.getDist(this.intersectPos, this.showBoundingBox, this.debug); // * this.c_fSmooth;
+                    dt = sd.getDist(this.intersectPos, this.showBoundingBox, this.debug);// * this.c_fSmooth;
+                */
+                dt = sd(this.intersectPos);
                 if (this.debug)
                     console.log('march #' + i + ' : ' + dt + ' : ' + vec3.str(this.intersectPos));
                 if (dt < this.EPS_INTERSECT) {
@@ -4149,7 +4999,7 @@ var qec;
             this.sc.create(message.sceneDTO, function () {
                 var scrend = _this.sc.get(function (o) { return o instanceof qec.scRenderer; }, 'render');
                 _this.renderPixel = new qec.renderPixel();
-                _this.renderPixel.init(scrend.settings);
+                _this.renderPixel.updateShader(scrend.settings);
                 _this.camera = scrend.camera;
                 console.log('renderWorker init DTO OK');
                 var msg = new renderWorkerInitDoneMessage();
@@ -4216,21 +5066,42 @@ var qec;
                 this.rp.showBoundingBox = b;
         };
         simpleRenderer.prototype.renderDebug = function (x, y, settings) {
-            this.rp.init(settings);
+            //this.rp.init(settings);
             this.renderUnit.renderDebug(x, y, this.rp, settings.camera);
         };
         simpleRenderer.prototype.render = function (settings) {
-            this.rp.init(settings);
+            //this.rp.init(settings);
+            this.renderLines(settings.camera, 0);
+            /*
             this.renderUnit.render(this.rp, settings.camera);
+
             var w = this.canvas.width;
             var h = this.canvas.height;
+            
             var ctx = this.canvas.getContext('2d');
-            //ctx.fillRect(0, 0, w, h);
             var imageData = ctx.getImageData(0, 0, w, h);
             imageData.data.set(this.renderUnit.getImageData());
-            ctx.putImageData(imageData, 0, 0, 0, 0, this.canvas.width, this.canvas.height);
+            ctx.putImageData(imageData, 0,0,0,0,this.canvas.width,this.canvas.height);
+            */
         };
-        simpleRenderer.prototype.updateShader = function (sd, lightCount) { };
+        simpleRenderer.prototype.renderLines = function (cam, lineIndex) {
+            var _this = this;
+            //console.log(lineIndex);
+            var lineCount = 10;
+            var h = this.canvas.height;
+            this.renderUnit.renderLines(this.rp, cam, lineIndex, Math.min(lineCount, h - lineIndex));
+            var w = this.canvas.width;
+            var ctx = this.canvas.getContext('2d');
+            var imageData = ctx.getImageData(0, 0, w, h);
+            imageData.data.set(this.renderUnit.getImageData(), 4 * w * lineIndex);
+            ctx.putImageData(imageData, 0, 0, 0, 0, this.canvas.width, this.canvas.height);
+            if (lineIndex < h) {
+                setTimeout(function () { return _this.renderLines(cam, lineIndex + lineCount); }, 0);
+            }
+        };
+        simpleRenderer.prototype.updateShader = function (settings) {
+            this.rp.updateShader(settings);
+        };
         simpleRenderer.prototype.updateAllUniformsForAll = function () { };
         simpleRenderer.prototype.updateAllUniforms = function (sd) { };
         simpleRenderer.prototype.updateDiffuse = function (sd) { };
@@ -4259,6 +5130,100 @@ var qec;
         return material;
     }());
     qec.material = material;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    function instanceOfBorder(object) {
+        return 'uniqueName' in object
+            && 'border' in object;
+    }
+    qec.instanceOfBorder = instanceOfBorder;
+    var partBorder = /** @class */ (function () {
+        function partBorder() {
+        }
+        partBorder.prototype.createFrom = function (dto) {
+            this.borderSrc = dto.borderImage.src;
+            this.borderBounds = new Float32Array(dto.borderBounds);
+            this.borderUpdated = true;
+        };
+        return partBorder;
+    }());
+    qec.partBorder = partBorder;
+    var partBorderDTO = /** @class */ (function () {
+        function partBorderDTO() {
+        }
+        return partBorderDTO;
+    }());
+    qec.partBorderDTO = partBorderDTO;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    function instanceOfProfile(object) {
+        return 'uniqueName' in object
+            && 'profile' in object;
+    }
+    qec.instanceOfProfile = instanceOfProfile;
+    var partProfile = /** @class */ (function () {
+        function partProfile() {
+        }
+        partProfile.prototype.createFrom = function (dto) {
+            this.profileSrc = dto.profileImage.src;
+            this.profileBounds = new Float32Array(dto.profileBounds);
+            this.profileUpdated = true;
+        };
+        return partProfile;
+    }());
+    qec.partProfile = partProfile;
+    var partProfileDTO = /** @class */ (function () {
+        function partProfileDTO() {
+        }
+        return partProfileDTO;
+    }());
+    qec.partProfileDTO = partProfileDTO;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    function instanceOfProfileTopBottom(object) {
+        return 'uniqueName' in object
+            && 'profileTopBottom' in object;
+    }
+    qec.instanceOfProfileTopBottom = instanceOfProfileTopBottom;
+    var partProfileTopBottom = /** @class */ (function () {
+        function partProfileTopBottom() {
+        }
+        partProfileTopBottom.prototype.createFrom = function (dto) {
+            this.profileSrc = dto.profileImage.src;
+            this.profileBounds = new Float32Array(dto.profileBounds);
+            this.profileUpdated = true;
+        };
+        return partProfileTopBottom;
+    }());
+    qec.partProfileTopBottom = partProfileTopBottom;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    function instanceOfTop(object) {
+        return 'uniqueName' in object
+            && 'top' in object;
+    }
+    qec.instanceOfTop = instanceOfTop;
+    var partTop = /** @class */ (function () {
+        function partTop() {
+        }
+        partTop.prototype.createFrom = function (dto) {
+            this.topSrc = dto.topImage.src;
+            this.topBounds = new Float32Array(dto.topBounds);
+            this.topUpdated = true;
+        };
+        return partTop;
+    }());
+    qec.partTop = partTop;
+    var partTopDTO = /** @class */ (function () {
+        function partTopDTO() {
+        }
+        return partTopDTO;
+    }());
+    qec.partTopDTO = partTopDTO;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -4412,7 +5377,7 @@ var qec;
             this.camera = dto.camera['__instance'];
             this.settings.boundingBoxes = false;
             this.settings.shadows = false;
-            this.settings.sd = dto.distance['__instance'];
+            this.settings.sdArray = [dto.distance['__instance']];
             this.settings.camera = this.camera;
             this.settings.spotLights = dto.spotLights.map(function (l) { return l['__instance']; });
             this.settings.directionalLights = dto.directionalLights.map(function (l) { return l['__instance']; });
@@ -4448,7 +5413,11 @@ var qec;
             s.register('sdBorderDTO', qec.sdBorder);
             s.register('sdBoxDTO', qec.sdBox);
             s.register('sdFieldsDTO', qec.sdFields);
+            s.register('sdFields1DTO', qec.sdFields1);
             s.register('sdFields2DTO', qec.sdFields2);
+            s.register(qec.sdFields2RadialDTO.TYPE, qec.sdFields2Radial);
+            s.register(qec.sdFields2BorderDTO.TYPE, qec.sdFields2Border);
+            s.register(qec.sdFields2ProfileBorderDTO.TYPE, qec.sdFields2ProfileBorder);
             s.register('sdGridDTO', qec.sdGrid);
             s.register('sdGrid2DTO', qec.sdGrid2);
             s.register('sdIntersectionDTO', qec.sdIntersection);
@@ -4462,8 +5431,8 @@ var qec;
             this.sceneBase.debugInfo = b;
         };
         scene.prototype.create = function (sceneDTO, done) {
-            var _this = this;
-            this.loadImages(sceneDTO, function () { return _this.createStep2(sceneDTO, done); });
+            //this.loadImages(sceneDTO, ()=>this.createStep2(sceneDTO, done));
+            this.createStep2(sceneDTO, done);
         };
         scene.prototype.createStep2 = function (sceneDTO, done) {
             this.sceneBase.create(sceneDTO);
@@ -4528,6 +5497,117 @@ var qec;
         function sceneBase() {
             this.debugInfo = false;
             this.creators = [];
+            /*
+            public create(sceneDTO:any)
+            {
+                var i = 0;
+                while (i++<1)
+                {
+                    if (this.debugInfo) console.log('scene pass : ' + i);
+                    this.createPass(sceneDTO);
+                }
+            }
+    
+            protected createPass(sceneDTO:any)
+            {
+                var instancesFound = false;
+                for (var key in sceneDTO)
+                {
+                    if (this.debugInfo) console.log('scene instantiate : ' + key);
+                    var dto = sceneDTO[key];
+                    
+                    // already created
+                    if (dto.__instance != null)
+                    {
+                        if (this.debugInfo) console.log('already created');
+                        continue;
+                    }
+                    
+                    // can't be created
+                    if (this.hasAnySceneNullReferenceInIt(dto, scene))
+                    {
+                        continue;
+                    }
+    
+                    // clone dto, and replace references
+                    //var dto2 = this.replaceBySceneReferences(dto);
+                    
+                    //var dto2 = dto;
+                    // create object
+                    var instance = this.createOneOrArray(key, dto);
+                    
+                    // register it as a field in 'this'
+                    this[key] = instance;
+    
+                    // register it as created in the 'scene' object
+                    dto.__instance = instance;
+    
+                    //if (this.debugInfo) console.log('OK' , instance);
+                }
+            }
+            */
+            /*
+            protected replaceBySceneReferences(dto:any):Object
+            {
+                var copy = {};
+                for (var key in dto)
+                {
+                    var field = dto[key];
+                    if (field.__instance != null)
+                    {
+                        if (this.debugInfo) console.log('replace ' + key + ' by its scene reference');
+                        copy[key] = field.__instance;
+                    }
+                    else
+                    {
+                        copy[key] = field;
+                    }
+                }
+                return copy;
+            }
+    
+            protected hasAnySceneNullReferenceInIt(dto:any, sceneDTO:any):boolean
+            {
+                for (var key in dto)
+                {
+                    var field = dto[key];
+                    if (this.isSceneReference(field, sceneDTO))
+                    {
+                        if (field.__instance == null)
+                        {
+                            if (this.debugInfo) console.log('has null reference in it : ' + key);
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+    
+            protected isSceneReference(object:any, sceneDTO:any):boolean
+            {
+                for (var key in sceneDTO)
+                {
+                    if (sceneDTO[key] == object)
+                        return true;
+                }
+                return false;
+            }
+            */
+            /*
+            public createOneOrArray(dto:any)
+            {
+                if (Array.isArray(dto))
+                {
+                    let created = [];
+                    for (let i=0; dto.length; ++i)
+                    {
+                        created.push(this.createOne(dto[i]));
+                    }
+                    return created;
+                }
+                else
+                    this.createOne(dto);
+            }*/
         }
         sceneBase.prototype.register = function (type, canCreate) {
             var c = {
@@ -4566,105 +5646,6 @@ var qec;
             if (!Array.isArray(dto))
                 dto.__instance = this.createOne(dto);
         };
-        /*
-        public create(sceneDTO:any)
-        {
-            var i = 0;
-            while (i++<1)
-            {
-                if (this.debugInfo) console.log('scene pass : ' + i);
-                this.createPass(sceneDTO);
-            }
-        }
-
-        protected createPass(sceneDTO:any)
-        {
-            var instancesFound = false;
-            for (var key in sceneDTO)
-            {
-                if (this.debugInfo) console.log('scene instantiate : ' + key);
-                var dto = sceneDTO[key];
-                
-                // already created
-                if (dto.__instance != null)
-                {
-                    if (this.debugInfo) console.log('already created');
-                    continue;
-                }
-                
-                // can't be created
-                if (this.hasAnySceneNullReferenceInIt(dto, scene))
-                {
-                    continue;
-                }
-
-                // clone dto, and replace references
-                //var dto2 = this.replaceBySceneReferences(dto);
-                
-                //var dto2 = dto;
-                // create object
-                var instance = this.createOneOrArray(key, dto);
-                
-                // register it as a field in 'this'
-                this[key] = instance;
-
-                // register it as created in the 'scene' object
-                dto.__instance = instance;
-
-                //if (this.debugInfo) console.log('OK' , instance);
-            }
-        }
-        */
-        sceneBase.prototype.replaceBySceneReferences = function (dto) {
-            var copy = {};
-            for (var key in dto) {
-                var field = dto[key];
-                if (field.__instance != null) {
-                    if (this.debugInfo)
-                        console.log('replace ' + key + ' by its scene reference');
-                    copy[key] = field.__instance;
-                }
-                else {
-                    copy[key] = field;
-                }
-            }
-            return copy;
-        };
-        sceneBase.prototype.hasAnySceneNullReferenceInIt = function (dto, sceneDTO) {
-            for (var key in dto) {
-                var field = dto[key];
-                if (this.isSceneReference(field, sceneDTO)) {
-                    if (field.__instance == null) {
-                        if (this.debugInfo)
-                            console.log('has null reference in it : ' + key);
-                        return true;
-                    }
-                }
-            }
-            return false;
-        };
-        sceneBase.prototype.isSceneReference = function (object, sceneDTO) {
-            for (var key in sceneDTO) {
-                if (sceneDTO[key] == object)
-                    return true;
-            }
-            return false;
-        };
-        /*
-        public createOneOrArray(dto:any)
-        {
-            if (Array.isArray(dto))
-            {
-                let created = [];
-                for (let i=0; dto.length; ++i)
-                {
-                    created.push(this.createOne(dto[i]));
-                }
-                return created;
-            }
-            else
-                this.createOne(dto);
-        }*/
         sceneBase.prototype.createOne = function (dto) {
             for (var i = 0; i < this.creators.length; ++i) {
                 var c = this.creators[i];
@@ -4672,7 +5653,8 @@ var qec;
                     return c.instantiate(dto);
                 }
             }
-            //throw "Can't create scene object " + key;
+            //console.error(dto);
+            //throw Error("Can't create scene object ");
         };
         return sceneBase;
     }());
@@ -4894,7 +5876,7 @@ var qec;
             */
             var margin = 0.05;
             this.topDfCanvas.drawUserCanvasForTop(topImage, this.topBounds, margin);
-            this.profileDfCanvas.drawUserCanvasForProfile(profileImage, this.profileBounds, margin);
+            this.profileDfCanvas.drawUserCanvasForBorder(profileImage, this.profileBounds, margin);
             this.topDfCanvas.update();
             this.profileDfCanvas.update();
             /*
@@ -5015,9 +5997,93 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
+    var sdFields1DTO = /** @class */ (function () {
+        function sdFields1DTO() {
+            this.type = sdFields1DTO.TYPE;
+        }
+        sdFields1DTO.TYPE = 'sdFields1DTO';
+        return sdFields1DTO;
+    }());
+    qec.sdFields1DTO = sdFields1DTO;
+    var sdFields1 = /** @class */ (function () {
+        function sdFields1() {
+            this.uniqueName = qec.uniqueName.new();
+            this.transform = mat4.create();
+            this.inverseTransform = mat4.identity(mat4.create());
+            this.material = new qec.material();
+            this.top = new qec.partTop();
+        }
+        sdFields1.prototype.createFrom = function (dto) {
+            this.top.createFrom(dto.top);
+            this.thickness = dto.thickness;
+            this.material.createFrom(dto.material);
+            mat4.copy(this.transform, dto.transform);
+            this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
+            this.boundingBox = new Float32Array([
+                0.5 * (this.top.topBounds[2] - this.top.topBounds[0]),
+                0.5 * (this.top.topBounds[3] - this.top.topBounds[1]),
+                0.5 * (this.thickness)
+            ]);
+        };
+        sdFields1.prototype.getDist3 = function (minDist, pos, boundingBox, debug) {
+            return 6666;
+            /*
+            //vec3.set(this.tmp, 68, 156, 0);
+
+            vec3.transformMat4(this.tmp, pos, this.inverseTransform);
+            this.tmp[2] -= 0.5*(this.thickness)
+            let boxDist = this.sdBox.getDist(this.tmp, false, false);
+            if (boxDist > minDist)
+                return minDist;
+
+            if (boxDist > 2)
+                return boxDist;
+
+
+            this.debug = debug;
+            vec3.transformMat4(this.tmp, pos, this.inverseTransform);
+            var p = this.tmp;
+            
+            //if (this.debug)
+            //    console.log('boundingCenterAndHalfSize : ' + float32ArrayToString(this.boundingCenterAndHalfSize));
+
+            if (boundingBox)
+            {
+                var distToBbox = this.sdBox.getDist(p, false,debug);
+                return distToBbox;
+            }
+            var d = 0;
+
+            var u = (p[0] - this.topBounds[0]) / (this.topBounds[2] - this.topBounds[0]);
+            var v = (p[1] - this.topBounds[1]) / (this.topBounds[3] - this.topBounds[1]);
+            var d0 = this.getFieldDistance(this.topTexture, u, v);
+            d = d0;
+                        
+            var dToUpperPlane = p[2] - this.thickness;
+            var dToLowerPlane = 0 - p[2];
+            if (dToUpperPlane > d) d = dToUpperPlane;
+            if (dToLowerPlane > d) d = dToLowerPlane;
+            
+            return d;
+            */
+        };
+        sdFields1.prototype.getDist = function (pos, boundingBox, debug) { return 66666; };
+        sdFields1.prototype.getDist2 = function (pos, rd, boundingBox, debug) { return 66666; };
+        sdFields1.prototype.getMaterial = function (pos) {
+            return this.material;
+        };
+        sdFields1.prototype.getInverseTransform = function (out) {
+            return this.inverseTransform;
+        };
+        return sdFields1;
+    }());
+    qec.sdFields1 = sdFields1;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
     var sdFields2DTO = /** @class */ (function () {
         function sdFields2DTO() {
-            this.type = sdFields2DTO.TYPE;
+            this.type = qec.sdFields1DTO.TYPE;
         }
         sdFields2DTO.TYPE = 'sdFields2DTO';
         return sdFields2DTO;
@@ -5025,150 +6091,284 @@ var qec;
     qec.sdFields2DTO = sdFields2DTO;
     var sdFields2 = /** @class */ (function () {
         function sdFields2() {
-            this.topDfCanvas = new qec.distanceFieldCanvas();
-            this.profileDfCanvas = new qec.distanceFieldCanvas();
-            this.material = new qec.material();
+            this.uniqueName = qec.uniqueName.new();
+            this.transform = mat4.create();
             this.inverseTransform = mat4.identity(mat4.create());
-            this.tmp = vec3.create();
-            this.color = vec4.create();
+            this.material = new qec.material();
+            this.top = new qec.partTop();
+            this.profile = new qec.partProfile();
         }
         sdFields2.prototype.createFrom = function (dto) {
-            this.topBounds = new Float32Array(dto.topBounds);
-            //this.profileBounds = new Float32Array(dto.profileBounds);
-            this.thickness = dto.thickness;
-            // crée la float texture            
-            var topImage = dto.topImage['__instance'].image;
-            //var profileImage = dto.profileImage['__instance'].image;
-            /*
-                        console.log(JSON.stringify(dto.topImage));
-                        console.log(profileImage);
-            */
-            var margin = 0.05;
-            this.topDfCanvas.drawUserCanvasForTop(topImage, this.topBounds, margin);
-            //this.profileDfCanvas.drawUserCanvasForTop(profileImage, this.profileBounds, margin);
-            var debugCanvas = document.createElement('canvas');
-            document.body.appendChild(debugCanvas);
-            this.topDfCanvas.debugInfoInExistingCanvas(debugCanvas);
-            this.topDfCanvas.update();
-            //this.profileDfCanvas.update();
-            /*
-                        this.topDfCanvas.debugInfoInCanvas();
-                        this.profileDfCanvas.debugInfoInCanvas();
-            
-                        $('.debug').append(this.topDfCanvas.canvas);
-                        $('.debug').append(this.profileDfCanvas.canvas);
-            */
-            this.init(this.topDfCanvas.floatTexture, vec4.fromValues(0, 0, 1, 1), new Float32Array(this.topDfCanvas.totalBounds), this.profileDfCanvas.floatTexture, vec4.fromValues(0, 0, 1, 1), new Float32Array(this.profileDfCanvas.totalBounds));
+            this.top.createFrom(dto.top);
+            this.profile.createFrom(dto.profile);
+            this.profileOrigin = new Float32Array(dto.profileOrigin);
+            this.profileAxis = new Float32Array(dto.profileAxis);
+            vec2.normalize(this.profileAxis, this.profileAxis);
             this.material.createFrom(dto.material);
+            mat4.copy(this.transform, dto.transform);
             this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
+            this.boundingBox = new Float32Array([
+                0.5 * (this.top.topBounds[2] - this.top.topBounds[0]),
+                0.5 * (this.top.topBounds[3] - this.top.topBounds[1]),
+                0.5 * (this.profile.profileBounds[3] - this.profile.profileBounds[1])
+            ]);
         };
-        sdFields2.prototype.init = function (topTexture, topSpriteBounds, topBounds, profileTexture, profileSpriteBounds, profileBounds) {
-            this.topTexture = topTexture;
-            this.topBounds = new Float32Array(topBounds);
-            this.topSpriteBounds = new Float32Array(topSpriteBounds);
+        sdFields2.prototype.getDist3 = function (minDist, pos, boundingBox, debug) {
+            return 6666;
             /*
-            this.profileTexture = profileTexture;
-            this.profileBounds = new Float32Array(profileBounds);
-            this.profileSpriteBounds = new Float32Array(profileSpriteBounds);
-            */
-            this.sdBox = new qec.sdBox();
-            this.sdBox.setHalfSize(0.5 * (this.topBounds[2] - this.topBounds[0]), 0.5 * (this.topBounds[3] - this.topBounds[1]), this.thickness);
-            mat4.identity(this.sdBox.inverseTransform);
-            /*
-            if (boundingHalfSize == null)
-                boundingHalfSize = vec3.fromValues(100,100,100);
-            this.sdBox = new sdBox();
-
-            console.log(vec3.str(boundingHalfSize));
-            this.sdBox.setHalfSize(boundingHalfSize[0], boundingHalfSize[1], boundingHalfSize[2]);
-            */
-            //this.getDist(vec3.fromValues(0, 0, 0.05), true);
-        };
-        sdFields2.prototype.getDist2 = function (pos, rd, boundingBox, debug) {
-            throw new Error('not implemented');
-        };
-        sdFields2.prototype.getDist = function (pos, boundingBox, debug) {
             //vec3.set(this.tmp, 68, 156, 0);
+
+            vec3.transformMat4(this.tmp, pos, this.inverseTransform);
+            this.tmp[2] -= 0.5*(this.thickness)
+            let boxDist = this.sdBox.getDist(this.tmp, false, false);
+            if (boxDist > minDist)
+                return minDist;
+
+            if (boxDist > 2)
+                return boxDist;
+
+
             this.debug = debug;
             vec3.transformMat4(this.tmp, pos, this.inverseTransform);
             var p = this.tmp;
+            
             //if (this.debug)
             //    console.log('boundingCenterAndHalfSize : ' + float32ArrayToString(this.boundingCenterAndHalfSize));
-            if (boundingBox) {
-                var distToBbox = this.sdBox.getDist(p, false, debug);
+
+            if (boundingBox)
+            {
+                var distToBbox = this.sdBox.getDist(p, false,debug);
                 return distToBbox;
             }
             var d = 0;
+
             var u = (p[0] - this.topBounds[0]) / (this.topBounds[2] - this.topBounds[0]);
             var v = (p[1] - this.topBounds[1]) / (this.topBounds[3] - this.topBounds[1]);
-            var d0 = this.getFieldDistanceWithSprite(this.topTexture, u, v, this.topSpriteBounds);
+            var d0 = this.getFieldDistance(this.topTexture, u, v);
             d = d0;
-            //return d;
-            /*
-            var d1 = Math.sqrt(p[1]*p[1] + p[2]*p[2]) - 1;
-            var d2 = - (Math.sqrt(p[1]*p[1] + p[2]*p[2]) - 0.8);
-
-            if (d1 > d) d = d1;
-            if (d2 > d) d = d2;
-            */
-            //var u2 = p[1] + 1;
-            /*
-            var u2 = (p[1] - this.profileBounds[0]) / (this.profileBounds[2] - this.profileBounds[0]);
-            var v2 = p[2];
-            var d3 = this.getFieldDistanceWithSprite(this.profileTexture, u2, v2, this.profileSpriteBounds)
-            if (d3 > d) d = d3;
-            */
+                        
             var dToUpperPlane = p[2] - this.thickness;
             var dToLowerPlane = 0 - p[2];
-            if (dToUpperPlane > d)
-                d = dToUpperPlane;
-            if (dToLowerPlane > d)
-                d = dToLowerPlane;
-            return d;
-            // return d;
-            /*
-            var u2 = (d - this.profileBounds[0]) / (this.profileBounds[2] - this.profileBounds[0]);
-            var v2 = (p[2] - this.profileBounds[1]) / (this.profileBounds[3] - this.profileBounds[1]);
-            var d2 = this.getFieldDistanceWithSprite(this.profileTexture, u2, v2, this.profileSpriteBounds);
+            if (dToUpperPlane > d) d = dToUpperPlane;
+            if (dToLowerPlane > d) d = dToLowerPlane;
             
-            if (this.debug)
-            {
-                //console.log('profileBounds ' + vec4.str(this.profileBounds));
-                console.log(' uv : [' +  u.toFixed(3) + ' , ' + v.toFixed(3) + ']');
-                console.log(d.toFixed(2));
-                console.log(' uv2 : [' +  u2.toFixed(3) + ' , ' + v2.toFixed(3) + ']');
-                console.log(d2.toFixed(2));
-            }
-
-            return d2;
+            return d;
             */
         };
-        sdFields2.prototype.getFieldDistanceWithSprite = function (field, u, v, spriteBounds) {
+        sdFields2.prototype.getDist = function (pos, boundingBox, debug) { return 66666; };
+        sdFields2.prototype.getDist2 = function (pos, rd, boundingBox, debug) { return 66666; };
+        sdFields2.prototype.getMaterial = function (pos) {
+            return this.material;
+        };
+        sdFields2.prototype.getInverseTransform = function (out) {
+            return this.inverseTransform;
+        };
+        return sdFields2;
+    }());
+    qec.sdFields2 = sdFields2;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var sdFields2BorderDTO = /** @class */ (function () {
+        function sdFields2BorderDTO() {
+            this.type = sdFields2BorderDTO.TYPE;
+        }
+        sdFields2BorderDTO.TYPE = 'sdFields2BorderDTO';
+        return sdFields2BorderDTO;
+    }());
+    qec.sdFields2BorderDTO = sdFields2BorderDTO;
+    var sdFields2Border = /** @class */ (function () {
+        function sdFields2Border() {
+            this.uniqueName = qec.uniqueName.new();
+            this.transform = mat4.create();
+            this.inverseTransform = mat4.identity(mat4.create());
+            this.material = new qec.material();
+            this.top = new qec.partTop();
+            this.border = new qec.partBorder();
+        }
+        sdFields2Border.prototype.createFrom = function (dto) {
+            this.top.createFrom(dto.top);
+            this.thickness = dto.thickness;
+            this.border.createFrom(dto.border);
+            this.material.createFrom(dto.material);
+            mat4.copy(this.transform, dto.transform);
+            this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
+            this.boundingBox = new Float32Array([
+                0.5 * (this.top.topBounds[2] - this.top.topBounds[0]),
+                0.5 * (this.top.topBounds[3] - this.top.topBounds[1]),
+                0.5 * (this.thickness)
+            ]);
+        };
+        sdFields2Border.prototype.getDist3 = function (minDist, pos, boundingBox, debug) {
+            return 6666;
+        };
+        sdFields2Border.prototype.getDist = function (pos, boundingBox, debug) { return 66666; };
+        sdFields2Border.prototype.getDist2 = function (pos, rd, boundingBox, debug) { return 66666; };
+        sdFields2Border.prototype.getMaterial = function (pos) {
+            return this.material;
+        };
+        sdFields2Border.prototype.getInverseTransform = function (out) {
+            return this.inverseTransform;
+        };
+        return sdFields2Border;
+    }());
+    qec.sdFields2Border = sdFields2Border;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var sdFields2ProfileBorderDTO = /** @class */ (function () {
+        function sdFields2ProfileBorderDTO() {
+            this.type = qec.sdFields1DTO.TYPE;
+        }
+        sdFields2ProfileBorderDTO.TYPE = 'sdFields2ProfileBorderDTO';
+        return sdFields2ProfileBorderDTO;
+    }());
+    qec.sdFields2ProfileBorderDTO = sdFields2ProfileBorderDTO;
+    var sdFields2ProfileBorder = /** @class */ (function () {
+        function sdFields2ProfileBorder() {
+            this.uniqueName = qec.uniqueName.new();
+            this.transform = mat4.create();
+            this.inverseTransform = mat4.identity(mat4.create());
+            this.material = new qec.material();
+            this.top = new qec.partTop();
+            this.profileTopBottom = new qec.partProfileTopBottom();
+            this.border = new qec.partBorder();
+        }
+        sdFields2ProfileBorder.prototype.createFrom = function (dto) {
+            this.top.createFrom(dto.top);
+            this.profileTopBottom.createFrom(dto.profile);
+            this.profileOrigin = new Float32Array(dto.profileOrigin);
+            this.profileAxis = new Float32Array(dto.profileAxis);
+            vec2.normalize(this.profileAxis, this.profileAxis);
+            this.border.createFrom(dto.border);
+            this.material.createFrom(dto.material);
+            mat4.copy(this.transform, dto.transform);
+            this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
+            this.boundingBox = new Float32Array([
+                0.5 * (this.top.topBounds[2] - this.top.topBounds[0]),
+                0.5 * (this.top.topBounds[3] - this.top.topBounds[1]),
+                0.5 * (this.profileTopBottom.profileBounds[3] - this.profileTopBottom.profileBounds[1])
+            ]);
+        };
+        sdFields2ProfileBorder.prototype.getDist3 = function (minDist, pos, boundingBox, debug) {
+            return 6666;
+            /*
+            //vec3.set(this.tmp, 68, 156, 0);
+
+            vec3.transformMat4(this.tmp, pos, this.inverseTransform);
+            this.tmp[2] -= 0.5*(this.thickness)
+            let boxDist = this.sdBox.getDist(this.tmp, false, false);
+            if (boxDist > minDist)
+                return minDist;
+
+            if (boxDist > 2)
+                return boxDist;
+
+
+            this.debug = debug;
+            vec3.transformMat4(this.tmp, pos, this.inverseTransform);
+            var p = this.tmp;
+            
+            //if (this.debug)
+            //    console.log('boundingCenterAndHalfSize : ' + float32ArrayToString(this.boundingCenterAndHalfSize));
+
+            if (boundingBox)
+            {
+                var distToBbox = this.sdBox.getDist(p, false,debug);
+                return distToBbox;
+            }
+            var d = 0;
+
+            var u = (p[0] - this.topBounds[0]) / (this.topBounds[2] - this.topBounds[0]);
+            var v = (p[1] - this.topBounds[1]) / (this.topBounds[3] - this.topBounds[1]);
+            var d0 = this.getFieldDistance(this.topTexture, u, v);
+            d = d0;
+                        
+            var dToUpperPlane = p[2] - this.thickness;
+            var dToLowerPlane = 0 - p[2];
+            if (dToUpperPlane > d) d = dToUpperPlane;
+            if (dToLowerPlane > d) d = dToLowerPlane;
+            
+            return d;
+            */
+        };
+        sdFields2ProfileBorder.prototype.getDist = function (pos, boundingBox, debug) { return 66666; };
+        sdFields2ProfileBorder.prototype.getDist2 = function (pos, rd, boundingBox, debug) { return 66666; };
+        sdFields2ProfileBorder.prototype.getMaterial = function (pos) {
+            return this.material;
+        };
+        sdFields2ProfileBorder.prototype.getInverseTransform = function (out) {
+            return this.inverseTransform;
+        };
+        return sdFields2ProfileBorder;
+    }());
+    qec.sdFields2ProfileBorder = sdFields2ProfileBorder;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var sdFields2RadialDTO = /** @class */ (function () {
+        function sdFields2RadialDTO() {
+            this.type = sdFields2RadialDTO.TYPE;
+        }
+        sdFields2RadialDTO.TYPE = 'sdFields2RadialDTO';
+        return sdFields2RadialDTO;
+    }());
+    qec.sdFields2RadialDTO = sdFields2RadialDTO;
+    var sdFields2Radial = /** @class */ (function () {
+        function sdFields2Radial() {
+            this.uniqueName = qec.uniqueName.new();
+            this.transform = mat4.create();
+            this.inverseTransform = mat4.identity(mat4.create());
+            this.material = new qec.material();
+            this.top = new qec.partTop();
+            this.profile = new qec.partProfile();
+            this.color = vec4.create();
+        }
+        sdFields2Radial.prototype.createFrom = function (dto) {
+            this.top.createFrom(dto.top);
+            this.profile.createFrom(dto.profile);
+            this.center = new Float32Array(dto.center);
+            this.radius = dto.radius;
+            this.material.createFrom(dto.material);
+            mat4.copy(this.transform, dto.transform);
+            this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
+            this.boundingBox = new Float32Array([
+                0.5 * (this.top.topBounds[2] - this.top.topBounds[0]),
+                0.5 * (this.top.topBounds[3] - this.top.topBounds[1]),
+                0.5 * (this.profile.profileBounds[3] - this.profile.profileBounds[1])
+            ]);
+        };
+        sdFields2Radial.prototype.getDist2 = function (pos, rd, boundingBox, debug) {
+            throw new Error('not implemented');
+        };
+        sdFields2Radial.prototype.getDist = function (pos, boundingBox, debug) {
+            return this.getDist3(66666, pos, boundingBox, debug);
+        };
+        sdFields2Radial.prototype.getDist3 = function (minDist, pos, boundingBox, debug) {
+            return 666;
+        };
+        sdFields2Radial.prototype.getFieldDistanceWithSprite = function (field, u, v, spriteBounds) {
             u = Math.min(Math.max(u, 0), 1);
             v = Math.min(Math.max(v, 0), 1);
             var u2 = mix(spriteBounds[0], spriteBounds[2], u);
             var v2 = mix(spriteBounds[1], spriteBounds[3], v);
             return this.getFieldDistance(field, u2, v2);
         };
-        sdFields2.prototype.getFieldDistance = function (field, u, v) {
+        sdFields2Radial.prototype.getFieldDistance = function (field, u, v) {
             u = Math.min(Math.max(u, 0), 1);
             v = Math.min(Math.max(v, 0), 1);
             qec.texture2D(field, u, v, this.color);
-            if (this.debug) {
-                //console.log('uv : ' , u, v);
-                //console.log(this.color[0].toFixed(2) ,' at xy : [' +  (u * (field.width-1)).toFixed(1) + ',' + (v * (field.height-1)).toFixed(1));
-            }
             return this.color[0];
         };
-        sdFields2.prototype.getMaterial = function (pos) {
+        sdFields2Radial.prototype.getMaterial = function (pos) {
             return this.material;
         };
-        sdFields2.prototype.getInverseTransform = function (out) {
+        sdFields2Radial.prototype.getInverseTransform = function (out) {
             mat4.copy(out, this.inverseTransform);
         };
-        return sdFields2;
+        return sdFields2Radial;
     }());
-    qec.sdFields2 = sdFields2;
+    qec.sdFields2Radial = sdFields2Radial;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -5588,14 +6788,18 @@ var qec;
 (function (qec) {
     var sdUnionDTO = /** @class */ (function () {
         function sdUnionDTO() {
+            this.type = sdUnionDTO.TYPE;
         }
+        sdUnionDTO.TYPE = 'sdUnionDTO';
         return sdUnionDTO;
     }());
     qec.sdUnionDTO = sdUnionDTO;
     var sdUnion = /** @class */ (function () {
         function sdUnion() {
+            this.uniqueName = qec.uniqueName.new();
             this.array = [];
             this.inverseTransform = mat4.identity(mat4.create());
+            this.newMaterial = new qec.material();
         }
         sdUnion.prototype.createFrom = function (dto) {
             this.array = dto.array.map(function (x) { return (x['__instance']); });
@@ -5610,11 +6814,19 @@ var qec;
         sdUnion.prototype.getDist = function (pos, boundingBox, debug) {
             var d = 66666;
             var l = this.array.length;
-            for (var i = 0; i < l; ++i)
-                d = Math.min(d, this.array[i].getDist(pos, boundingBox, debug));
+            for (var i = 0; i < l; ++i) {
+                //let distBB = (<sdFields2> this.array[i]).getDistToBoundingBox(pos);
+                //if (distBB < d)
+                //    d = Math.min(d, this.array[i].getDist(pos, boundingBox, debug));
+                d = this.array[i].getDist3(d, pos, boundingBox, debug);
+            }
             return d;
         };
         sdUnion.prototype.getMaterial = function (pos) {
+            this.newMaterial.diffuse[0] = 72 / 255;
+            this.newMaterial.diffuse[1] = 145 / 255;
+            this.newMaterial.diffuse[2] = 243 / 255;
+            return this.newMaterial;
             var min = 666;
             var minMat;
             var l = this.array.length;
@@ -5626,7 +6838,7 @@ var qec;
                 }
             }
             if (minMat == null)
-                return new qec.material();
+                return this.newMaterial;
             return minMat;
         };
         sdUnion.prototype.getInverseTransform = function (out) {
@@ -5638,6 +6850,19 @@ var qec;
         return sdUnion;
     }());
     qec.sdUnion = sdUnion;
+})(qec || (qec = {}));
+var qec;
+(function (qec) {
+    var uniqueName = /** @class */ (function () {
+        function uniqueName() {
+        }
+        uniqueName.new = function () {
+            return '' + uniqueName.id++;
+        };
+        uniqueName.id = 0;
+        return uniqueName;
+    }());
+    qec.uniqueName = uniqueName;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
@@ -6879,7 +8104,12 @@ var qec;
                 //textureDebugInCanvas(dfCanvas.floatTexture ,0 ,128, canvas);
                 //document.body.appendChild(canvas);
             }
-            packer.repack(allDfCanvas.map(function (c) { return c.floatTexture; }));
+            var sprites = allDfCanvas.map(function (c) {
+                var s = new qec.textureSprite();
+                s.originalTexture = c.floatTexture;
+                return s;
+            });
+            packer.repack(sprites);
             packer.debugInfoInBody(255);
         };
         return texturePackerTest;
@@ -7330,7 +8560,8 @@ var qec;
             if (resources.run == null)
                 resources.run = new qec.runAll();
             resources.run.push(function (_done) { return resources.doReq('app/ts/render/hardware/10_sd.glsl', _done); });
-            resources.run.push(function (_done) { return resources.doReq('app/ts/render/hardware/11_sdFields.glsl', _done); });
+            //resources.run.push((_done) => resources.doReq('app/ts/render/hardware/11_sdFields.glsl', _done));
+            //resources.run.push((_done) => resources.doReq('app/ts/render/hardware/12_sdFields2.glsl', _done));
             resources.run.push(function (_done) { return resources.doReq('app/ts/render/hardware/20_light.glsl', _done); });
             resources.run.push(function (_done) { return resources.doReq('app/ts/render/hardware/30_renderPixel.glsl', _done); });
             //for (var i=0; i < 6; ++i)
@@ -8873,135 +10104,21 @@ var qec;
 })(qec || (qec = {}));
 var qec;
 (function (qec) {
-    var index2 = /** @class */ (function () {
-        function index2() {
-            /*
-            sd:signedDistance;
-            light:spotLight;
-            cam: camera;
-            */
-            this.isParallel = false;
-            this.isHardware = false;
-            this.renderSteps = false;
-            this.renderSettings = new qec.renderSettings();
-            this.t = 5;
-            this.camDist = 0;
-        }
-        index2.prototype.start = function (element) {
-            var _this = this;
-            var select = document.createElement('select');
-            var option0 = document.createElement('option');
-            option0.value = "";
-            option0.text = "<select>";
-            select.appendChild(option0);
-            var examples = qec.getExamples();
-            for (var i in examples) {
-                var option = document.createElement('option');
-                option.value = examples[i].title;
-                option.text = option.value;
-                select.appendChild(option);
-            }
-            document.body.appendChild(select);
-            select.addEventListener('change', function (e) {
-                return window.location.href =
-                    '?scene=' + select.value +
-                        '&isParallel=' + (_this.isParallel ? '1' : '0') +
-                        '&isHardware=' + (_this.isHardware ? '1' : '0') +
-                        '&renderSteps=' + (_this.renderSteps ? '1' : '0');
-            });
-            this.element = element;
-            var sceneName = getParameterByName('scene', undefined);
-            if (!sceneName)
-                sceneName = 'Sphere';
-            this.createScene(sceneName);
-        };
-        index2.prototype.createScene = function (title) {
-            var _this = this;
-            this.sceneDTO = qec.createExample(title);
-            if (!this.isParallel) {
-                this.sc = new qec.scene();
-                this.sc.setDebug(true);
-                this.sc.create(this.sceneDTO, function () {
-                    if (_this.isHardware)
-                        _this.renderer = new qec.hardwareRenderer();
-                    else {
-                        var sr = new qec.simpleRenderer();
-                        sr.setRenderSteps(_this.renderSteps);
-                        _this.renderer = sr;
-                    }
-                    _this.renderer.setContainerAndSize(_this.element, 600, 600);
-                    var scrend = _this.sc.get(function (o) { return o instanceof qec.scRenderer; }, 'render');
-                    _this.renderSettings = scrend.settings;
-                    _this.renderSettings.shadows = true;
-                    _this.texturePacker = new qec.texturePacker();
-                    _this.texturePacker.repackMode = 0;
-                    _this.texturePacker.repackSdRec(_this.renderSettings.sd);
-                    _this.render(function () { });
-                });
-            }
-            else {
-                this.rendererParallel = new qec.parallelRenderer();
-                this.rendererParallel.setContainerAndSize(this.element, 400, 400);
-                this.rendererParallel.initDTO(this.sceneDTO, function () {
-                    var sc = new qec.scene();
-                    //this.cam = <camera> sc.createOne(this.sceneDTO, 'camera');
-                    _this.render(function () { });
-                });
-            }
-        };
-        index2.prototype.render = function (done) {
-            if (!this.isParallel) {
-                this.renderer.updateShader(this.renderSettings.sd, this.renderSettings.spotLights.length, this.texturePacker);
-                this.renderer.render(this.renderSettings);
-                done();
-            }
-            else
-                this.rendererParallel.render(this.renderSettings.camera, done);
-        };
-        index2.prototype.debug = function (x, y) {
-            if (!this.isParallel)
-                this.renderer.renderDebug(x, y, this.renderSettings);
-        };
-        index2.prototype.startRenderLoop = function () {
-            var cam = this.renderSettings.camera;
-            this.t = 5;
-            this.camDist = vec2.distance(cam.target, cam.position);
-            this.renderLoop();
-        };
-        index2.prototype.renderLoop = function () {
-            alert("maj des mouvements de camera");
-            /*
-            if (this.t>10)
-                return;
-            
-            var cam = this.renderSettings.camera;
-            cam.position[0] = cam.target[0] + this.camDist*Math.cos(Math.PI*2 * this.t/10);
-            cam.position[1] = cam.target[1] + this.camDist*Math.sin(Math.PI*2 * this.t/10);
-            cam.setPosition(cam.position);
-            this.render(() =>
-            {
-                this.t += 0.5;
-                setTimeout(()=>this.renderLoop(), 0);
-            });
-            */
-        };
-        return index2;
-    }());
-    qec.index2 = index2;
-})(qec || (qec = {}));
-var qec;
-(function (qec) {
     var index3 = /** @class */ (function () {
         function index3() {
-            /*
-            sd:signedDistance;
-            light:spotLight;
-            cam: camera;
-            */
+            // overidden by:
+            // p2.isParallel = getParameterByName('isParallel') == '1';
+            // p2.isHardware = getParameterByName('isHardware') == '1';
+            // p2.renderSteps = getParameterByName('renderSteps') == '1';
             this.isParallel = false;
             this.isHardware = false;
+            this.isAnimate = false;
+            this.isFullScreen = false;
             this.renderSteps = false;
             this.renderSettings = new qec.renderSettings();
+            this.rotateLoop = new qec.rotateLoop();
+            this.frameCount = 0;
+            this.t = 0;
         }
         index3.prototype.start = function (element) {
             this.element = element;
@@ -9015,27 +10132,43 @@ var qec;
             var _this = this;
             new qec.svgSceneLoader().loadUrl('data/' + sceneName, function (sceneDTO) {
                 console.log('createScene continues');
-                var sr = new qec.simpleRenderer();
-                sr.setRenderSteps(_this.renderSteps);
-                _this.renderer = sr;
-                _this.renderer.setContainerAndSize(_this.element, 600, 600);
+                _this.updater = new qec.updater();
+                if (_this.isHardware) {
+                    _this.renderer = new qec.hardwareRenderer();
+                    _this.updater.texturePacker.isHardware = true;
+                }
+                else {
+                    var sr = new qec.simpleRenderer();
+                    sr.setRenderSteps(_this.renderSteps);
+                    _this.renderer = sr;
+                }
+                var w = 600;
+                var h = 600;
+                if (_this.isFullScreen) {
+                    w = window.innerWidth;
+                    h = window.innerHeight;
+                }
+                _this.renderer.setContainerAndSize(_this.element, w, h);
                 _this.renderSettings = new qec.renderSettings();
                 _this.renderSettings.shadows = false;
                 _this.renderSettings.refraction = false;
                 _this.renderSettings.boundingBoxes = false;
                 var scene = new qec.scene();
                 scene.create(sceneDTO, function () {
-                    var union = new qec.sdUnion();
-                    union.array = sceneDTO.objects.map(function (x) { return x['__instance']; });
-                    _this.renderSettings.sd = union;
+                    _this.renderSettings.sdArray = sceneDTO.objects.map(function (x) { return x['__instance']; });
                     _this.renderSettings.camera = sceneDTO.cameras[0]['__instance'];
                     var lightDto = new qec.directionalLightDTO();
                     lightDto.direction = [1, 1, -1];
-                    lightDto.intensity = 0.5;
+                    lightDto.intensity = 1;
                     var light = new qec.directionalLight();
                     light.createFrom(lightDto);
                     _this.renderSettings.directionalLights = [light];
-                    _this.render();
+                    if (_this.isAnimate) {
+                        _this.renderRotate();
+                    }
+                    else {
+                        _this.render();
+                    }
                 });
                 /*
                 this.renderSettings.sd = sd;
@@ -9047,11 +10180,47 @@ var qec;
             });
         };
         index3.prototype.render = function () {
-            this.renderer.render(this.renderSettings);
+            var _this = this;
+            this.updater.update(this.renderSettings.sdArray, function () {
+                _this.renderer.updateShader(_this.renderSettings);
+                _this.renderer.render(_this.renderSettings);
+            });
         };
         index3.prototype.debug = function (x, y) {
             if (!this.isParallel)
                 this.renderer.renderDebug(x, y, this.renderSettings);
+        };
+        index3.prototype.renderRotate = function () {
+            var _this = this;
+            this.frameDiv = document.createElement('div');
+            this.frameDiv.style.position = 'fixed';
+            this.frameDiv.style.top = '0px';
+            this.frameDiv.style.left = '0px';
+            this.frameDiv.style.color = 'red';
+            document.body.appendChild(this.frameDiv);
+            this.previousNow = Date.now();
+            this.rotateLoop.setRenderSettings(this.renderSettings);
+            this.updater.update(this.renderSettings.sdArray, function () {
+                _this.renderer.updateShader(_this.renderSettings);
+                _this.renderRotateOne();
+            });
+        };
+        index3.prototype.renderRotateOne = function () {
+            var _this = this;
+            var now = Date.now();
+            var dt = (now - this.previousNow) / 1000;
+            this.t += dt;
+            this.frameCount++;
+            this.previousNow = now;
+            while (this.t > 1) {
+                this.frameDiv.innerText = '' + this.frameCount;
+                this.t -= 1;
+                this.frameCount = 0;
+            }
+            this.rotateLoop.update(dt);
+            this.renderer.updateAllUniformsForAll();
+            this.renderer.render(this.renderSettings);
+            setTimeout(function () { return _this.renderRotateOne(); }, 50);
         };
         return index3;
     }());

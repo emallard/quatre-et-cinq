@@ -71,10 +71,13 @@ module qec {
                     light.createFrom(lightDto);
                     
                     this.renderSettings.directionalLights = [light];
-                    this.render();
                     if (this.isAnimate)
                     {
                         this.renderRotate();
+                    }
+                    else
+                    {
+                        this.render();
                     }
                 });
 
@@ -117,24 +120,33 @@ module qec {
 
             this.previousNow = Date.now();
             this.rotateLoop.setRenderSettings(this.renderSettings);
-            setInterval(() => {
-                let now = Date.now();
-                let dt = (now - this.previousNow)/1000;
-                this.t += dt;
-                this.frameCount++;
-                this.previousNow = now;
 
-                while (this.t > 1)
-                {
-                    this.frameDiv.innerText = '' + this.frameCount;
-                    this.t -= 1;
-                    this.frameCount = 0;
-                }
+            this.updater.update(this.renderSettings.sdArray, () => 
+            {
+                this.renderer.updateShader(this.renderSettings);
+                this.renderRotateOne();
+            });
+        }
 
-                this.rotateLoop.update(dt);
-                this.renderer.updateAllUniformsForAll();
-                this.renderer.render(this.renderSettings);
-            }, 30);
+        renderRotateOne()
+        {
+            let now = Date.now();
+            let dt = (now - this.previousNow)/1000;
+            this.t += dt;
+            this.frameCount++;
+            this.previousNow = now;
+
+            while (this.t > 1)
+            {
+                this.frameDiv.innerText = '' + this.frameCount;
+                this.t -= 1;
+                this.frameCount = 0;
+            }
+
+            this.rotateLoop.update(dt);
+            this.renderer.updateAllUniformsForAll();
+            this.renderer.render(this.renderSettings);
+            setTimeout(() => this.renderRotateOne(), 50);
         }
     }
 }
