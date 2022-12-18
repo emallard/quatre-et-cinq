@@ -19,7 +19,7 @@ module qec {
     {
         uniqueName:string = uniqueName.new();
 
-        transform:Float32Array;
+        transform = mat4.create();
         inverseTransform = mat4.identity(mat4.create());
         material = new material();
         top:partTop = new partTop();
@@ -40,6 +40,7 @@ module qec {
             this.border.createFrom(dto.border);
 
             this.material.createFrom(dto.material);
+            mat4.copy(this.transform, dto.transform);
             this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
 
             this.boundingBox = new Float32Array([

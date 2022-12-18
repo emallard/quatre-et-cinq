@@ -107,25 +107,29 @@ module qec {
         setUniforms(uniforms:any)
         {
             let sd = this.sd;
-            let v = new THREE.Vector3();
-            v.fromArray(sd.material.diffuse);
-            let m = new THREE.Matrix4();
-            m.fromArray(sd.inverseTransform);
-            let boundingBox = new THREE.Vector3();
-            boundingBox.fromArray(sd.boundingBox);
+            
+            let uniform = uniforms[`u_sd_${sd.uniqueName}`];
+            if (uniform == undefined)
+            {
+                uniform = {
+                    value: {
+                        diffuse: new THREE.Vector3(),
+                        inverseTransform: new THREE.Matrix4(),
+                        boundingBox: new THREE.Vector3(),
+                        topTexture: null,
+                        profileTexture: null,
+                    }
+                };
+                uniforms[`u_sd_${sd.uniqueName}`] = uniform;
+            }
+            
+            uniform.value.diffuse.fromArray(sd.material.diffuse);
+            uniform.value.boundingBox.fromArray(sd.boundingBox);
+            uniform.value.inverseTransform.fromArray(sd.inverseTransform);
+            uniform.value.topTexture = sd.top.topSprite.bigTexture.threeDataTexture;
+            uniform.value.profileTexture = sd.profile.profileSprite.bigTexture.threeDataTexture;
 
-            console.log(v);
-            uniforms[`u_sd_${sd.uniqueName}`] = {
-                value: {
-                    diffuse: v,
-                    inverseTransform: m,
-                    topTexture: sd.top.topSprite.bigTexture.threeDataTexture,
-                    profileTexture: sd.profile.profileSprite.bigTexture.threeDataTexture,
-                    boundingBox: boundingBox
-                }
-            };
-
-            console.log(uniforms[`u_sd_${sd.uniqueName}`]);
+            //console.log(uniforms[`u_sd_${sd.uniqueName}`]);
 
             //uniforms[`u_sd_${sd.uniqueName}.diffuse`] = v;
             //uniforms[`u_sd_${sd.uniqueName}.inverseTransform`] = m;

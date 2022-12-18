@@ -74,6 +74,27 @@ module qec {
         setUniforms(uniforms:any)
         {
             let sd = this.sd;
+            
+            let uniform = uniforms[`u_sd_${sd.uniqueName}`];
+            if (uniform == undefined)
+            {
+                uniform = {
+                    value: {
+                        diffuse: new THREE.Vector3(),
+                        inverseTransform: new THREE.Matrix4(),
+                        topTexture: null,
+                        boundingBox: new THREE.Vector3()
+                    }
+                };
+                uniforms[`u_sd_${sd.uniqueName}`] = uniform;
+            }
+            
+            uniform.value.diffuse.fromArray(sd.material.diffuse);
+            uniform.value.boundingBox.fromArray(sd.boundingBox);
+            uniform.value.inverseTransform.fromArray(sd.inverseTransform);
+            uniform.value.topTexture = sd.top.topSprite.bigTexture.threeDataTexture;
+            /*
+            
             let v = new THREE.Vector3();
             v.fromArray(sd.material.diffuse);
             let m = new THREE.Matrix4();
@@ -90,8 +111,9 @@ module qec {
                     boundingBox: boundingBox
                 }
             };
-
-            console.log(uniforms[`u_sd_${sd.uniqueName}`]);
+            */
+            //console.log(uniforms[`u_sd_${sd.uniqueName}`]);
+            
 
             //uniforms[`u_sd_${sd.uniqueName}.diffuse`] = v;
             //uniforms[`u_sd_${sd.uniqueName}.inverseTransform`] = m;

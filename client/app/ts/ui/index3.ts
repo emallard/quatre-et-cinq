@@ -12,8 +12,9 @@ module qec {
 
         isParallel = false;
         isHardware = false;
+        isAnimate = false;
+        isFullScreen = false;
         renderSteps = false;
-
         renderSettings = new renderSettings();
 
         start(element: HTMLElement) {
@@ -42,7 +43,15 @@ module qec {
                     this.renderer = sr;
                 }
                 
-                this.renderer.setContainerAndSize(this.element, 600, 600);
+                let w = 600;
+                let h = 600; 
+                if (this.isFullScreen)
+                {
+                    w = window.innerWidth;
+                    h = window.innerHeight; 
+                }
+
+                this.renderer.setContainerAndSize(this.element, w, h);
     
                 this.renderSettings = new renderSettings();
                 this.renderSettings.shadows = false;
@@ -63,6 +72,10 @@ module qec {
                     
                     this.renderSettings.directionalLights = [light];
                     this.render();
+                    if (this.isAnimate)
+                    {
+                        this.renderRotate();
+                    }
                 });
 
                 /*
@@ -87,6 +100,41 @@ module qec {
         debug(x: number, y: number) {
             if (!this.isParallel)
                 this.renderer.renderDebug(x, y, this.renderSettings);
+        }
+
+        previousNow:number;
+        rotateLoop = new rotateLoop();
+        frameCount = 0;
+        t = 0;
+        frameDiv:HTMLElement;
+        renderRotate() {
+            this.frameDiv = document.createElement('div')
+            this.frameDiv.style.position = 'fixed';
+            this.frameDiv.style.top = '0px';
+            this.frameDiv.style.left = '0px';
+            this.frameDiv.style.color = 'red';
+            document.body.appendChild(this.frameDiv);
+
+            this.previousNow = Date.now();
+            this.rotateLoop.setRenderSettings(this.renderSettings);
+            setInterval(() => {
+                let now = Date.now();
+                let dt = (now - this.previousNow)/1000;
+                this.t += dt;
+                this.frameCount++;
+                this.previousNow = now;
+
+                while (this.t > 1)
+                {
+                    this.frameDiv.innerText = '' + this.frameCount;
+                    this.t -= 1;
+                    this.frameCount = 0;
+                }
+
+                this.rotateLoop.update(dt);
+                this.renderer.updateAllUniformsForAll();
+                this.renderer.render(this.renderSettings);
+            }, 30);
         }
     }
 }

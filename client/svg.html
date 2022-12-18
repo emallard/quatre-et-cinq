@@ -42,6 +42,8 @@
             var p2 = new qec.index3();
             p2.isParallel = getParameterByName('isParallel') == '1';
             p2.isHardware = getParameterByName('isHardware') == '1';
+            p2.isAnimate = getParameterByName('isAnimate') == '1';
+            p2.isFullScreen = getParameterByName('isFullScreen') == '1';
             p2.renderSteps = getParameterByName('renderSteps') == '1';
             p2.start(document.getElementById('root'))
         }
