@@ -10220,7 +10220,7 @@ var qec;
             this.rotateLoop.update(dt);
             this.renderer.updateAllUniformsForAll();
             this.renderer.render(this.renderSettings);
-            setTimeout(function () { return _this.renderRotateOne(); }, 50);
+            requestAnimationFrame(function () { return _this.renderRotateOne(); });
         };
         return index3;
     }());

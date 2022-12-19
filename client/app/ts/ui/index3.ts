@@ -146,7 +146,7 @@ module qec {
             this.rotateLoop.update(dt);
             this.renderer.updateAllUniformsForAll();
             this.renderer.render(this.renderSettings);
-            setTimeout(() => this.renderRotateOne(), 50);
+            requestAnimationFrame(() => this.renderRotateOne());
         }
     }
 }
