@@ -6,6 +6,7 @@ module qec
     {
         texturePacker: texturePacker;
         needRepack: boolean;
+        debugInfoInCanvas  =false;
 
         constructor()
         {
@@ -117,8 +118,11 @@ module qec
 
                     vec4.copy(top.topBounds, topDfCanvas.totalBounds);
 
-                    topDfCanvas.debugInfoInCanvas();
-                    document.body.append(topDfCanvas.canvas);
+                    if (this.debugInfoInCanvas)
+                    {
+                        topDfCanvas.debugInfoInCanvas();
+                        document.body.append(topDfCanvas.canvas);
+                    }
 
                     top.topTexture = topDfCanvas.floatTexture;
                     top.topTextureUpdated = true;
@@ -153,8 +157,11 @@ module qec
 
                     vec4.copy(profile.profileBounds, topDfCanvas.totalBounds);
 
-                    topDfCanvas.debugInfoInCanvas();
-                    document.body.append(topDfCanvas.canvas);
+                    if (this.debugInfoInCanvas)
+                    {
+                        topDfCanvas.debugInfoInCanvas();
+                        document.body.append(topDfCanvas.canvas);
+                    }
 
                     profile.profileTexture = topDfCanvas.floatTexture;
                     profile.profileTextureUpdated = true;
@@ -191,8 +198,11 @@ module qec
                         // to be done only once
                         // vec4.copy(profile.profileBounds, topDfCanvas.totalBounds);
 
-                        topDfCanvas.debugInfoInCanvas();
-                        document.body.append(topDfCanvas.canvas);
+                        if (this.debugInfoInCanvas)
+                        {
+                            topDfCanvas.debugInfoInCanvas();
+                            document.body.append(topDfCanvas.canvas);
+                        }
 
                         profile.profileTopTexture = topDfCanvas.floatTexture;
                     }
@@ -203,8 +213,11 @@ module qec
 
                         vec4.copy(profile.profileBounds, topDfCanvas.totalBounds);
 
-                        topDfCanvas.debugInfoInCanvas();
-                        document.body.append(topDfCanvas.canvas);
+                        if (this.debugInfoInCanvas)
+                        {
+                            topDfCanvas.debugInfoInCanvas();
+                            document.body.append(topDfCanvas.canvas);
+                        }
 
                         profile.profileBottomTexture = topDfCanvas.floatTexture;
                     }
@@ -241,8 +254,11 @@ module qec
 
                     vec4.copy(b.borderBounds, topDfCanvas.totalBounds);
 
-                    topDfCanvas.debugInfoInCanvas();
-                    document.body.append(topDfCanvas.canvas);
+                    if (this.debugInfoInCanvas)
+                    {
+                        topDfCanvas.debugInfoInCanvas();
+                        document.body.append(topDfCanvas.canvas);
+                    }
 
                     b.borderTexture = topDfCanvas.floatTexture;
                     b.borderTextureUpdated = true;

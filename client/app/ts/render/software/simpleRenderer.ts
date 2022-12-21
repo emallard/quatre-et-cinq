@@ -12,7 +12,6 @@ module qec {
             this.canvas = canvas;
             canvas.width  = rWidth;
             canvas.height = rHeight;
-            canvas.style.border   = "1px solid";
             element.appendChild(canvas);
 
             this.renderUnit.setCanvasSize(canvas.width, canvas.height);    

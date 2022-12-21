@@ -138,11 +138,14 @@ module qec {
                 this.sdColor[1] = 1;
                 this.sdColor[2] = 1;
 
-                for (var j=0; j < 3; ++j)
-                    outColor[j] = 0.2*this.sdColor[j];
-
+                var KA = 0.2;
                 var KD = 0.7;
                 var KS = 0.5;
+
+                for (var j=0; j < 3; ++j)
+                    outColor[j] = KA*this.sdColor[j];
+
+                
                 
                 for (var i=0; i < this.spotLights.length; ++i)
                 {

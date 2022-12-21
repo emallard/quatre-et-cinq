@@ -2,6 +2,7 @@ module qec {
 
     export class renderPixelGetDist
     {
+        private tmpBoundingBox = vec3.create();
         private tmp = vec3.create();
         private tmp2 = vec3.create();
         private color = vec4.create();
@@ -48,8 +49,8 @@ module qec {
         getDistFields1(hd: sdFields1, pos:Float32Array, d:number)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
-            this.tmp[2] -= hd.boundingBox[2];
-            let boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
+            vec3.set(this.tmpBoundingBox, this.tmp[0], this.tmp[1], this.tmp[2] - hd.boundingBox[2]);
+            let boxDist = this.getDistBoundingBox(this.tmpBoundingBox, hd.boundingBox);
 
             if (boxDist > d)
                 return d;
@@ -57,7 +58,6 @@ module qec {
             if (boxDist > 2)
                 return boxDist;
 
-            this.tmp[2] += hd.boundingBox[2];
             let p = this.tmp;
             
             let d0 = this.getDistTop(hd.top, p);
@@ -68,9 +68,8 @@ module qec {
         getDistFields2(hd: sdFields2, pos:Float32Array, d:number)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
-            this.tmp[2] -= hd.boundingBox[2];
-            let boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
-
+            vec3.set(this.tmpBoundingBox, this.tmp[0], this.tmp[1], this.tmp[2] - hd.boundingBox[2]);
+            let boxDist = this.getDistBoundingBox(this.tmpBoundingBox, hd.boundingBox);
             
             if (boxDist > d)
                 return d;
@@ -78,8 +77,6 @@ module qec {
             if (boxDist > 2)
                 return boxDist;
             
-
-            this.tmp[2] += hd.boundingBox[2];
             let p = this.tmp;
             
             
@@ -99,9 +96,8 @@ module qec {
         getDistFields2Radial(hd: sdFields2Radial, pos:Float32Array, d:number)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
-            this.tmp[2] -= hd.boundingBox[2];
-            let boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
-
+            vec3.set(this.tmpBoundingBox, this.tmp[0], this.tmp[1], this.tmp[2] - hd.boundingBox[2]);
+            let boxDist = this.getDistBoundingBox(this.tmpBoundingBox, hd.boundingBox);
             
             if (boxDist > d)
                 return d;
@@ -109,10 +105,7 @@ module qec {
             if (boxDist > 2)
                 return boxDist;
             
-
-            this.tmp[2] += hd.boundingBox[2];
             let p = this.tmp;
-            
             
             let d0 = this.getDistTop(hd.top, p);
 
@@ -130,9 +123,8 @@ module qec {
         getDistFields2Border(hd: sdFields2Border, pos:Float32Array, d:number)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
-            this.tmp[2] -= hd.boundingBox[2];
-            let boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
-
+            vec3.set(this.tmpBoundingBox, this.tmp[0], this.tmp[1], this.tmp[2] - hd.boundingBox[2]);
+            let boxDist = this.getDistBoundingBox(this.tmpBoundingBox, hd.boundingBox);
             
             if (boxDist > d)
                 return d;
@@ -140,8 +132,6 @@ module qec {
             if (boxDist > 2)
                 return boxDist;
             
-
-            this.tmp[2] += hd.boundingBox[2];
             let p = this.tmp;
             
             let d0 = this.getDistTop(hd.top, p);
@@ -155,9 +145,8 @@ module qec {
         getDistFields2ProfileBorder(hd: sdFields2ProfileBorder, pos:Float32Array, d:number)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
-            this.tmp[2] -= hd.boundingBox[2];
-            let boxDist = this.getDistBoundingBox(this.tmp, hd.boundingBox);
-
+            vec3.set(this.tmpBoundingBox, this.tmp[0], this.tmp[1], this.tmp[2] - hd.boundingBox[2]);
+            let boxDist = this.getDistBoundingBox(this.tmpBoundingBox, hd.boundingBox);
             
             if (boxDist > d)
                 return d;
@@ -165,10 +154,7 @@ module qec {
             if (boxDist > 2)
                 return boxDist;
             
-
-            this.tmp[2] += hd.boundingBox[2];
             let p = this.tmp;
-            
             
             let d0 = this.getDistTop(hd.top, p);
 

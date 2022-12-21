@@ -34,12 +34,10 @@ module qec {
             let name = `u_sd_${sd.uniqueName}`;
             return `
             {
-                vec4 p2 = ${name}.inverseTransform * vec4(pos, 1.0);
+                vec4 p = ${name}.inverseTransform * vec4(pos, 1.0);
 
-                vec3 p = p2.xyz;
-
-                p[2] -= ${name}.boundingBox[2];
-                float distToBbox = sdBox(p, ${name}.boundingBox);
+                vec3 p2 = vec3(p.x, p.y, p.z - ${name}.boundingBox[2]);
+                float distToBbox = sdBox(p2, ${name}.boundingBox);
                 
                 if (distToBbox < d)
                 {
@@ -49,8 +47,6 @@ module qec {
                 }
                 else
                 {
-                    p[2] += ${name}.boundingBox[2];
-
                     ${this.getDistTop(name+'.topTexture', sd.top, 'd0')}
 
                     float originToPointX = p[0]-(${sd.profileOrigin[0].toFixed(3)});

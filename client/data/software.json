@@ -1,0 +1,20 @@
+{
+    "array":[
+        {
+            "sceneName":"data/bee-thickness.svg",
+            "isHardware":false
+        },
+        {
+            "sceneName":"data/bee-profile-axis.svg",
+            "isHardware":false
+        },
+        {
+            "sceneName":"data/square-border-thickness.svg",
+            "isHardware":false
+        },
+        {
+            "sceneName":"data/square-border-profile-axis.svg",
+            "isHardware":false
+        }
+    ]
+}

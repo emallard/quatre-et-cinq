@@ -32,12 +32,10 @@ module qec {
             let name = `u_sd_${sd.uniqueName}`;
             return `
             {
-                vec4 p2 = ${name}.inverseTransform * vec4(pos, 1.0);
+                vec4 p = ${name}.inverseTransform * vec4(pos, 1.0);
 
-                vec3 p = p2.xyz;
-
-                p[2] -= ${name}.boundingBox[2];
-                float distToBbox = sdBox(p, ${name}.boundingBox);
+                vec3 p2 = vec3(p.x, p.y, p.z - ${name}.boundingBox[2]);
+                float distToBbox = sdBox(p2, ${name}.boundingBox);
                 
                 if (distToBbox < d)
                 {
@@ -47,8 +45,6 @@ module qec {
                     }
                     else
                     {
-                        p[2] += ${name}.boundingBox[2];
-
                         vec2 uv = vec2(
                             (p[0] - ${sd.top.topBounds[0].toFixed(3)}) / (${(sd.top.topBounds[2] - sd.top.topBounds[0]).toFixed(3)}),
                             (p[1] - ${sd.top.topBounds[1].toFixed(3)}) / (${(sd.top.topBounds[3] - sd.top.topBounds[1]).toFixed(3)})

@@ -1,7 +1,9 @@
-- height controller
-- zoom buttons, zoom on object, zoom to see all
-- pan
-- file load/save => in zip file
-- save svg / reload svg
-- bounding box with some lines hidden
-- await/async
+http://localhost:8000/svg.html?scene=owl-profile-axis.svg&isHardware=1&isFullScreen=1&isAnimate=1
+
+[ ] p[2] -=, p[2] +=
+[ ] Spot light
+[ ] Comparaison facile software / hardware
+[ ] Enlever debug texture / fullscreen / perf?
+[ ] Mettre une grille en fond
+[ ] Feuille d'érable courbée
+[ ] Hibou avec profile : ventre en dent de scie, bec courbé, bordures?

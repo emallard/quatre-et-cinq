@@ -28,24 +28,55 @@
 
     <script>
         
-        if (getParameterByName('isHardware') == '1')
-        {
-            qec.resources.loadAll(onResourceLoaded);
-        }
-        else
-        {
-            onResourceLoaded();
-        }
-
+        qec.resources.loadAll(onResourceLoaded);
+        
         function onResourceLoaded()
         {
-            var p2 = new qec.index3();
-            p2.isParallel = getParameterByName('isParallel') == '1';
-            p2.isHardware = getParameterByName('isHardware') == '1';
-            p2.isAnimate = getParameterByName('isAnimate') == '1';
-            p2.isFullScreen = getParameterByName('isFullScreen') == '1';
-            p2.renderSteps = getParameterByName('renderSteps') == '1';
-            p2.start(document.getElementById('root'))
+            var sceneName = getParameterByName('scene');
+            var json = getParameterByName('json');
+            if (sceneName == undefined && json == undefined)
+                alert("scene?sceneName - json?json");
+
+            if (sceneName != undefined)
+            {
+                var r = new qec.devRenderer();
+                r.sceneName = 'data/' + sceneName;
+                r.isParallel = getParameterByName('isParallel') == '1';
+                r.isHardware = getParameterByName('isHardware') == '1';
+                r.isBoth = getParameterByName('isBoth') == '1';
+                r.isAnimate = getParameterByName('isAnimate') == '1';
+                r.isFullScreen = getParameterByName('isFullScreen') == '1';
+                r.renderSteps = getParameterByName('renderSteps') == '1';
+                r.start(document.getElementById('root'));
+            }
+            else
+            {
+                var req = new XMLHttpRequest();
+                req.open('GET', 'data/'+json, true);
+                req.onreadystatechange = () => {
+                    if (req.readyState == 4) {
+                        if (req.status == 200) {
+                            let downloadedJson = JSON.parse(req.responseText);
+                            console.log(downloadedJson);
+                            for (let a of downloadedJson.array)
+                            {
+                                let settings = new qec.devRendererSettings();
+                                for (let key in a)
+                                {
+                                    settings[key] = a[key];
+                                }
+                                var r = new qec.devRenderer();
+                                r.setSettings(settings);
+                                r.start(document.getElementById('root'));
+                            }
+                        }
+                        else {
+                            console.error("Erreur pendant le chargement du json.\n");
+                        }
+                    }
+                };
+                req.send(null);
+            }
         }
 
             /*
