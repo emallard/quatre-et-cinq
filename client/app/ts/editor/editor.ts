@@ -59,7 +59,7 @@ module qec {
                 intensity: 0.2
             });
 
-            this.renderSettings.spotLights.push(this.workspace.keyLight, this.workspace.fillLight, this.workspace.rimLight);
+            this.renderSettings.lights.push(this.workspace.keyLight, this.workspace.fillLight, this.workspace.rimLight);
 
             this.sdGround = new sdBox();
             this.sdGround.getMaterial(null).setDiffuse(0.8, 0.8, 0.8);
@@ -174,7 +174,7 @@ module qec {
                     var sdEffect = new sdIntersection();
 
                     var sdG = new sdGrid();
-                    vec3.set(sdG.size, 0.063, 0.063, 0.063);
+                    sdG.size = 0.063;
                     sdG.thickness = 0.0001;
 
                     var sdB = new sdBorder();

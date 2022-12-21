@@ -10,6 +10,7 @@ module qec {
 
     export class spotLight implements ilight
     {
+        uniqueName:string = uniqueName.new();
         position = vec3.create();
         direction = vec3.create();
         intensity = 1;

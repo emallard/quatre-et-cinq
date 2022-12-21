@@ -4,9 +4,7 @@ module qec
     export class renderSettings
     {
         sdArray:signedDistance[];
-        
-        directionalLights:directionalLight[] = [];
-        spotLights:spotLight[] = [];
+        lights:ilight[] = [];
         
         camera:camera = new camera();
         shadows:boolean;

@@ -6,8 +6,9 @@ module qec
         getColor(pos: Float32Array, out:Float32Array);
     }
 */
-    export interface materialDTO
+    export class materialDTO
     {
+        static TYPE:string = "materialDTO";
         type:string;
         diffuse:number[];
     }

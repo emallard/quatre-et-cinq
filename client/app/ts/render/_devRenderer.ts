@@ -8,8 +8,11 @@ module qec {
         isBoth = false;
         isAnimate = false;
         isFullScreen = false;
-        isDirectionalLight = true;
-        showDistanceField = false;
+
+        isDirectionalLight = false;
+        showGrid = false;
+
+        debugDistanceField = false;
         renderSteps = false;
     }
 
@@ -45,7 +48,7 @@ module qec {
                 
                 // updater
                 this.updater = new updater();
-                this.updater.debugInfoInCanvas = this.settings.showDistanceField;
+                this.updater.debugInfoInCanvas = this.settings.debugDistanceField;
 
                 // renderers
                 let w = 600;
@@ -60,9 +63,18 @@ module qec {
                 {
                     let hr = new hardwareRenderer();
                     let elt = document.createElement('div');
-                    elt.style.border = 'solid 2px blue';
-                    elt.style.margin = '2px';
-                    elt.style.display = 'inline-block';
+                    if (this.settings.isBoth)
+                    {
+                        elt.style.border = 'solid 2px blue';
+                        elt.style.margin = '2px';
+                        elt.style.display = 'inline-block';
+                    }
+                    else
+                    {
+                        elt.style.display = 'fixed';
+                        elt.style.top = '0px;'
+                        elt.style.left = '0px;'
+                    }
                     this.element.append(elt);
                     hr.setContainerAndSize(elt, w, h);
 
@@ -75,9 +87,18 @@ module qec {
                     let sr = new simpleRenderer();
                     sr.setRenderSteps(this.settings.renderSteps);
                     let elt = document.createElement('div');
-                    elt.style.border = 'solid 2px red';
-                    elt.style.margin = '2px';
-                    elt.style.display = 'inline-block';
+                    if (this.settings.isBoth)
+                    {
+                        elt.style.border = 'solid 2px red';
+                        elt.style.margin = '2px';
+                        elt.style.display = 'inline-block';
+                    }
+                    else
+                    {
+                        elt.style.display = 'fixed';
+                        elt.style.top = '0px;'
+                        elt.style.left = '0px;'
+                    }
                     this.element.append(elt);
                     sr.setContainerAndSize(elt, w, h);
 
@@ -99,6 +120,30 @@ module qec {
                 scene.create(sceneDTO, () => {
                     this.renderSettings.sdArray = sceneDTO.objects.map(x => x['__instance']);
                     this.renderSettings.camera = sceneDTO.cameras[0]['__instance'];
+                    let camTarget = this.renderSettings.camera.target;
+
+                    // grid
+
+                    if (this.settings.showGrid)
+                    {
+                        let transform = mat4.create();
+                        mat4.identity(transform);
+                        mat4.translate(transform, transform, vec3.fromValues(camTarget[0], camTarget[1], 0));
+                        let grid = new sdGrid();
+                        grid.createFrom({
+                            type : sdGridDTO.TYPE,
+                            size : 10,
+                            thickness:0.5,
+                            material: {
+                                type: materialDTO.TYPE,
+                                diffuse: [1, 1, 1]
+                            },
+                            transform: transform
+                        });
+                        this.renderSettings.sdArray.push(grid);
+                    }
+
+                    // light
 
                     if (this.settings.isDirectionalLight)
                     {
@@ -109,14 +154,13 @@ module qec {
                         let light = new directionalLight();
                         light.createFrom(lightDto);
                         
-                        this.renderSettings.directionalLights = [light];
+                        this.renderSettings.lights = [light];
                     }
                     else
                     {
-                        this.renderSettings.spotLights = [];
+                        this.renderSettings.lights = [];
                         {
                             let lightDto = new spotLightDTO()
-                            let camTarget = this.renderSettings.camera.target;
                             let dist = 30;
                             lightDto.position = [camTarget[0]-dist, camTarget[0]-dist, camTarget[0]+dist];
                             lightDto.direction= [1, 1, -1];
@@ -124,7 +168,7 @@ module qec {
 
                             let light = new spotLight();
                             light.createFrom(lightDto);
-                            this.renderSettings.spotLights.push(light);
+                            this.renderSettings.lights.push(light);
                         }
                         {
                             let lightDto = new spotLightDTO()
@@ -132,11 +176,11 @@ module qec {
                             let dist = 30;
                             lightDto.position = [camTarget[0]+dist, camTarget[0]-dist, camTarget[0]-dist];
                             lightDto.direction= [-1, 1, 1];
-                            lightDto.intensity = 0.2;
+                            lightDto.intensity = 0.3;
 
                             let light = new spotLight();
                             light.createFrom(lightDto);
-                            this.renderSettings.spotLights.push(light);
+                            this.renderSettings.lights.push(light);
                         }
                         
                     }
@@ -218,7 +262,7 @@ module qec {
                 r.updateShader(this.renderSettings);
                 r.render(this.renderSettings);
             });
-            if (this.totalT < 10)
+            if (this.totalT < 20)
                 requestAnimationFrame(() => this.renderRotateOne());
         }
     }

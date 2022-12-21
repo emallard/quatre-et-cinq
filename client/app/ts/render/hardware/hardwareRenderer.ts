@@ -20,7 +20,7 @@ module qec {
 
         sd: signedDistance[];
         text: hardwareShaderTextUnion;
-        textLights: hardwareShaderDirectionalLight;
+        textLights: hardwareShaderLights;
 
         setFragmentShader(text: string) {
             this.fragmentShader = text;
@@ -36,7 +36,7 @@ module qec {
             this.initTHREE();
 
             this.text = new hardwareShaderTextUnion();
-            this.textLights = new hardwareShaderDirectionalLight();
+            this.textLights = new hardwareShaderLights();
 
             this.gShaderMaterial.uniforms.u_inverseTransforms = { type: "m4v", value: [] };
             this.gShaderMaterial.uniforms.u_diffuses = { type: "3fv", value: [] };
@@ -69,7 +69,7 @@ module qec {
 
             this.sd = settings.sdArray;
             this.text.setArray(this.sd);
-            this.textLights.setLight(settings.directionalLights[0]);
+            this.textLights.setLights(settings.lights);
 
             console.log('hardwareRenderer.updateShader');
 
@@ -100,7 +100,7 @@ module qec {
 
                 
                 generatedLight += this.textLights.declareUniforms() + '\n';
-                generatedLight += this.textLights.generateApplyLight();
+                generatedLight += this.textLights.generateLight();
             }
 
             this.fragmentShader = ''
@@ -111,7 +111,7 @@ module qec {
                 + resources.all['app/ts/render/hardware/30_renderPixel.glsl'];
 
             console.log(generatedPart);
-            //console.log(generatedLight);
+            console.log(generatedLight);
 
             this.gViewQuad.material.fragmentShader = this.fragmentShader;
             this.gViewQuad.material.needsUpdate = true;
@@ -232,15 +232,6 @@ module qec {
                 this.gShaderMaterial.uniforms.u_lightPositions = { type: "3fv", value: [] };
                 this.gShaderMaterial.uniforms.u_lightIntensities = { type: "1fv", value: [] };
             }
-
-            settings.spotLights.forEach((l, i) => {
-                if (this.gShaderMaterial.uniforms.u_lightPositions.value[i] == null) {
-                    this.gShaderMaterial.uniforms.u_lightPositions.value[i] = new THREE.Vector3();
-                    this.gShaderMaterial.uniforms.u_lightIntensities.value[i] = 0;
-                }
-                this.gShaderMaterial.uniforms.u_lightPositions.value[i].fromArray(l.position);
-                this.gShaderMaterial.uniforms.u_lightIntensities.value[i] = l.intensity;
-            })
 
             this.gRenderer.render(this.gScene, this.gCamera);
         }

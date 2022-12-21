@@ -13,8 +13,7 @@ module qec {
 
         sd:signedDistance[];
 
-        directionalLights:directionalLight[];
-        spotLights:spotLight[];
+        lights:ilight[];
         
         out = vec4.create();
 
@@ -23,7 +22,7 @@ module qec {
         c_fSmooth = 0.70;
         EPS_NORMAL_1 = 0.5;
         EPS_NORMAL_2 = 0.5;
-        EPS_INTERSECT = 0.1;
+        EPS_INTERSECT = 0.05;
 
         shadows = false;
         SS_K = 15.0;
@@ -54,8 +53,7 @@ module qec {
         updateShader(settings:renderSettings)
         {
             this.getDist = new renderPixelGetDist().generateGetDist(settings.sdArray);
-            this.directionalLights = settings.directionalLights;
-            this.spotLights = settings.spotLights;
+            this.lights = settings.lights;
             this.shadows = settings.shadows;
         }
 
@@ -142,22 +140,24 @@ module qec {
                 var KD = 0.7;
                 var KS = 0.5;
 
-                for (var j=0; j < 3; ++j)
-                    outColor[j] = KA*this.sdColor[j];
-
+                //for (var j=0; j < 3; ++j)
+                //    outColor[j] = KA*this.sdColor[j];
                 
-                
-                for (var i=0; i < this.spotLights.length; ++i)
+                for (var i=0; i < this.lights.length; ++i)
                 {
-                    this.getSpotLighting(i, outPos, outNormal, rd, this.outLighting);
-                    for (var j=0; j < 3; ++j)
-                        outColor[j] += this.outLighting[2] * ( KS*this.outLighting[1] + KD*this.outLighting[0] * this.sdColor[j]);
-                }
-                for (var i=0; i < this.directionalLights.length; ++i)
-                {
-                    this.getDirectionalLighting(this.directionalLights[i], outPos, outNormal, rd, this.outLighting);
-                    for (var j=0; j < 3; ++j)
-                        outColor[j] += this.outLighting[2] * ( KS*this.outLighting[1] + KD*this.outLighting[0] * this.sdColor[j]);
+                    let light = this.lights[i];
+                    if (light instanceof spotLight)
+                    {
+                        this.getSpotLighting(light, outPos, outNormal, rd, this.outLighting);
+                        for (var j=0; j < 3; ++j)
+                            outColor[j] += this.outLighting[2] * ( KS*this.outLighting[1] + KD*this.outLighting[0] * this.sdColor[j]);
+                    }
+                    else if (light instanceof directionalLight)
+                    {
+                        this.getDirectionalLighting(light, outPos, outNormal, rd, this.outLighting);
+                        for (var j=0; j < 3; ++j)
+                            outColor[j] += this.outLighting[2] * ( KS*this.outLighting[1] + KD*this.outLighting[0] * this.sdColor[j]);
+                    }
                 }
                 
             }
@@ -229,10 +229,10 @@ module qec {
         }
 
         diffToLight = vec3.create();
-        getSpotLighting(i:number, pos:Float32Array, normal:Float32Array, rd:Float32Array, out:Float32Array) : void
+        getSpotLighting(light:spotLight, pos:Float32Array, normal:Float32Array, rd:Float32Array, out:Float32Array) : void
         {
-            var intensity = this.spotLights[i].intensity; 
-            var lightPos = this.spotLights[i].position;
+            var intensity = light.intensity; 
+            var lightPos = light.position;
             vec3.subtract(this.diffToLight, lightPos, pos);
             vec3.normalize(this.diffToLight, this.diffToLight);
 

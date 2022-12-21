@@ -11,7 +11,7 @@
 
 </head>
 
-<body>
+<body style="margin:0px">
     <!--
     <input id='pickX'><input id='pickY'>
     <button id='pickButton'>Pick</button>
@@ -39,14 +39,18 @@
 
             if (sceneName != undefined)
             {
+                let settings = new qec.devRendererSettings();
+                settings.sceneName = 'data/' + sceneName;
+                settings.isParallel = getParameterByName('isParallel') == '1';
+                settings.isHardware = getParameterByName('isHardware') == '1';
+                settings.isBoth = getParameterByName('isBoth') == '1';
+                settings.isAnimate = getParameterByName('isAnimate') == '1';
+                settings.isFullScreen = getParameterByName('isFullScreen') == '1';
+                settings.isDirectionalLight = getParameterByName('isDirectionalLight') == '1';
+                
+                settings.renderSteps = getParameterByName('renderSteps') == '1';
                 var r = new qec.devRenderer();
-                r.sceneName = 'data/' + sceneName;
-                r.isParallel = getParameterByName('isParallel') == '1';
-                r.isHardware = getParameterByName('isHardware') == '1';
-                r.isBoth = getParameterByName('isBoth') == '1';
-                r.isAnimate = getParameterByName('isAnimate') == '1';
-                r.isFullScreen = getParameterByName('isFullScreen') == '1';
-                r.renderSteps = getParameterByName('renderSteps') == '1';
+                r.setSettings(settings);
                 r.start(document.getElementById('root'));
             }
             else

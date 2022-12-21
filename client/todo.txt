@@ -1,9 +1,10 @@
 http://localhost:8000/svg.html?scene=owl-profile-axis.svg&isHardware=1&isFullScreen=1&isAnimate=1
 
-[ ] p[2] -=, p[2] +=
+[X] p[2] -=, p[2] +=
 [ ] Spot light
-[ ] Comparaison facile software / hardware
-[ ] Enlever debug texture / fullscreen / perf?
-[ ] Mettre une grille en fond
+[X] Comparaison facile software / hardware
+[X] Enlever debug texture
+[ ] Perf : start with a ray to full scene boundingbox collision
+[-] Mettre une grille en fond
 [ ] Feuille d'érable courbée
 [ ] Hibou avec profile : ventre en dent de scie, bec courbé, bordures?

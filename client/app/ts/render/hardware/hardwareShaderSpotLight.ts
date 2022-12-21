@@ -1,11 +1,11 @@
 module qec {
 
-    export class hardwareShaderDirectionalLight implements ihardwareShaderLight
+    export class hardwareShaderSpotLight implements ihardwareShaderLight
     {
-        light: directionalLight;
-        structName = 'lightDirectional';
+        light: spotLight;
+        structName = 'lightSpot';
 
-        constructor(light: directionalLight)
+        constructor(light: spotLight)
         {
             this.light = light;
         }
@@ -14,7 +14,7 @@ module qec {
         {
             if (declared[this.structName] == undefined)
             declared[this.structName] = `
-                vec3 invDirection;
+                vec3 position;
                 float intensity;
             `;           
         }
@@ -30,25 +30,24 @@ module qec {
             let KD = 0.7;
             let KS = 0.5;
             return `
-                {
-                    vec3 toLight = ${name}.invDirection;
-                
-                    float diffuse = ${name}.intensity * getDiffuse(pos, normal, toLight);
-                    float specular = ${name}.intensity * getSpecular(pos, normal, toLight, rd);
-                    result += ${KS}*specular + ${KD}*diffuse * col;
-                }
+            {
+                vec3 toLight = normalize(${name}.position - pos);
+                float diffuse = ${name}.intensity * getDiffuse(pos, normal, toLight);
+                float specular = ${name}.intensity * getSpecular(pos, normal, toLight, rd);
+                result += ${KS}*specular + ${KD}*diffuse * col;
+            }
             `
         }
 
         setUniforms(uniforms:any)
         {
             let v = new THREE.Vector3();
-            v.fromArray(this.light.invDirection);
+            v.fromArray(this.light.position);
             
             uniforms[`u_light_${this.light.uniqueName}`] = {
                 value: {
                     intensity: this.light.intensity,
-                    invDirection: v
+                    position: v
                 }
             };
 

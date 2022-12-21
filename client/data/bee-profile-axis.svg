@@ -23,15 +23,15 @@
      inkscape:pagecheckerboard="0"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="35.440737"
-     inkscape:cx="389.59404"
-     inkscape:cy="110.59307"
+     inkscape:zoom="1.3095753"
+     inkscape:cx="347.05909"
+     inkscape:cy="336.3686"
      inkscape:window-width="1846"
      inkscape:window-height="1016"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g8987"
+     inkscape:current-layer="g9416"
      inkscape:snap-global="false"
      fit-margin-top="0"
      fit-margin-left="0"
@@ -302,12 +302,12 @@
       <circle
          style="fill:#f6f906;fill-opacity:1;stroke:none;stroke-width:3.4;stroke-opacity:1"
          id="path9915-3"
-         cx="66.060822"
-         cy="179.82324"
+         cx="61.378445"
+         cy="152.93016"
          r="3.3758767"
          inkscape:label="target">
         <desc
-           id="desc3445">&quot;z&quot;:30</desc>
+           id="desc3445">&quot;z&quot;:0</desc>
       </circle>
     </g>
   </g>
