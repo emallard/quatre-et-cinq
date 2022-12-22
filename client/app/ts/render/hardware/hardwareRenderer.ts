@@ -86,7 +86,10 @@ module qec {
 
                 generatedPart += this.text.declareUniforms() + '\n';
                 generatedPart += this.text.generateDist() + '\n';
-                generatedPart += this.text.generateColor() + '\n';
+                if (settings.noColor)
+                    generatedPart += `vec3 getColor(vec3 pos, vec3 normal) { return vec3(1.0,1.0,1.0); }`;
+                else
+                    generatedPart += this.text.generateColor() + '\n';
             }
 
             let generatedLight = '';

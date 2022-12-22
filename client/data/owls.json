@@ -1,0 +1,16 @@
+{
+    "array":[
+        {
+            "sceneName":"data/owl-0.svg",
+            "isHardware":true
+        },
+        {
+            "sceneName":"data/owl-1.svg",
+            "isHardware":true
+        },
+        {
+            "sceneName":"data/owl-2.svg",
+            "isHardware":true
+        }
+    ]
+}

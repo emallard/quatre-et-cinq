@@ -47,14 +47,18 @@ module qec {
         showBoundingBox = false;
         reflection = false;
         rayToBounds = false;//true;
+        noColor=false;
 
-        getDist: (Float32Array) => number;
+        getDist: (pos:Float32Array) => number;
+        getColor: (pos:Float32Array, out:Float32Array) => void;
 
         updateShader(settings:renderSettings)
         {
             this.getDist = new renderPixelGetDist().generateGetDist(settings.sdArray);
+            this.getColor = new renderPixelGetDist().generateGetColor(settings.sdArray);
             this.lights = settings.lights;
             this.shadows = settings.shadows;
+            this.noColor = settings.noColor;
         }
 
         render (ro:Float32Array, rd:Float32Array, debugInfo:boolean = false):Float32Array 
@@ -132,9 +136,18 @@ module qec {
 
                 
                 //this.sd.getMaterial(outPos).getColor(this.sdColor);
-                this.sdColor[0] = 1;
-                this.sdColor[1] = 1;
-                this.sdColor[2] = 1;
+                //this.sdColor[0] = 1;
+                //this.sdColor[1] = 1;
+                //this.sdColor[2] = 1;
+                if (this.noColor)
+                {
+                    vec3.set(this.sdColor, 1, 1, 1);
+                }
+                else
+                {
+                    this.getColor(outPos, this.sdColor);
+                }
+                
 
                 var KA = 0.2;
                 var KD = 0.7;

@@ -5,7 +5,7 @@ module qec {
         tmp = vec3.create();
         tmpBoundingBox = vec3.create();
 
-        getDistGrid(hd: sdGrid, pos:Float32Array, d:number): number
+        getDistGrid(hd: sdGrid, pos:Float32Array, d:number, col:Float32Array): number
         {            
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
             let p = this.tmp;
@@ -19,7 +19,12 @@ module qec {
             var dMin = Math.min(d0, d1);
             dMin -= hd.thickness;
             let dGrid = Math.max(boxDist, dMin);
-            return Math.min(d, dGrid);
+            let result = Math.min(d, dGrid);
+            if (col != null && result < d)
+            {
+                vec3.copy(col, hd.material.diffuse);
+            }
+            return result;
         }
 
 

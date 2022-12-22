@@ -56,8 +56,9 @@ module qec {
                     float dotProduct = originToPointX*(${sd.profileAxis[0].toFixed(3)}) + originToPointY*(${sd.profileAxis[1].toFixed(3)});
                     ${this.getDistProfile(name+'.profileTexture', sd.profile, 'dotProduct', 'd1')};
 
+                    float previousD = d;
                     d = min(d, max(d0, max(d1, distToBbox)));
-                    ${assignColor ? 'if (d == d0) { color = '+ name + '.diffuse; }' : ''}
+                    ${assignColor ? 'if (d != previousD) { color = '+ name + '.diffuse; }' : ''}
                 }
                 }
             }

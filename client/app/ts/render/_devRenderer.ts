@@ -6,11 +6,12 @@ module qec {
         isParallel = false;
         isHardware = false;
         isBoth = false;
-        isAnimate = false;
+        isAnimated = false;
         isFullScreen = false;
 
         isDirectionalLight = false;
         showGrid = false;
+        noColor=false;
 
         debugDistanceField = false;
         renderSteps = false;
@@ -115,13 +116,14 @@ module qec {
                 this.renderSettings.shadows = false;
                 this.renderSettings.refraction = false;
                 this.renderSettings.boundingBoxes = false;
+                this.renderSettings.noColor = this.settings.noColor;
 
                 let scene = new qec.scene();
                 scene.create(sceneDTO, () => {
                     this.renderSettings.sdArray = sceneDTO.objects.map(x => x['__instance']);
                     this.renderSettings.camera = sceneDTO.cameras[0]['__instance'];
                     let camTarget = this.renderSettings.camera.target;
-
+                    camTarget[2] = 0;
                     // grid
 
                     if (this.settings.showGrid)
@@ -161,10 +163,13 @@ module qec {
                         this.renderSettings.lights = [];
                         {
                             let lightDto = new spotLightDTO()
-                            let dist = 30;
-                            lightDto.position = [camTarget[0]-dist, camTarget[0]-dist, camTarget[0]+dist];
+                            let dist = 300;
                             lightDto.direction= [1, 1, -1];
-                            lightDto.intensity = 0.5;
+                            lightDto.position = [
+                                camTarget[0]-dist*lightDto.direction[0], 
+                                camTarget[1]-dist*lightDto.direction[1],
+                                camTarget[2]-dist*lightDto.direction[2]];
+                            lightDto.intensity = 0.8;
 
                             let light = new spotLight();
                             light.createFrom(lightDto);
@@ -172,11 +177,13 @@ module qec {
                         }
                         {
                             let lightDto = new spotLightDTO()
-                            let camTarget = this.renderSettings.camera.target;
-                            let dist = 30;
-                            lightDto.position = [camTarget[0]+dist, camTarget[0]-dist, camTarget[0]-dist];
-                            lightDto.direction= [-1, 1, 1];
-                            lightDto.intensity = 0.3;
+                            let dist = 300;
+                            lightDto.direction = [-1, 1, -1];
+                            lightDto.position = [
+                                camTarget[0]-dist*lightDto.direction[0], 
+                                camTarget[1]-dist*lightDto.direction[1],
+                                camTarget[2]-dist*lightDto.direction[2]];
+                            lightDto.intensity = 0.1;
 
                             let light = new spotLight();
                             light.createFrom(lightDto);
@@ -185,7 +192,7 @@ module qec {
                         
                     }
 
-                    if (this.settings.isAnimate)
+                    if (this.settings.isAnimated)
                     {
                         this.renderRotate();
                     }

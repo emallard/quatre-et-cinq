@@ -58,8 +58,9 @@ module qec {
                         vec4 textureColor = texture2D(${name}.topTexture, uv2);
                         float d0 = textureColor[0];
                         
+                        float previousD = d;
                         d = min(d, max(d0, distToBbox));
-                        ${assignColor ? 'if (d == d0) { color = '+ name + '.diffuse; }' : ''}
+                        ${assignColor ? 'if (d != previousD) { color = '+ name + '.diffuse; }' : ''}
                     }
                 }
                 

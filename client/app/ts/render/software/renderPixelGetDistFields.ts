@@ -7,7 +7,7 @@ module qec {
         private tmp2 = vec3.create();
         private color = vec4.create();
 
-        getDistFields1(hd: sdFields1, pos:Float32Array, d:number)
+        getDistFields1(hd: sdFields1, pos:Float32Array, d:number, col:Float32Array)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
             vec3.set(this.tmpBoundingBox, this.tmp[0], this.tmp[1], this.tmp[2] - hd.boundingBox[2]);
@@ -23,10 +23,15 @@ module qec {
             
             let d0 = this.getDistTop(hd.top, p);
 
-            return Math.max(boxDist, d0);
+            let result = Math.max(boxDist, d0);
+            if (col != null && result < d)
+            {
+                vec3.copy(col, hd.material.diffuse);
+            }
+            return result;
         }
 
-        getDistFields2(hd: sdFields2, pos:Float32Array, d:number)
+        getDistFields2(hd: sdFields2, pos:Float32Array, d:number, col:Float32Array)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
             vec3.set(this.tmpBoundingBox, this.tmp[0], this.tmp[1], this.tmp[2] - hd.boundingBox[2]);
@@ -51,10 +56,15 @@ module qec {
             let dotProduct = originToPointX*hd.profileAxis[0] + originToPointY*hd.profileAxis[1];
             let d1 = this.getDistProfile(hd.profile, p, dotProduct);
 
-            return Math.min(d, Math.max(d0, d1, boxDist));
+            let result = Math.min(d, Math.max(d0, d1, boxDist));
+            if (col != null && result < d)
+            {
+                vec3.copy(col, hd.material.diffuse);
+            }
+            return result;
         }
 
-        getDistFields2Radial(hd: sdFields2Radial, pos:Float32Array, d:number)
+        getDistFields2Radial(hd: sdFields2Radial, pos:Float32Array, d:number, col:Float32Array)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
             vec3.set(this.tmpBoundingBox, this.tmp[0], this.tmp[1], this.tmp[2] - hd.boundingBox[2]);
@@ -78,10 +88,15 @@ module qec {
             let length = Math.sqrt(originToPointX*originToPointX + originToPointY*originToPointY);
             let d1 = this.getDistProfile(hd.profile, p, length);
 
-            return Math.min(d, Math.max(d0, d1, boxDist));
+            let result = Math.min(d, Math.max(d0, d1, boxDist));
+            if (col != null && result < d)
+            {
+                vec3.copy(col, hd.material.diffuse);
+            }
+            return result;
         }
 
-        getDistFields2Border(hd: sdFields2Border, pos:Float32Array, d:number)
+        getDistFields2Border(hd: sdFields2Border, pos:Float32Array, d:number, col:Float32Array)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
             vec3.set(this.tmpBoundingBox, this.tmp[0], this.tmp[1], this.tmp[2] - hd.boundingBox[2]);
@@ -100,10 +115,16 @@ module qec {
             let distanceFromTop = p[2] - hd.thickness;
             let d1 = this.getDistBorder(hd.border, d0, distanceFromTop);
             
-            return Math.min(d, d1);//Math.max(d1, boxDist));
+            let result = Math.min(d, d1);//Math.max(d1, boxDist));
+
+            if (col != null && result < d)
+            {
+                vec3.copy(col, hd.material.diffuse);
+            }
+            return result;
         }
 
-        getDistFields2ProfileBorder(hd: sdFields2ProfileBorder, pos:Float32Array, d:number)
+        getDistFields2ProfileBorder(hd: sdFields2ProfileBorder, pos:Float32Array, d:number, col:Float32Array)
         {
             vec3.transformMat4(this.tmp, pos, hd.inverseTransform);
             vec3.set(this.tmpBoundingBox, this.tmp[0], this.tmp[1], this.tmp[2] - hd.boundingBox[2]);
@@ -140,7 +161,13 @@ module qec {
             }
             
 
-            return Math.min(d, Math.max(d0, d1, boxDist));
+            let result = Math.min(d, Math.max(d0, d1, boxDist));
+
+            if (col != null && result < d)
+            {
+                vec3.copy(col, hd.material.diffuse);
+            }
+            return result;
         }
 
         getDistTop(top:partTop, p:Float32Array):number

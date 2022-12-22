@@ -9,6 +9,8 @@ module qec
         camera:camera = new camera();
         shadows:boolean;
         refraction:boolean;
+
         boundingBoxes:boolean;
+        noColor=false;
     }
 }

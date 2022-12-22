@@ -1,10 +1,11 @@
-http://localhost:8000/svg.html?scene=owl-profile-axis.svg&isHardware=1&isFullScreen=1&isAnimate=1
+http://localhost:8000/svg.html?scene=owl-profile-axis.svg&isHardware=1&isFullScreen=1&isAnimated=1
 
 [X] p[2] -=, p[2] +=
-[ ] Spot light
+[X] Spot light
 [X] Comparaison facile software / hardware
 [X] Enlever debug texture
-[ ] Perf : start with a ray to full scene boundingbox collision
 [-] Mettre une grille en fond
+[ ] getColor
+[ ] Exmples Hibou avec profile : ventre en dent de scie, bec courbé, bordures?
 [ ] Feuille d'érable courbée
-[ ] Hibou avec profile : ventre en dent de scie, bec courbé, bordures?
+[ ] Perf : start with a ray to full scene boundingbox collision

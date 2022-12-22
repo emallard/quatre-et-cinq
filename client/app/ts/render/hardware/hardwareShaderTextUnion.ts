@@ -56,14 +56,13 @@ module qec {
             let txt = `vec3 getColor(vec3 pos, vec3 normal) {
                 float d = 6666.0;
                 vec3 color = vec3(1.0,1.0,1.0);
-                //vec3 color = normal;
                 `;
-            /*
+            
             for (let sh of this.inner)
             {
                 txt += sh.generateDist(true);
             }
-            */
+            
             txt += 'return color;}';
             return txt;
         }
