@@ -1,31 +1,9 @@
 {
-    "start": 0,
-    "end": 5,
-    "scenes": [
-        "owl-0.svg",
-        "owl-1.svg"
-    ],
+    "start":0,
+    "end":5,
+    "scenes": ["data/owl-0.svg", "data/owl-1.svg"],
     "segments": [
-        [
-            1,
-            2,
-            "body",
-            "thickness"
-        ],
-        [
-            2,
-            3,
-            "eye_l",
-            [
-                "thickness",
-                "redMaterial"
-            ]
-        ],
-        [
-            2,
-            3,
-            "eye_r",
-            "thickness"
-        ]
+        [2, 3, "eye_l", ["thickness", "redMaterial"]],
+        [2, 3, "eye_r", "thickness"]
     ]
 }

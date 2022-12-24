@@ -9,7 +9,7 @@ module qec {
             req.onreadystatechange = () => {
                 if (req.readyState == 4) {
                     if (req.status == 200) {
-                        let sc = this.loadContent(req.responseText, done);
+                        this.loadContent(req.responseText, done);
                     }
                     else {
                         console.error("Erreur pendant le chargement de la page.\n");
@@ -19,7 +19,7 @@ module qec {
             req.send(null);
         }
 
-        loadContent(content: string, done: (sc: scSceneDTO) => void) {
+        loadContent(content: string, done: (sc: scSceneDTO) => void): void {
             let parser = new DOMParser();
             let doc = parser.parseFromString(content, "image/svg+xml");
             let svgRootElement = doc.querySelector('svg');
@@ -33,8 +33,6 @@ module qec {
                 scene.dtos.push(...sdFieldsArray);
                 done(scene);
             });
-
-            return scene;
         }
 
         getSdFields(elt: SVGGraphicsElement, done: (x: any[]) => void) {
@@ -52,6 +50,7 @@ module qec {
 
         getSdFieldsOne(thicknessElt: SVGGraphicsElement, done: (x: any) => void) {
             let parent = <SVGGraphicsElement>thicknessElt.parentNode;
+            let svgId = this.getLabel(parent);
 
             console.log("getSdFieldsOne " + this.getLabel(parent));
 
@@ -148,6 +147,7 @@ module qec {
 
                     let sdFields: sdFields2ProfileBorderDTO = {
                         type: sdFields2ProfileBorderDTO.TYPE,
+                        svgId: svgId,
                         material: material,
                         transform: transform,
                         top: top,
@@ -177,6 +177,7 @@ module qec {
 
                     let sdFields: sdFields2DTO = {
                         type: sdFields2DTO.TYPE,
+                        svgId: svgId,
                         material: material,
                         transform: transform,
 
@@ -198,6 +199,7 @@ module qec {
 
                     let sdFields: sdFields2RadialDTO = {
                         type: sdFields2RadialDTO.TYPE,
+                        svgId: svgId,
                         material: material,
                         transform: transform,
 
@@ -213,6 +215,7 @@ module qec {
                 else if (borderFrameElt != null) {
                     let sdFields: sdFields2BorderDTO = {
                         type: sdFields2BorderDTO.TYPE,
+                        svgId: svgId,
                         top: top,
                         thickness: height,
                         border: this.createBorder(thicknessElt),
@@ -225,7 +228,7 @@ module qec {
                 else {
                     let sdFields: sdFields1DTO = {
                         type: sdFields1DTO.TYPE,
-                        svgId: parent.id,
+                        svgId: svgId,
                         top: top,
                         thickness: height,
                         material: material,

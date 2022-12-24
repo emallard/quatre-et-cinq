@@ -4,7 +4,7 @@ module qec {
     export class sdFields2BorderDTO {
         static TYPE: string = 'sdFields2BorderDTO';
         type: string = sdFields2BorderDTO.TYPE;
-        svgId?: string;
+        svgId: string;
         top: partTopDTO;
         thickness: number;
 
