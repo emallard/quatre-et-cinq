@@ -10,7 +10,8 @@
         "**/node_modules": true,
         "**/typings": false,
         "**/_site": true,
-        "**/vendor": true
+        "**/vendor": true,
+        "**/libs": true
     },
     "files.watcherExclude": {
         "**/.git/objects/**": true,

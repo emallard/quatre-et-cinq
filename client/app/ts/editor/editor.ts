@@ -177,12 +177,7 @@ module qec {
                     sdG.size = 0.063;
                     sdG.thickness = 0.0001;
 
-                    var sdB = new sdBorder();
-                    sdB.borderIn = 0.0001;
-                    sdB.borderOut = 0;
-                    sdB.sd = objs[i].sd;
-
-                    sdEffect.array = [sdB, sdG];
+                    sdEffect.array = [sdG];
                     this.sdUnionWithHoleSd.array.push(sdEffect);
                 }
 

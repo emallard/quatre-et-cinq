@@ -1,7 +1,6 @@
 module qec {
-    
-    export class devRendererSettings 
-    {
+
+    export class devRendererSettings {
         sceneName = '';
         isParallel = false;
         isHardware = false;
@@ -11,7 +10,8 @@ module qec {
 
         isDirectionalLight = false;
         showGrid = false;
-        noColor=false;
+        noColor = false;
+        generateVideo = true;
 
         debugDistanceField = false;
         renderSteps = false;
@@ -28,50 +28,42 @@ module qec {
         // p2.isHardware = getParameterByName('isHardware') == '1';
         // p2.renderSteps = getParameterByName('renderSteps') == '1';
 
-        settings: devRendererSettings;
-
+        settings: devRendererSettings = new devRendererSettings();
         renderSettings = new renderSettings();
 
-        setSettings(settings: devRendererSettings)
-        {
-            this.settings = settings;
-        }
-
-        start(element: HTMLElement) {
+        start(element: HTMLElement, override: any) {
+            for (let key in override) {
+                this.settings[key] = override[key];
+            }
             this.element = element;
             this.createScene();
         }
 
         createScene() {
-            new svgSceneLoader().loadUrl(this.settings.sceneName, sceneDTO =>
-            {
+            new svgSceneLoader().loadUrl(this.settings.sceneName, sceneDTO => {
                 console.log('createScene continues');
-                
+
                 // updater
                 this.updater = new updater();
                 this.updater.debugInfoInCanvas = this.settings.debugDistanceField;
 
                 // renderers
                 let w = 600;
-                let h = 600; 
-                if (this.settings.isFullScreen)
-                {
+                let h = 600;
+                if (this.settings.isFullScreen) {
                     w = window.innerWidth;
-                    h = window.innerHeight; 
+                    h = window.innerHeight;
                 }
 
-                if (this.settings.isHardware || this.settings.isBoth)
-                {
+                if (this.settings.isHardware || this.settings.isBoth) {
                     let hr = new hardwareRenderer();
                     let elt = document.createElement('div');
-                    if (this.settings.isBoth)
-                    {
+                    if (this.settings.isBoth) {
                         elt.style.border = 'solid 2px blue';
                         elt.style.margin = '2px';
                         elt.style.display = 'inline-block';
                     }
-                    else
-                    {
+                    else {
                         elt.style.display = 'fixed';
                         elt.style.top = '0px;'
                         elt.style.left = '0px;'
@@ -83,19 +75,16 @@ module qec {
                     this.updater.texturePacker.isHardware = true;
                 }
 
-                if (!this.settings.isHardware || this.settings.isBoth)
-                {   
+                if (!this.settings.isHardware || this.settings.isBoth) {
                     let sr = new simpleRenderer();
                     sr.setRenderSteps(this.settings.renderSteps);
                     let elt = document.createElement('div');
-                    if (this.settings.isBoth)
-                    {
+                    if (this.settings.isBoth) {
                         elt.style.border = 'solid 2px red';
                         elt.style.margin = '2px';
                         elt.style.display = 'inline-block';
                     }
-                    else
-                    {
+                    else {
                         elt.style.display = 'fixed';
                         elt.style.top = '0px;'
                         elt.style.left = '0px;'
@@ -105,109 +94,39 @@ module qec {
 
                     this.renderers.push(sr);
                 }
-                
-                
 
-                this.renderers.forEach(r =>  {
-                    
-                });
-    
                 this.renderSettings = new renderSettings();
                 this.renderSettings.shadows = false;
                 this.renderSettings.refraction = false;
                 this.renderSettings.boundingBoxes = false;
                 this.renderSettings.noColor = this.settings.noColor;
 
-                let scene = new qec.scene();
-                scene.create(sceneDTO, () => {
-                    this.renderSettings.sdArray = sceneDTO.objects.map(x => x['__instance']);
-                    this.renderSettings.camera = sceneDTO.cameras[0]['__instance'];
-                    let camTarget = this.renderSettings.camera.target;
-                    camTarget[2] = 0;
-                    // grid
+                let loadedOjects = new qec.sceneLoader().load(sceneDTO.dtos);
 
-                    if (this.settings.showGrid)
-                    {
-                        let transform = mat4.create();
-                        mat4.identity(transform);
-                        mat4.translate(transform, transform, vec3.fromValues(camTarget[0], camTarget[1], 0));
-                        let grid = new sdGrid();
-                        grid.createFrom({
-                            type : sdGridDTO.TYPE,
-                            size : 10,
-                            thickness:0.5,
-                            material: {
-                                type: materialDTO.TYPE,
-                                diffuse: [1, 1, 1]
-                            },
-                            transform: transform
-                        });
-                        this.renderSettings.sdArray.push(grid);
-                    }
+                this.renderSettings.sdArray = loadedOjects.filter(x => instanceOfSignedDistance(x));
+                this.renderSettings.camera = loadedOjects.filter(x => x instanceof camera)[0];
+                let camTarget = this.renderSettings.camera.target;
+                camTarget[2] = 0;
+                // grid
 
-                    // light
+                if (this.settings.showGrid)
+                    this.renderSettings.sdArray.push(devRendererTools.createGrid(camTarget));
 
-                    if (this.settings.isDirectionalLight)
-                    {
-                        let lightDto = new directionalLightDTO();
-                        lightDto.direction= [1, 1, -1];
-                        lightDto.intensity = 1;
+                // light
+                this.renderSettings.lights = devRendererTools.createLights(this.settings.isDirectionalLight, camTarget);
 
-                        let light = new directionalLight();
-                        light.createFrom(lightDto);
-                        
-                        this.renderSettings.lights = [light];
-                    }
-                    else
-                    {
-                        this.renderSettings.lights = [];
-                        {
-                            let lightDto = new spotLightDTO()
-                            let dist = 300;
-                            lightDto.direction= [1, 1, -1];
-                            lightDto.position = [
-                                camTarget[0]-dist*lightDto.direction[0], 
-                                camTarget[1]-dist*lightDto.direction[1],
-                                camTarget[2]-dist*lightDto.direction[2]];
-                            lightDto.intensity = 0.8;
-
-                            let light = new spotLight();
-                            light.createFrom(lightDto);
-                            this.renderSettings.lights.push(light);
-                        }
-                        {
-                            let lightDto = new spotLightDTO()
-                            let dist = 300;
-                            lightDto.direction = [-1, 1, -1];
-                            lightDto.position = [
-                                camTarget[0]-dist*lightDto.direction[0], 
-                                camTarget[1]-dist*lightDto.direction[1],
-                                camTarget[2]-dist*lightDto.direction[2]];
-                            lightDto.intensity = 0.1;
-
-                            let light = new spotLight();
-                            light.createFrom(lightDto);
-                            this.renderSettings.lights.push(light);
-                        }
-                        
-                    }
-
-                    if (this.settings.isAnimated)
-                    {
-                        this.renderRotate();
-                    }
-                    else
-                    {
-                        this.render();
-                    }
-                });
+                if (this.settings.isAnimated) {
+                    this.renderRotate();
+                }
+                else {
+                    this.render();
+                }
             });
         }
 
 
         render() {
-            this.updater.update(this.renderSettings.sdArray, () => 
-            {
+            this.updater.update(this.renderSettings.sdArray, () => {
                 this.renderers.forEach(r => {
                     r.updateShader(this.renderSettings);
                     r.render(this.renderSettings);
@@ -221,13 +140,15 @@ module qec {
                 this.renderer.renderDebug(x, y, this.renderSettings);
         }*/
 
-        previousNow:number;
+        previousNow: number;
         rotateLoop = new rotateLoop();
         frameCount = 0;
         t = 0;
         totalT = 0;
 
-        frameDiv:HTMLElement;
+        frameDiv: HTMLElement;
+
+        video = new video();
         renderRotate() {
             this.frameDiv = document.createElement('div')
             this.frameDiv.style.position = 'fixed';
@@ -239,8 +160,7 @@ module qec {
             this.previousNow = Date.now();
             this.rotateLoop.setRenderSettings(this.renderSettings);
 
-            this.updater.update(this.renderSettings.sdArray, () => 
-            {
+            this.updater.update(this.renderSettings.sdArray, () => {
                 this.renderers.forEach(r => {
                     r.updateShader(this.renderSettings);
                 });
@@ -248,17 +168,20 @@ module qec {
             });
         }
 
-        renderRotateOne()
-        {
+        renderRotateOne() {
             let now = Date.now();
-            let dt = (now - this.previousNow)/1000;
+            let dt = (now - this.previousNow) / 1000;
+
+            if (this.settings.generateVideo) {
+                dt = 0.02;
+            }
+
             this.t += dt;
             this.totalT += dt;
             this.frameCount++;
             this.previousNow = now;
 
-            while (this.t > 1)
-            {
+            while (this.t > 1) {
                 this.frameDiv.innerText = '' + this.frameCount;
                 this.t -= 1;
                 this.frameCount = 0;
@@ -269,8 +192,18 @@ module qec {
                 r.updateShader(this.renderSettings);
                 r.render(this.renderSettings);
             });
-            if (this.totalT < 20)
+
+            if (this.settings.generateVideo) {
+                this.video.addCanvas(this.renderers[0].getCanvas());
+            }
+
+            if (this.totalT < 10)
                 requestAnimationFrame(() => this.renderRotateOne());
+
+            else {
+                if (this.settings.generateVideo)
+                    this.video.finalizeVideo();
+            }
         }
     }
 }

@@ -1,9 +1,9 @@
 module qec {
     export class svgSceneLoader {
 
-        debug:boolean = false;
+        debug: boolean = false;
 
-        loadUrl(src:string, done: (sc:scSceneDTO) => void) {
+        loadUrl(src: string, done: (sc: scSceneDTO) => void) {
             var req = new XMLHttpRequest();
             req.open('GET', src, true);
             req.onreadystatechange = () => {
@@ -19,45 +19,39 @@ module qec {
             req.send(null);
         }
 
-        loadContent(content:string, done: (sc:scSceneDTO) => void)
-        {
+        loadContent(content: string, done: (sc: scSceneDTO) => void) {
             let parser = new DOMParser();
             let doc = parser.parseFromString(content, "image/svg+xml");
             let svgRootElement = doc.querySelector('svg');
 
-            let scene = new scSceneDTO()
-            {
+            let scene = new scSceneDTO();
+            scene.dtos = [];
 
-            }
+            scene.dtos.push(...this.getCameras(svgRootElement));
 
-            scene.cameras = this.getCameras(svgRootElement);
-
-            this.getSdFields(svgRootElement, (sdFieldsArray) => { 
-                scene.objects = sdFieldsArray; 
+            this.getSdFields(svgRootElement, (sdFieldsArray) => {
+                scene.dtos.push(...sdFieldsArray);
                 done(scene);
             });
-            
+
             return scene;
         }
 
-        getSdFields(elt: SVGGraphicsElement, done:(x:any[])=>void)
-        {
-            let all:sdFields2DTO[] = [];
+        getSdFields(elt: SVGGraphicsElement, done: (x: any[]) => void) {
+            let all: sdFields2DTO[] = [];
             let groups = elt.querySelectorAll("g");
-            let r:runAll = new runAll();
+            let r: runAll = new runAll();
             groups.forEach(x => {
-                if (this.getLabel(x) == "thickness")
-                {
-                    r.push(_done => this.getSdFieldsOne(x, (sdFields) => { all.push(sdFields); _done();}));
+                if (this.getLabel(x) == "thickness") {
+                    r.push(_done => this.getSdFieldsOne(x, (sdFields) => { all.push(sdFields); _done(); }));
                 }
             });
 
             r.run(() => done(all));
         }
 
-        getSdFieldsOne(thicknessElt: SVGGraphicsElement, done:(x:any)=>void)
-        {
-            let parent = <SVGGraphicsElement> thicknessElt.parentNode;
+        getSdFieldsOne(thicknessElt: SVGGraphicsElement, done: (x: any) => void) {
+            let parent = <SVGGraphicsElement>thicknessElt.parentNode;
 
             console.log("getSdFieldsOne " + this.getLabel(parent));
 
@@ -73,7 +67,7 @@ module qec {
 
             let img = new Image();
             img.onload = () => {
-                
+
                 // real bounds
                 console.log("img dimension : " + img.width + "," + img.height);
                 let canvas = document.createElement('canvas');
@@ -84,16 +78,16 @@ module qec {
                 ctx.drawImage(img, 0, 0);
                 let pixelBounds = this.getBoundingBoxInPx(canvas);
                 let px = 3.779528;
-                let realBounds = [pixelBounds[0]/px, pixelBounds[1]/px, pixelBounds[2]/px, pixelBounds[3]/px];
+                let realBounds = [pixelBounds[0] / px, pixelBounds[1] / px, pixelBounds[2] / px, pixelBounds[3] / px];
                 //console.log("bounding box dimension in pixels : ", realBounds);
 
                 let parser = new DOMParser();
                 let doc = parser.parseFromString(src, "image/svg+xml");
                 let svgRootElement = doc.querySelector('svg');
 
-                svgRootElement.setAttribute('viewBox', realBounds[0]+' '+realBounds[1]+' '+(realBounds[2]-realBounds[0])+' '+(realBounds[3]-realBounds[1]));
-                svgRootElement.setAttribute('width', (realBounds[2]-realBounds[0])+'mm');
-                svgRootElement.setAttribute('height', (realBounds[3]-realBounds[1])+'mm');
+                svgRootElement.setAttribute('viewBox', realBounds[0] + ' ' + realBounds[1] + ' ' + (realBounds[2] - realBounds[0]) + ' ' + (realBounds[3] - realBounds[1]));
+                svgRootElement.setAttribute('width', (realBounds[2] - realBounds[0]) + 'mm');
+                svgRootElement.setAttribute('height', (realBounds[3] - realBounds[1]) + 'mm');
 
                 // (Debug) Show the extracted SVG:
                 // document.body.appendChild(svgRootElement);
@@ -102,12 +96,12 @@ module qec {
                 let topImage = new scImageDTO();
                 topImage.src = "data:image/svg+xml;base64," + btoa(svg_xml);
 
-                let cx = (realBounds[0]+realBounds[2])/2;
-                let cy = (realBounds[1]+realBounds[3])/2;
-                let halfWidth = (realBounds[2]-realBounds[0])/2;
-                let halfHeight = (realBounds[3]-realBounds[1])/2;
+                let cx = (realBounds[0] + realBounds[2]) / 2;
+                let cy = (realBounds[1] + realBounds[3]) / 2;
+                let halfWidth = (realBounds[2] - realBounds[0]) / 2;
+                let halfHeight = (realBounds[3] - realBounds[1]) / 2;
                 let topBounds = [-halfWidth, -halfHeight, halfWidth, halfHeight];
-                let top: partTopDTO = {topImage: topImage, topBounds: topBounds};
+                let top: partTopDTO = { topImage: topImage, topBounds: topBounds };
 
                 let transform = mat4.create();
 
@@ -121,23 +115,22 @@ module qec {
                 let height = parseFloat(textContentSplit[1]);
 
                 // transform
-                mat4.translate(transform , transform, vec3.fromValues(cx, cy, z));
+                mat4.translate(transform, transform, vec3.fromValues(cx, cy, z));
 
                 // material
                 let color = this.getColorIgnoringThickness(parent);
                 if (color == null)
                     color = [0.5, 0.5, 0.5];
                 let material = {
-                    type:'materialDTO',
-                    diffuse : color
+                    type: 'materialDTO',
+                    diffuse: color
                 };
 
                 // profile line in realBounds matrix
                 let startElt = this.getByLabel(thicknessElt, "start");
                 let radiusElt = this.getByLabel(thicknessElt, "radius");
                 let borderFrameElt = this.getByLabel(thicknessElt, "border_frame");
-                if (startElt != null && borderFrameElt != null)
-                {
+                if (startElt != null && borderFrameElt != null) {
                     let start = this.getXY(thicknessElt, "start");
                     let end = this.getXY(thicknessElt, "end");
                     start.y = this.toLeftHanded(start.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
@@ -147,13 +140,13 @@ module qec {
                     start.y -= cy;
                     end.x -= cx;
                     end.y -= cy;
-                    
+
                     let profileOrigin = [start.x, start.y];
                     let profileAxis = [end.x - start.x, end.y - start.y];
 
                     let width = vec2.length(new Float32Array(profileAxis));
-                    
-                    let sdFields:sdFields2ProfileBorderDTO = {
+
+                    let sdFields: sdFields2ProfileBorderDTO = {
                         type: sdFields2ProfileBorderDTO.TYPE,
                         material: material,
                         transform: transform,
@@ -167,8 +160,7 @@ module qec {
                     };
                     done(sdFields);
                 }
-                else if (startElt != null)
-                {
+                else if (startElt != null) {
                     let start = this.getXY(thicknessElt, "start");
                     let end = this.getXY(thicknessElt, "end");
                     start.y = this.toLeftHanded(start.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
@@ -178,16 +170,16 @@ module qec {
                     start.y -= cy;
                     end.x -= cx;
                     end.y -= cy;
-                    
+
                     let profileOrigin = [start.x, start.y];
                     let profileAxis = [end.x - start.x, end.y - start.y];
                     let width = vec2.length(new Float32Array(profileAxis));
 
-                    let sdFields:sdFields2DTO = {
+                    let sdFields: sdFields2DTO = {
                         type: sdFields2DTO.TYPE,
                         material: material,
                         transform: transform,
-                        
+
                         top: top,
 
                         profile: this.createProfile(thicknessElt, width, height),
@@ -196,21 +188,20 @@ module qec {
                     };
                     done(sdFields);
                 }
-                else if (radiusElt != null)
-                {
+                else if (radiusElt != null) {
                     let radius = this.getXYR(thicknessElt, "radius");
                     radius.y = this.toLeftHanded(radius.y, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
                     radius.x -= cx;
                     radius.y -= cy;
 
                     let width = radius.r;
-                    
-                    let sdFields:sdFields2RadialDTO = {
+
+                    let sdFields: sdFields2RadialDTO = {
                         type: sdFields2RadialDTO.TYPE,
                         material: material,
                         transform: transform,
-                        
-                    top: top,
+
+                        top: top,
 
                         profile: this.createProfile(thicknessElt, width, height),
 
@@ -219,27 +210,26 @@ module qec {
                     };
                     done(sdFields);
                 }
-                else if (borderFrameElt != null)
-                {
-                    let sdFields:sdFields2BorderDTO = {
+                else if (borderFrameElt != null) {
+                    let sdFields: sdFields2BorderDTO = {
                         type: sdFields2BorderDTO.TYPE,
                         top: top,
                         thickness: height,
                         border: this.createBorder(thicknessElt),
-                        
+
                         material: material,
-                        transform:transform
+                        transform: transform
                     }
                     done(sdFields);
                 }
-                else
-                {
-                    let sdFields:sdFields1DTO = {
+                else {
+                    let sdFields: sdFields1DTO = {
                         type: sdFields1DTO.TYPE,
+                        svgId: parent.id,
                         top: top,
                         thickness: height,
                         material: material,
-                        transform:transform
+                        transform: transform
                     }
                     done(sdFields);
                 }
@@ -247,19 +237,17 @@ module qec {
             img.src = "data:image/svg+xml;base64," + btoa(src);
         }
 
-        createProfile(thicknessElt: SVGGraphicsElement, width:number, height: number):partProfileDTO
-        {
+        createProfile(thicknessElt: SVGGraphicsElement, width: number, height: number): partProfileDTO {
             let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height, '');
             let profileImage = new scImageDTO();
             profileImage.src = "data:image/svg+xml;base64," + btoa(profileSrc);
             return {
                 profileImage: profileImage,
-                profileBounds : profileBounds,
+                profileBounds: profileBounds,
             }
         }
 
-        createBorder(thicknessElt: SVGGraphicsElement):partBorderDTO
-        {
+        createBorder(thicknessElt: SVGGraphicsElement): partBorderDTO {
             // height
             let borderDimensionsElt = this.getByLabel(thicknessElt, 'border_dimensions');
             let borderDimensionstspan = borderDimensionsElt.children.item(0);
@@ -276,16 +264,14 @@ module qec {
             }
         }
 
-        createSvgFromPoints(width:number, height: number, points:number[]):string
-        {
+        createSvgFromPoints(width: number, height: number, points: number[]): string {
             var widthAndHeight = 'width="' + width + '" height="' + height + '"';
             var viewbox = 'viewbox="0 0 ' + width + ' ' + height + '"';
 
             let pointy = height - points[1];
-            var path ='M ' + points[0] + ' ' + pointy + ' ';
-            for (let i=0; i< points.length; i+=2)
-            {
-                pointy = height - points[i+1];
+            var path = 'M ' + points[0] + ' ' + pointy + ' ';
+            for (let i = 0; i < points.length; i += 2) {
+                pointy = height - points[i + 1];
                 path = path + 'L ' + points[i] + ' ' + pointy + ' ';
             }
             path = path + 'Z';
@@ -301,18 +287,17 @@ module qec {
                 + '<path d="' + path + '" fill="black"'
                 + '/>'
                 + '\n</g></svg>';
-            
-            if (this.debug)
-            {
+
+            if (this.debug) {
                 let doc = new DOMParser().parseFromString(text, "image/svg+xml");
                 let svgRootElement = doc.querySelector('svg');
                 document.body.append(svgRootElement);
             }
-            
+
             return text;
         }
 
-        getBoundingBoxInPx(canvas:HTMLCanvasElement): number[] {
+        getBoundingBoxInPx(canvas: HTMLCanvasElement): number[] {
             var ctx = canvas.getContext('2d');
             var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
@@ -346,16 +331,14 @@ module qec {
             return bounds;
         }
 
-        getCameras(svg: SVGSVGElement): cameraDTO[]
-        {
-            let cameras:cameraDTO[] = [];
+        getCameras(svg: SVGSVGElement): cameraDTO[] {
+            let cameras: cameraDTO[] = [];
             let groups = svg.querySelectorAll("g");
             groups.forEach(x => {
-                
+
                 let label = this.getLabel(x);
-                if (label.indexOf("camera") == 0)
-                {
-                    let cam = new cameraDTO() ;
+                if (label.indexOf("camera") == 0) {
+                    let cam = new cameraDTO();
                     cam.position = this.getXYZByLabel(x, 'position');
                     cam.target = this.getXYZByLabel(x, 'target');
 
@@ -365,19 +348,17 @@ module qec {
                     cam.up = [0, 0, 1];
                     cameras.push(cam);
                 }
-                
+
             });
             return cameras;
         }
 
-        toLeftHanded(y:number, height:number)
-        {
+        toLeftHanded(y: number, height: number) {
             //return y;
             return height - y;
         }
 
-        getXYZByLabel(elt:SVGGraphicsElement, name:string) : number[]
-        {
+        getXYZByLabel(elt: SVGGraphicsElement, name: string): number[] {
             let values = this.getXYDescByLabel(elt, name);
             if (values[2] == null || values[2]['z'] == null)
                 values[2] = 0;
@@ -386,19 +367,17 @@ module qec {
             return values;
         }
 
-        getXYZThicknessByLabel(elt:SVGGraphicsElement, name:string) : XYZThickness
-        {
+        getXYZThicknessByLabel(elt: SVGGraphicsElement, name: string): XYZThickness {
             let o = this.getXYDescByLabel(elt, name);
             return {
                 x: o[0],
                 y: o[1],
                 z: o[2]['z'],
-                thickness:o[2]['thickness']
+                thickness: o[2]['thickness']
             }
         }
 
-        getXYPoints(elt:SVGGraphicsElement, name:string) : XYPoints
-        {
+        getXYPoints(elt: SVGGraphicsElement, name: string): XYPoints {
             let o = this.getXYDescByLabel(elt, name);
             return {
                 x: o[0],
@@ -407,8 +386,7 @@ module qec {
             }
         }
 
-        getXY(elt:SVGGraphicsElement, name:string) : XY
-        {
+        getXY(elt: SVGGraphicsElement, name: string): XY {
             let o = this.getXYDescByLabel(elt, name);
             return {
                 x: o[0],
@@ -416,41 +394,37 @@ module qec {
             }
         }
 
-        getXYDescByLabel(elt:SVGGraphicsElement, name:string) : [number, number, any]
-        {
+        getXYDescByLabel(elt: SVGGraphicsElement, name: string): [number, number, any] {
             let positionElt = this.getByLabel(elt, name);
             var descs = positionElt.getElementsByTagName("desc");
             let z = 0;
-            let desc:any = null;
-            if (descs.length > 0)
-            {
-                let positionDesc =  descs.item(0);
+            let desc: any = null;
+            if (descs.length > 0) {
+                let positionDesc = descs.item(0);
                 let json = '{' + positionDesc.textContent + '}';
                 console.log('desc json : ', json);
                 desc = JSON.parse(json);
             }
-            
+
             let cx = parseFloat(positionElt.getAttribute('cx'));
             let cy = parseFloat(positionElt.getAttribute('cy'));
             let p = elt.ownerSVGElement.createSVGPoint();
             p.x = cx;
             p.y = cy;
 
-            while (!(elt instanceof SVGSVGElement))
-            {
+            while (!(elt instanceof SVGSVGElement)) {
                 let trans = elt.transform.baseVal.consolidate();
                 if (trans != null)
                     p = p.matrixTransform(trans.matrix);
-                elt = <SVGGraphicsElement> elt.parentNode;
+                elt = <SVGGraphicsElement>elt.parentNode;
             }
-            
+
             //let ctm = positionElt.getScreenCTM();
             //let p2 = ctm.transformPoint(p);
             return [p.x, p.y, desc];
         }
 
-        getXYR(elt:SVGGraphicsElement, name:string) : XYR
-        {
+        getXYR(elt: SVGGraphicsElement, name: string): XYR {
             let positionElt = this.getByLabel(elt, name);
 
             let cx = parseFloat(positionElt.getAttribute('cx'));
@@ -464,22 +438,19 @@ module qec {
             r.x = p.x + rx;
             r.y = p.y;
 
-            while (!(elt instanceof SVGSVGElement))
-            {
+            while (!(elt instanceof SVGSVGElement)) {
                 let trans = elt.transform.baseVal.consolidate();
-                if (trans != null)
-                {
+                if (trans != null) {
                     p = p.matrixTransform(trans.matrix);
                     r = r.matrixTransform(trans.matrix);
                 }
-                elt = <SVGGraphicsElement> elt.parentNode;
+                elt = <SVGGraphicsElement>elt.parentNode;
             }
 
-            return {x: p.x, y:p.y, r: vec2.length(vec2.fromValues(r.x-p.x, r.y-p.y))};
+            return { x: p.x, y: p.y, r: vec2.length(vec2.fromValues(r.x - p.x, r.y - p.y)) };
         }
 
-        getFrame(eltThickness:SVGGraphicsElement, width:number, height:number, prefix:string) : [string, number[]]
-        {
+        getFrame(eltThickness: SVGGraphicsElement, width: number, height: number, prefix: string): [string, number[]] {
             let frameElt = this.getByLabel(eltThickness, prefix + 'frame');
 
 
@@ -494,47 +465,43 @@ module qec {
             let h = frameElt.ownerSVGElement.createSVGPoint();
             h.x = origin.x + 0;
             h.y = origin.y + parseFloat(frameElt.getAttribute('height'));
-            
-            while (!(frameElt instanceof SVGSVGElement))
-            {
+
+            while (!(frameElt instanceof SVGSVGElement)) {
                 let trans = frameElt.transform.baseVal.consolidate();
-                if (trans != null)
-                {
+                if (trans != null) {
                     origin = origin.matrixTransform(trans.matrix);
                     w = w.matrixTransform(trans.matrix);
                     h = h.matrixTransform(trans.matrix);
                 }
-                frameElt = <SVGGraphicsElement> frameElt.parentNode;
+                frameElt = <SVGGraphicsElement>frameElt.parentNode;
             }
-            
+
             let shapeElt = this.getByLabel(eltThickness, prefix + 'shape');
             let [clonedRoot, clonedGroup] = this.extractIgnoringThickness(shapeElt);
 
             let matrix = clonedRoot.createSVGMatrix();
             matrix.e = origin.x;
             matrix.f = origin.y;
-            matrix.a = (w.x - origin.x)/width;
-            matrix.b = (w.y - origin.y)/width;
-            matrix.c = (h.x - origin.x)/height;
-            matrix.d = (h.y - origin.y)/height;
+            matrix.a = (w.x - origin.x) / width;
+            matrix.b = (w.y - origin.y) / width;
+            matrix.c = (h.x - origin.x) / height;
+            matrix.d = (h.y - origin.y) / height;
             matrix = matrix.inverse();
 
             let transform = clonedRoot.createSVGTransformFromMatrix(matrix);
             clonedGroup.transform.baseVal.appendItem(transform);
 
-            
-            clonedRoot.setAttribute('width', ''+width+'mm');
-            clonedRoot.setAttribute('height', ''+height+'mm');
-            clonedRoot.setAttribute('viewBox', '0 0 '+ width + ' ' + height);
+
+            clonedRoot.setAttribute('width', '' + width + 'mm');
+            clonedRoot.setAttribute('height', '' + height + 'mm');
+            clonedRoot.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
             var svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
             //console.log("frame SVG");
             //console.log(svg_xml);
             return [svg_xml, [0, 0, width, height]];
         }
-        parsePoint(pt:DOMPoint, s:string, rel:DOMPoint)
-        {
-            if (rel != null)
-            {
+        parsePoint(pt: DOMPoint, s: string, rel: DOMPoint) {
+            if (rel != null) {
                 pt.x = rel.x;
                 pt.y = rel.y;
             }
@@ -544,28 +511,23 @@ module qec {
             pt.y += parseFloat(nums[1]);
         }
 
-        getByLabel(elt:SVGGraphicsElement, name:string) : SVGGraphicsElement
-        {
-            let found:SVGGraphicsElement;
+        getByLabel(elt: SVGGraphicsElement, name: string): SVGGraphicsElement {
+            let found: SVGGraphicsElement;
             elt.childNodes.forEach(x => {
-                let attributes = (<SVGGraphicsElement> x).attributes;
-                if (attributes != null)
-                {
+                let attributes = (<SVGGraphicsElement>x).attributes;
+                if (attributes != null) {
                     let attr = attributes.getNamedItem('inkscape:label');
-                    if (attr != null && attr.textContent == name)
-                    {
-                        found = (<SVGGraphicsElement> x);
+                    if (attr != null && attr.textContent == name) {
+                        found = (<SVGGraphicsElement>x);
                     }
                 }
             });
             return found;
         }
 
-        getLabel(elt:SVGGraphicsElement):string
-        {
+        getLabel(elt: SVGGraphicsElement): string {
             let attributes = elt.attributes;
-            if (attributes != null)
-            {
+            if (attributes != null) {
                 let attr = attributes.getNamedItem('inkscape:label');
                 if (attr != null)
                     return attr.textContent;
@@ -575,43 +537,38 @@ module qec {
 
         ///////
 
-        extractSvgIgnoringThickness(elt: SVGGraphicsElement):string
-        {
+        extractSvgIgnoringThickness(elt: SVGGraphicsElement): string {
             let [clonedRoot, g] = this.extractIgnoringThickness(elt);
             var svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
             return svg_xml;
         }
 
-        extractIgnoringThickness(elt: SVGGraphicsElement):[SVGSVGElement, SVGGElement]
-        {
+        extractIgnoringThickness(elt: SVGGraphicsElement): [SVGSVGElement, SVGGElement] {
             let current = elt;
-            let chain:SVGGraphicsElement[] = [];
-            while (current != null)
-            {
+            let chain: SVGGraphicsElement[] = [];
+            while (current != null) {
                 chain.push(current);
                 if (current instanceof SVGSVGElement)
                     break;
-                current = <SVGGraphicsElement> current.parentNode;
+                current = <SVGGraphicsElement>current.parentNode;
             }
-            
-            let clonedRoot = <SVGSVGElement> chain[chain.length-1].cloneNode(false);
-            let cloned = <SVGGraphicsElement> clonedRoot;
 
-            
-            let g = clonedRoot.ownerDocument.createElementNS("http://www.w3.org/2000/svg","g");
+            let clonedRoot = <SVGSVGElement>chain[chain.length - 1].cloneNode(false);
+            let cloned = <SVGGraphicsElement>clonedRoot;
+
+
+            let g = clonedRoot.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "g");
             cloned.appendChild(g);
             cloned = g;
 
-            for (let i=chain.length-2; i>=0; --i)
-            {
-                let newCloned = <SVGGraphicsElement> chain[i].cloneNode(false);
+            for (let i = chain.length - 2; i >= 0; --i) {
+                let newCloned = <SVGGraphicsElement>chain[i].cloneNode(false);
                 cloned.appendChild(newCloned);
                 cloned = newCloned;
             }
 
             elt.childNodes.forEach(x => {
-                if (this.getLabel(<SVGGraphicsElement> x) != 'thickness')
-                {
+                if (this.getLabel(<SVGGraphicsElement>x) != 'thickness') {
                     cloned.appendChild(x.cloneNode(true));
                 }
             });
@@ -619,44 +576,39 @@ module qec {
             return [clonedRoot, g];
         }
 
-        getColorIgnoringThickness(elt:SVGGraphicsElement): number[] {
+        getColorIgnoringThickness(elt: SVGGraphicsElement): number[] {
             var style = elt.getAttribute('style');
-            if (style != null)
-            {
+            if (style != null) {
                 let col = '';
                 var i = style.indexOf('fill:');
                 if (i >= 0) {
                     col = style.substring(i + 5, i + 5 + 7);
                 }
-                else
-                {
+                else {
                     i = style.indexOf('stroke:');
                     if (i >= 0) {
                         col = style.substring(i + 7, i + 7 + 7);
                     }
                 }
-                
+
                 if (col != '') {
                     var rgb = this.hexToRgb(col);
                     if (rgb != null)
                         return rgb;
                 }
             }
-            
-            for (let i=0; i<elt.childNodes.length; ++i)
-            {
+
+            for (let i = 0; i < elt.childNodes.length; ++i) {
                 let child = elt.childNodes.item(i);
-                if (child instanceof SVGGraphicsElement)
-                {
-                    if (this.getLabel(child) != 'thickness')
-                    {
+                if (child instanceof SVGGraphicsElement) {
+                    if (this.getLabel(child) != 'thickness') {
                         let childColor = this.getColorIgnoringThickness(child);
                         if (childColor != null)
-                        return childColor;
+                            return childColor;
                     }
                 }
             }
-            
+
             return null;
         }
 
@@ -676,27 +628,27 @@ module qec {
         }
     }
 
-    interface XYZThickness{
-        x:number;
-        y:number;
-        z:number;
-        thickness:number;
+    interface XYZThickness {
+        x: number;
+        y: number;
+        z: number;
+        thickness: number;
     }
 
-    interface XYPoints{
-        x:number;
-        y:number;
-        points:number[];
+    interface XYPoints {
+        x: number;
+        y: number;
+        points: number[];
     }
 
-    interface XY{
-        x:number;
-        y:number;
+    interface XY {
+        x: number;
+        y: number;
     }
 
-    interface XYR{
-        x:number;
-        y:number;
-        r:number;
+    interface XYR {
+        x: number;
+        y: number;
+        r: number;
     }
 }

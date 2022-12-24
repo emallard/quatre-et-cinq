@@ -1,5 +1,6 @@
 module qec {
-    
+
+    /*
     export class sdGrid2DTO {
         type : string = 'sdGrid2DTO';
         size : number;
@@ -64,4 +65,5 @@ module qec {
             vec3.set(out, 100, 100, 100);
         }
     }
+    */
 }

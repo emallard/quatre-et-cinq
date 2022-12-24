@@ -1,0 +1,20 @@
+{
+    "array": [
+        {
+            "sceneName": "data/test/thickness.svg",
+            "isBoth": true
+        },
+        {
+            "sceneName": "data/test/profile.svg",
+            "isBoth": true
+        },
+        {
+            "sceneName": "data/test/thickness-border.svg",
+            "isBoth": false
+        },
+        {
+            "sceneName": "data/test/profile-border.svg",
+            "isBoth": false
+        }
+    ]
+}

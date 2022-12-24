@@ -1,28 +1,31 @@
 module qec {
-    
+
     export class sdGridDTO {
-        static TYPE:string = 'sdGridDTO';
-        type : string = sdGridDTO.TYPE;
-        size : number;
-        thickness:number;
+        static TYPE: string = 'sdGridDTO';
+        type: string = sdGridDTO.TYPE;
+        size: number;
+        thickness: number;
         material: materialDTO;
-        transform: Float32Array;        
+        transform: Float32Array;
     }
 
     export class sdGrid implements signedDistance, canCreate<sdGridDTO>
     {
+        isSignedDistance = true;
+        svgId: string;
+        uniqueName: string = uniqueName.new();
+
         transform = mat4.create();
         inverseTransform = mat4.identity(mat4.create());
-        
+
         material = new material();
         size = 0;
-        thickness:number;
+        thickness: number;
         d = vec3.create();
         mod = vec3.create();
         boundingBox = vec3.create();
 
-        createFrom(dto:sdGridDTO)
-        {
+        createFrom(dto: sdGridDTO) {
             //vec3.set(this.size, dto.size, dto.size, dto.size);    
             this.size = dto.size;
             this.thickness = dto.thickness;
@@ -31,17 +34,15 @@ module qec {
             mat4.copy(this.transform, dto.transform);
             this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
 
-            vec3.set(this.boundingBox, this.size*10, this.size*10, 0);
+            vec3.set(this.boundingBox, this.size * 10, this.size * 10, 0);
         }
 
-        getDist2(pos: Float32Array, rd:Float32Array, boundingBox:boolean, debug:boolean):number
-        {
-            return 1000;            
+        getDist2(pos: Float32Array, rd: Float32Array, boundingBox: boolean, debug: boolean): number {
+            return 1000;
         }
-        
 
-        getDist(pos: Float32Array, boundingBox:boolean, debug:boolean):number
-        {
+
+        getDist(pos: Float32Array, boundingBox: boolean, debug: boolean): number {
             return 1000;
             /*
             for (var i = 0; i < 3; ++i)
@@ -54,18 +55,15 @@ module qec {
             */
         }
 
-        getMaterial(pos: Float32Array):material
-        {
+        getMaterial(pos: Float32Array): material {
             return this.material;
         }
 
-        getInverseTransform(out:Float32Array)
-        {
+        getInverseTransform(out: Float32Array) {
             mat4.identity(out);
         }
 
-        getBoundingBox(out: Float32Array)
-        {
+        getBoundingBox(out: Float32Array) {
             vec3.set(out, 100, 100, 100);
         }
     }

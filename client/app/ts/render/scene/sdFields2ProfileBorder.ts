@@ -1,40 +1,41 @@
 module qec {
 
 
-    export class sdFields2ProfileBorderDTO
-    {
-        static TYPE:string = 'sdFields2ProfileBorderDTO';
-        type:string = sdFields1DTO.TYPE;
-        top:partTopDTO;
-        
-        profile:partProfileDTO;
+    export class sdFields2ProfileBorderDTO {
+        static TYPE: string = 'sdFields2ProfileBorderDTO';
+        type: string = sdFields1DTO.TYPE;
+        svgId?: string;
+        top: partTopDTO;
+
+        profile: partProfileDTO;
         profileOrigin: number[];
         profileAxis: number[];
 
         border: partBorderDTO;
 
         material: materialDTO;
-        transform:Float32Array;
+        transform: Float32Array;
     }
 
-    
-    export class sdFields2ProfileBorder implements signedDistance, iTop, iProfileTopBottom, iBorder
-    {
-        uniqueName:string = uniqueName.new();
+
+    export class sdFields2ProfileBorder implements signedDistance, iTop, iProfileTopBottom, iBorder {
+        isSignedDistance = true;
+        svgId: string;
+        uniqueName: string = uniqueName.new();
 
         transform = mat4.create();
         inverseTransform = mat4.identity(mat4.create());
         material = new material();
-        top:partTop = new partTop();
-        profileTopBottom:partProfileTopBottom = new partProfileTopBottom();
+        top: partTop = new partTop();
+        profileTopBottom: partProfileTopBottom = new partProfileTopBottom();
         profileOrigin: Float32Array;
         profileAxis: Float32Array;
         border: partBorder = new partBorder();
 
         boundingBox: Float32Array;
 
-        createFrom(dto:sdFields2ProfileBorderDTO)
-        {
+        createFrom(dto: sdFields2ProfileBorderDTO): sdFields2ProfileBorder {
+            this.svgId = dto.svgId;
             this.top.createFrom(dto.top);
             this.profileTopBottom.createFrom(dto.profile);
             this.profileOrigin = new Float32Array(dto.profileOrigin);
@@ -47,13 +48,14 @@ module qec {
             this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
 
             this.boundingBox = new Float32Array([
-                0.5*(this.top.topBounds[2] - this.top.topBounds[0]), 
-                0.5*(this.top.topBounds[3] - this.top.topBounds[1]), 
-                0.5*(this.profileTopBottom.profileBounds[3] - this.profileTopBottom.profileBounds[1])]);
+                0.5 * (this.top.topBounds[2] - this.top.topBounds[0]),
+                0.5 * (this.top.topBounds[3] - this.top.topBounds[1]),
+                0.5 * (this.profileTopBottom.profileBounds[3] - this.profileTopBottom.profileBounds[1])]);
+
+            return this;
         }
 
-        getDist3(minDist:number, pos: Float32Array, boundingBox:boolean, debug:boolean):number
-        {
+        getDist3(minDist: number, pos: Float32Array, boundingBox: boolean, debug: boolean): number {
             return 6666;
             /*
             //vec3.set(this.tmp, 68, 156, 0);
@@ -96,17 +98,15 @@ module qec {
             */
         }
 
-        getDist(pos: Float32Array, boundingBox:boolean, debug:boolean):number {return 66666;}
+        getDist(pos: Float32Array, boundingBox: boolean, debug: boolean): number { return 66666; }
 
-        getDist2(pos: Float32Array, rd:Float32Array, boundingBox:boolean, debug:boolean):number {return 66666;}
-        
-        getMaterial(pos:Float32Array):material
-        {
+        getDist2(pos: Float32Array, rd: Float32Array, boundingBox: boolean, debug: boolean): number { return 66666; }
+
+        getMaterial(pos: Float32Array): material {
             return this.material
         }
 
-        getInverseTransform(out: Float32Array)
-        {
+        getInverseTransform(out: Float32Array) {
             return this.inverseTransform;
         }
     }

@@ -7,87 +7,117 @@
     <script src="libs/three.js"></script>
     <script src="libs/gl-matrix.js"></script>
     <script src="libs/knockout-3.4.1.js"></script>
+    <script src="libs/FileSaver.js"></script>
+    <script src="libs/jszip.min.js"></script>
     <script src="app/built/built.js"></script>
 
 </head>
 
-<body>
-
+<body style="margin:0px">
+    <!--
     <input id='pickX'><input id='pickY'>
     <button id='pickButton'>Pick</button>
     <br/>
     <button id='renderLoopButton'>renderLoop</button>
     <br/>
-	<div id='root' style=display:inline-block>
-        
+-->
+    <div id='root' style=display:inline-block>
+
     </div>
 
     <div class='debug' style='background-color:white'>
     </div>
 
     <script>
-        
-        if (getParameterByName('isHardware') == '1')
-        {
-            qec.resources.loadAll(onResourceLoaded);
-        }
-        else
-        {
-            onResourceLoaded();
-        }
 
-        function onResourceLoaded()
-        {
+        qec.resources.loadAll(onResourceLoaded);
 
-            //var p = getParameterByName('page')
-            //if (!p) p = 'index2';
+        function onResourceLoaded() {
+            var svg = getParameterByName('svg');
+            var json = getParameterByName('json');
+            var anim = getParameterByName('anim');
+            var test = getParameterByName('test');
+            if (svg == undefined && json == undefined && anim == undefined && test == undefined) {
+                alert("?svg=x.svg - ?json=x.json - ?anim=x.json - ?test=all");
+                return;
+            }
 
-            //var p2 = eval('new qec.'+p+'()');
-            //var injector = new qec.injector();
-            //var p2 = injector.create(qec.index2());
-            var p2 = new qec.index2();
-            p2.isParallel = getParameterByName('isParallel') == '1';
-            p2.isHardware = getParameterByName('isHardware') == '1';
-            p2.renderSteps = getParameterByName('renderSteps') == '1';
-            p2.start(document.getElementById('root'))
-        
+            let rootElt = document.getElementById('root');
 
-
-            var pickClicked = false;    
-            var pickbutton = document.getElementById('pickButton');
-            var renderLoopButton = document.getElementById('renderLoopButton');
-            var root = document.getElementById('root');
-            
-            pickbutton.addEventListener("click", function(e)
-            {
-                pickClicked = true;
-            });
-            root.addEventListener("mousemove", function(e)
-            {
-                if (pickClicked) {
-                    document.getElementById('pickX').value = e.offsetX;
-                    document.getElementById('pickY').value = e.offsetY;
+            if (svg != undefined) {
+                let settings = getSettings();
+                settings.sceneName = 'data/' + svg;
+                new qec.devRenderer().start(rootElt, settings);
+            }
+            else if (json != undefined) {
+                qec.devRendererBatch.loadUrl('data/' + json, rootElt);
+            }
+            else if (anim != undefined) {
+                new qec.devRendererAnimation().loadUrl(anim, rootElt);
+            }
+            else if (test != undefined) {
+                if (test == 'all') {
+                    var r = new qec.devRenderer();
+                    qec.devRendererBatch.loadUrl('data/test/test.json', rootElt);
                 }
-            });
-            root.addEventListener("mousedown", function(e)
+                else {
+                    let settings = getSettings();
+                    settings.sceneName = 'data/test/' + test;
+                    new qec.devRenderer().start(rootElt, settings);
+                }
+            }
+        }
+
+        function getSettings() {
+            let settings = {};
+            settings.isParallel = getParameterByName('isParallel') == '1';
+            settings.isHardware = getParameterByName('isHardware') == '1';
+            settings.isBoth = getParameterByName('isBoth') == '1';
+            settings.isAnimated = getParameterByName('isAnimated') == '1';
+            settings.isFullScreen = getParameterByName('isFullScreen') == '1';
+            settings.isDirectionalLight = getParameterByName('isDirectionalLight') == '1';
+            settings.noColor = getParameterByName('noColor') == '1';
+            settings.renderSteps = getParameterByName('renderSteps') == '1';
+            return settings;
+
+        }
+
+        /*
+        var pickClicked = false;    
+        var pickbutton = document.getElementById('pickButton');
+        var renderLoopButton = document.getElementById('renderLoopButton');
+        var root = document.getElementById('root');
+        
+        pickbutton.addEventListener("click", function(e)
+        {
+            pickClicked = true;
+        });
+        root.addEventListener("mousemove", function(e)
+        {
+            if (pickClicked) {
+                document.getElementById('pickX').value = e.offsetX;
+                document.getElementById('pickY').value = e.offsetY;
+            }
+        });
+        root.addEventListener("mousedown", function(e)
+        {
+            if (pickClicked)
             {
-                if (pickClicked)
+                pickClicked = false;
+                if (p2.debug)
                 {
-                    pickClicked = false;
-                    if (p2.debug)
-                    {
-                        var x = document.getElementById('pickX').value;
-                        var y = document.getElementById('pickY').value;
-                        p2.debug(parseFloat(x), parseFloat(y))
-                    }
+                    var x = document.getElementById('pickX').value;
+                    var y = document.getElementById('pickY').value;
+                    p2.debug(parseFloat(x), parseFloat(y))
                 }
-            });
+            }
+        });
 
-            renderLoopButton.addEventListener("click", function(e)
-            {
-                p2.startRenderLoop();
-            });
-        } 
+        renderLoopButton.addEventListener("click", function(e)
+        {
+            p2.startRenderLoop();
+        });
+        */
 
     </script>
 </body>

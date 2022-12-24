@@ -1,21 +1,21 @@
 module qec {
 
 
-    export class sdFields1DTO
-    {
-        static TYPE:string = 'sdFields1DTO';
-        type:string = sdFields1DTO.TYPE;
-        top:partTopDTO;
-        thickness:number;
-        
+    export class sdFields1DTO {
+        static TYPE: string = 'sdFields1DTO';
+        type: string = sdFields1DTO.TYPE;
+        svgId?: string;
+        top: partTopDTO;
+        thickness: number;
         material: materialDTO;
-        transform:Float32Array;
+        transform: Float32Array;
     }
 
 
-    export class sdFields1 implements iTop, signedDistance
-    {
-        uniqueName:string = uniqueName.new();
+    export class sdFields1 implements iTop, signedDistance {
+        isSignedDistance = true;
+        svgId: string;
+        uniqueName: string = uniqueName.new();
 
         transform = mat4.create();
         inverseTransform = mat4.identity(mat4.create());
@@ -23,26 +23,35 @@ module qec {
 
         boundingBox: Float32Array;
 
-        thickness:number;
+        thickness: number;
 
-        top:partTop = new partTop();
-        
-        createFrom(dto:sdFields1DTO)
-        {
+        top: partTop = new partTop();
+
+        createFrom(dto: sdFields1DTO): sdFields1 {
+            this.svgId = dto.svgId;
             this.top.createFrom(dto.top);
             this.thickness = dto.thickness;
             this.material.createFrom(dto.material);
             mat4.copy(this.transform, dto.transform);
             this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
 
-            this.boundingBox = new Float32Array([
-                0.5*(this.top.topBounds[2] - this.top.topBounds[0]), 
-                0.5*(this.top.topBounds[3] - this.top.topBounds[1]), 
-                0.5*(this.thickness)]);
+            this.updateBoundingBox();
+            return this;
         }
 
-        getDist3(minDist:number, pos: Float32Array, boundingBox:boolean, debug:boolean):number
-        {
+        mix(dto0: sdFields1DTO, dto1: sdFields1DTO, ratio: number) {
+            this.thickness = mix(dto0.thickness, dto1.thickness, ratio);
+            this.updateBoundingBox();
+        }
+
+        updateBoundingBox() {
+            this.boundingBox = new Float32Array([
+                0.5 * (this.top.topBounds[2] - this.top.topBounds[0]),
+                0.5 * (this.top.topBounds[3] - this.top.topBounds[1]),
+                0.5 * (this.thickness)]);
+        }
+
+        getDist3(minDist: number, pos: Float32Array, boundingBox: boolean, debug: boolean): number {
             return 6666;
             /*
             //vec3.set(this.tmp, 68, 156, 0);
@@ -85,17 +94,15 @@ module qec {
             */
         }
 
-        getDist(pos: Float32Array, boundingBox:boolean, debug:boolean):number {return 66666;}
+        getDist(pos: Float32Array, boundingBox: boolean, debug: boolean): number { return 66666; }
 
-        getDist2(pos: Float32Array, rd:Float32Array, boundingBox:boolean, debug:boolean):number {return 66666;}
-        
-        getMaterial(pos:Float32Array):material
-        {
+        getDist2(pos: Float32Array, rd: Float32Array, boundingBox: boolean, debug: boolean): number { return 66666; }
+
+        getMaterial(pos: Float32Array): material {
             return this.material
         }
 
-        getInverseTransform(out: Float32Array)
-        {
+        getInverseTransform(out: Float32Array) {
             return this.inverseTransform;
         }
     }

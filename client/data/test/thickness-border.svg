@@ -7,7 +7,7 @@
    viewBox="0 0 191.39773 260.08963"
    version="1.1"
    id="svg5"
-   sodipodi:docname="square-border.svg"
+   sodipodi:docname="thickness-border.svg"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -24,14 +24,14 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="0.70508387"
-     inkscape:cx="692.82538"
-     inkscape:cy="392.15193"
+     inkscape:cx="590.70987"
+     inkscape:cy="638.93108"
      inkscape:window-width="1846"
      inkscape:window-height="1016"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer5"
+     inkscape:current-layer="g9416"
      inkscape:snap-global="false"
      fit-margin-top="0"
      fit-margin-left="0"
@@ -335,7 +335,7 @@
          r="10.259767"
          inkscape:label="target">
         <desc
-           id="desc3445">&quot;z&quot;:30</desc>
+           id="desc3445">&quot;z&quot;:0</desc>
       </circle>
     </g>
   </g>

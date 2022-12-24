@@ -1,64 +1,59 @@
-module qec{
+module qec {
 
-    export class sdUnionDTO
-    {
-        static TYPE:string = 'sdUnionDTO';
-        type:string = sdUnionDTO.TYPE;
+    export class sdUnionDTO {
+        static TYPE: string = 'sdUnionDTO';
+        type: string = sdUnionDTO.TYPE;
         array: any[];
     }
 
     export class sdUnion implements signedDistance, canCreate<sdUnionDTO>
     {
-        uniqueName:string = uniqueName.new();
-        array : signedDistance[] = [];
+        isSignedDistance = true;
+        svgId: string;
+        uniqueName: string = uniqueName.new();
+
+        array: signedDistance[] = [];
         inverseTransform = mat4.identity(mat4.create());
 
-        createFrom(dto:sdUnionDTO)
-        {
-            this.array = dto.array.map(x => <signedDistance> (x['__instance']));
+        createFrom(dto: sdUnionDTO) {
+            this.array = dto.array.map(x => <signedDistance>(x['__instance']));
         }
 
 
-        getDist2(pos: Float32Array, rd:Float32Array, boundingBox:boolean, debug:boolean):number
-        {
+        getDist2(pos: Float32Array, rd: Float32Array, boundingBox: boolean, debug: boolean): number {
             var d = 66666;
             var l = this.array.length;
-            for (var i=0; i < l; ++i)
+            for (var i = 0; i < l; ++i)
                 d = Math.min(d, this.array[i].getDist2(pos, rd, boundingBox, debug));
 
             return d;
         }
 
-        getDist(pos: Float32Array, boundingBox:boolean, debug:boolean):number
-        {
+        getDist(pos: Float32Array, boundingBox: boolean, debug: boolean): number {
             var d = 66666;
             var l = this.array.length;
-            for (var i=0; i < l; ++i)
-            {
+            for (var i = 0; i < l; ++i) {
                 //let distBB = (<sdFields2> this.array[i]).getDistToBoundingBox(pos);
                 //if (distBB < d)
                 //    d = Math.min(d, this.array[i].getDist(pos, boundingBox, debug));
-                d = (<sdFields2> this.array[i]).getDist3(d, pos, boundingBox, debug);
+                d = (<sdFields2>this.array[i]).getDist3(d, pos, boundingBox, debug);
             }
 
             return d;
         }
 
         newMaterial = new material();
-        getMaterial(pos: Float32Array)
-        {
-            this.newMaterial.diffuse[0] = 72/255;
-            this.newMaterial.diffuse[1] = 145/255;
-            this.newMaterial.diffuse[2] = 243/255;
+        getMaterial(pos: Float32Array) {
+            this.newMaterial.diffuse[0] = 72 / 255;
+            this.newMaterial.diffuse[1] = 145 / 255;
+            this.newMaterial.diffuse[2] = 243 / 255;
             return this.newMaterial;
             var min = 666;
-            var minMat:material;
+            var minMat: material;
             var l = this.array.length;
-            for (var i=0; i < l; ++i)
-            {
+            for (var i = 0; i < l; ++i) {
                 var distI = this.array[i].getDist(pos, false, false);
-                if (distI < min)
-                {
+                if (distI < min) {
                     min = distI;
                     minMat = this.array[i].getMaterial(pos);
                 }
@@ -68,13 +63,11 @@ module qec{
             return minMat;
         }
 
-        getInverseTransform(out:Float32Array)
-        {
+        getInverseTransform(out: Float32Array) {
             mat4.copy(out, this.inverseTransform);
         }
 
-        getBoundingBox(out: Float32Array)
-        {
+        getBoundingBox(out: Float32Array) {
             vec3.set(out, 100, 100, 100);
         }
     }

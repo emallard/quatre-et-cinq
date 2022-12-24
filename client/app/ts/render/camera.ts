@@ -1,7 +1,8 @@
 module qec {
 
     export class cameraDTO {
-        public type = 'cameraDTO';
+        public static TYPE = 'cameraDTO';
+        public type = cameraDTO.TYPE;
         constructor(
             public position: number[] = [1, 1, 1],
             public target: number[] = [0, 0, 0],
@@ -11,7 +12,7 @@ module qec {
     }
 
 
-    export class camera implements canCreate<cameraDTO> {
+    export class camera {
 
         projMatrix = mat4.create();
         transformMatrix = mat4.create();
@@ -30,12 +31,13 @@ module qec {
         tmpMatrix = mat4.create();
         tmpVec3 = vec3.create();
 
-        createFrom(dto: cameraDTO) {
+        createFrom(dto: cameraDTO): camera {
             vec3FromArray(this.position, dto.position);
             vec3FromArray(this.target, dto.target);
             vec3FromArray(this.up, dto.up);
             this.fov = dto.fov;
             this.updateMatrices();
+            return this;
         }
 
         toDTO(dto: cameraDTO) {
