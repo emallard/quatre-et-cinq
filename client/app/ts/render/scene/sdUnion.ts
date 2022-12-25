@@ -30,6 +30,8 @@ module qec {
         }
 
         getDist(pos: Float32Array, boundingBox: boolean, debug: boolean): number {
+            throw new Error("Not Implemented");
+            /*
             var d = 66666;
             var l = this.array.length;
             for (var i = 0; i < l; ++i) {
@@ -40,6 +42,7 @@ module qec {
             }
 
             return d;
+            */
         }
 
         newMaterial = new material();
@@ -67,8 +70,12 @@ module qec {
             mat4.copy(out, this.inverseTransform);
         }
 
-        getBoundingBox(out: Float32Array) {
-            vec3.set(out, 100, 100, 100);
+        getTransform(out: Float32Array) {
+            throw new Error("Not Implemented");
+        }
+
+        getBounds(min: Float32Array, max: Float32Array) {
+            throw new Error("Not Implemented");
         }
     }
 }

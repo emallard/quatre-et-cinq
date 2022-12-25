@@ -88,5 +88,18 @@ module qec {
         getInverseTransform(out: Float32Array) {
             mat4.copy(out, this.inverseTransform);
         }
+
+        getTransform(out: Float32Array) {
+            mat4.copy(out, this.transform);
+        }
+
+        getBounds(min: Float32Array, max: Float32Array) {
+            for (let i = 0; i < 2; ++i) {
+                min[i] = -this.boundingBox[i];
+                max[i] = this.boundingBox[i];
+            }
+            min[2] = 0;
+            max[2] = this.boundingBox[2] * 2;
+        }
     }
 }

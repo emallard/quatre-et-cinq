@@ -11,7 +11,8 @@ module qec {
         isDirectionalLight = false;
         showGrid = false;
         noColor = false;
-        generateVideo = true;
+        generateVideo = false;
+        generateOBJ = false;
 
         debugDistanceField = false;
         renderSteps = false;
@@ -131,6 +132,18 @@ module qec {
                     r.updateShader(this.renderSettings);
                     r.render(this.renderSettings);
                 });
+
+                if (this.settings.generateOBJ) {
+                    let toTriangles = new signedDistanceToTriangles();
+                    toTriangles.compute(this.renderSettings.sdArray, 200, 200, 10, 1);
+
+                    //let obj = new exportOBJ().getText(toTriangles.triangles, toTriangles.normals, toTriangles.colors);
+                    //saveAs(obj, "example.obj");
+
+                    var stl = new exportSTL().getBinary(toTriangles.triangles, toTriangles.normals);
+                    var blob = new Blob([stl], { type: 'application//octet-binary' });
+                    saveAs(blob, 'download.stl');
+                }
             });
         }
 

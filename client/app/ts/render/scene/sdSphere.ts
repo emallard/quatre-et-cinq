@@ -86,5 +86,13 @@ module qec {
             mat4.copy(out, this.inverseTransform);
         }
 
+        getTransform(out: Float32Array) {
+            throw new Error("Not Implemented");
+        }
+
+        getBounds(min: Float32Array, max: Float32Array) {
+            throw new Error("Not Implemented");
+        }
+
     }
 }

@@ -17,12 +17,14 @@ module qec {
         private tmp = vec3.create();
         private tmpPos = vec3.create();
         material = new material();
+        transform = mat4.create();
         inverseTransform = mat4.create();
 
         createFrom(dto: sdBoxDTO) {
             vec3FromArray(this.halfSize, dto.halfSize);
             this.material.createFrom(dto.material)
-            mat4.invert(this.inverseTransform, new Float32Array(dto.transform));
+            this.transform = new Float32Array(dto.transform);
+            mat4.invert(this.inverseTransform, this.transform);
         }
 
         setHalfSize(sx: number, sy: number, sz: number) {
@@ -80,5 +82,15 @@ module qec {
             mat4.copy(out, this.inverseTransform);
         }
 
+        getTransform(out: Float32Array) {
+            mat4.copy(out, this.transform);
+        }
+
+        getBounds(min: Float32Array, max: Float32Array) {
+            for (let i = 0; i < 3; ++i) {
+                min[i] = -this.halfSize[i];
+                max[i] = this.halfSize[i];
+            }
+        }
     }
 }

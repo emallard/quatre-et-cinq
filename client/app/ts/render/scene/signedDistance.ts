@@ -21,6 +21,8 @@ module qec {
 
         getInverseTransform(out: Float32Array);
 
-        //getBoundingBox(out: Float32Array[]);
+        getBounds(min: Float32Array, max: Float32Array);
+
+        getTransform(out: Float32Array);
     }
 }

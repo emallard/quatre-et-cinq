@@ -59,5 +59,13 @@ module qec {
             mat4.identity(out);
         }
 
+        getTransform(out: Float32Array) {
+            throw new Error("Not Implemented");
+        }
+
+        getBounds(min: Float32Array, max: Float32Array) {
+            throw new Error("Not Implemented");
+        }
+
     }
 }

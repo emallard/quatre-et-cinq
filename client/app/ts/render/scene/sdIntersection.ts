@@ -58,8 +58,12 @@ module qec {
             mat4.identity(out);
         }
 
-        getBoundingBox(out: Float32Array) {
-            vec3.set(out, 100, 100, 100);
+        getTransform(out: Float32Array) {
+            throw new Error("Not Implemented");
+        }
+
+        getBounds(min: Float32Array, max: Float32Array) {
+            throw new Error("Not Implemented");
         }
     }
 }
