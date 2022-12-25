@@ -1,9 +1,19 @@
 {
-    "start":0,
+    "start":-0.1,
     "end":5,
     "scenes": ["data/owl-0.svg", "data/owl-1.svg"],
     "segments": [
-        [2, 3, "eye_l", ["thickness", "redMaterial"]],
-        [2, 3, "eye_r", "thickness"]
+        [0, 5, "eyelid_l", "thickness"],
+        [0, 5, "eyelid_r", "thickness"],
+        [0, 5, "eye_l", "thickness"],
+        [0, 5, "eye_r", "thickness"],
+        [0, 5, "eyes", "thickness"],
+        [0, 5, "beak", "thickness"],
+        [0, 5, "tummy", "thickness"],
+        [0, 5, "wing_l", "thickness"],
+        [0, 5, "wing_r", "thickness"],
+        [0, 5, "foot_l", "thickness"],
+        [0, 5, "foot_r", "thickness"],
+        [0, 5, "body", "thickness"]
     ]
 }

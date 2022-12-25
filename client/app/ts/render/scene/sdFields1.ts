@@ -39,8 +39,8 @@ module qec {
             return this;
         }
 
-        mix(dto0: sdFields1DTO, dto1: sdFields1DTO, ratio: number) {
-            this.thickness = mix(dto0.thickness, dto1.thickness, ratio);
+        setThickness(thickness: number) {
+            this.thickness = thickness;
             this.updateBoundingBox();
         }
 

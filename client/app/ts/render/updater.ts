@@ -1,51 +1,42 @@
 
-module qec 
-{
+module qec {
 
-    export class updater
-    {
+    export class updater {
         texturePacker: texturePacker;
         needRepack: boolean;
-        debugInfoInCanvas  =false;
+        debugInfoInCanvas = false;
 
-        constructor()
-        {
+        constructor() {
             this.texturePacker = new texturePacker();
         }
 
-        update(array:signedDistance[], done: () => void)
-        {
-            console.log('updater.update');
-            this.updateImages(array, () => 
-            {
-                if (this.needRepack)
+        update(array: signedDistance[], done: () => void) {
+            //console.log('updater.update');
+            this.updateImages(array, () => {
+                if (this.needRepack) {
+                    this.needRepack = false;
                     this.updateSprites(array);
+                }
                 done();
             });
         }
 
-        updateImages(array:signedDistance[], done: () => void) 
-        {
+        updateImages(array: signedDistance[], done: () => void) {
             let run = new runAll();
-            for (let sd of array)
-            {
-                if (instanceOfTop(sd))
-                {
+            for (let sd of array) {
+                if (instanceOfTop(sd)) {
                     let captured = <iTop>sd;
                     run.push(x => this.updateTop(captured, x));
                 }
-                if (instanceOfProfile(sd))
-                {
+                if (instanceOfProfile(sd)) {
                     let captured = <iProfile>sd;
                     run.push(x => this.updateProfile(captured, x));
                 }
-                if (instanceOfProfileTopBottom(sd))
-                {
+                if (instanceOfProfileTopBottom(sd)) {
                     let captured = <iProfileTopBottom>sd;
                     run.push(x => this.updateProfileTopBottom(captured, x));
                 }
-                if (instanceOfBorder(sd))
-                {
+                if (instanceOfBorder(sd)) {
                     let captured = <iBorder>sd;
                     run.push(x => this.updateBorder(captured, x));
                 }
@@ -53,27 +44,23 @@ module qec
             run.run(done);
         }
 
-        updateSprites(array:signedDistance[])
-        {
+        updateSprites(array: signedDistance[]) {
+            console.log('updater.updateSprites');
             let allSprites: textureSprite[] = [];
-            for (let sd of array)
-            {
-                if (instanceOfTop(sd))
-                {
+            for (let sd of array) {
+                if (instanceOfTop(sd)) {
                     let top = sd.top;
                     top.topSprite = new textureSprite();
                     top.topSprite.originalTexture = top.topTexture;
                     allSprites.push(top.topSprite);
                 }
-                if (instanceOfProfile(sd))
-                {
+                if (instanceOfProfile(sd)) {
                     let profile = sd.profile;
                     profile.profileSprite = new textureSprite();
                     profile.profileSprite.originalTexture = profile.profileTexture;
                     allSprites.push(profile.profileSprite);
                 }
-                if (instanceOfProfileTopBottom(sd))
-                {
+                if (instanceOfProfileTopBottom(sd)) {
                     let profile = sd.profileTopBottom;
                     {
                         profile.profileTopSprite = new textureSprite();
@@ -86,8 +73,7 @@ module qec
                         allSprites.push(profile.profileBottomSprite);
                     }
                 }
-                if (instanceOfBorder(sd))
-                {
+                if (instanceOfBorder(sd)) {
                     let b = sd.border;
                     b.borderSprite = new textureSprite();
                     b.borderSprite.originalTexture = b.borderTexture;
@@ -97,11 +83,9 @@ module qec
             this.texturePacker.repack(allSprites);
         }
 
-        updateTop(sd:iTop, done: () => void)
-        {
+        updateTop(sd: iTop, done: () => void) {
             let top = sd.top;
-            if (top.topUpdated)
-            {
+            if (top.topUpdated) {
                 console.log('update top ' + sd.uniqueName);
 
                 top.topUpdated = false;
@@ -112,14 +96,13 @@ module qec
                 // load image
                 let img = new Image();
                 img.onload = () => {
-                    let topDfCanvas = new distanceFieldCanvas();                    
+                    let topDfCanvas = new distanceFieldCanvas();
                     topDfCanvas.drawUserCanvasForTop(img, top.topBounds, margin);
                     topDfCanvas.update();
 
                     vec4.copy(top.topBounds, topDfCanvas.totalBounds);
 
-                    if (this.debugInfoInCanvas)
-                    {
+                    if (this.debugInfoInCanvas) {
                         topDfCanvas.debugInfoInCanvas();
                         document.body.append(topDfCanvas.canvas);
                     }
@@ -130,17 +113,14 @@ module qec
                 };
                 img.src = top.topSrc;
             }
-            else
-            {
+            else {
                 done();
             }
         }
 
-        updateProfile(sd:iProfile, done: () => void)
-        {
+        updateProfile(sd: iProfile, done: () => void) {
             let profile = sd.profile;
-            if (profile.profileUpdated)
-            {
+            if (profile.profileUpdated) {
                 console.log('update profile' + sd.uniqueName);
 
                 profile.profileUpdated = false;
@@ -151,14 +131,13 @@ module qec
                 // load image
                 let img = new Image();
                 img.onload = () => {
-                    let topDfCanvas = new distanceFieldCanvas();                    
+                    let topDfCanvas = new distanceFieldCanvas();
                     topDfCanvas.drawUserCanvasForTop(img, profile.profileBounds, margin);
                     topDfCanvas.update();
 
                     vec4.copy(profile.profileBounds, topDfCanvas.totalBounds);
 
-                    if (this.debugInfoInCanvas)
-                    {
+                    if (this.debugInfoInCanvas) {
                         topDfCanvas.debugInfoInCanvas();
                         document.body.append(topDfCanvas.canvas);
                     }
@@ -169,17 +148,14 @@ module qec
                 };
                 img.src = profile.profileSrc;
             }
-            else
-            {
+            else {
                 done();
             }
         }
 
-        updateProfileTopBottom(sd:iProfileTopBottom, done: () => void)
-        {
+        updateProfileTopBottom(sd: iProfileTopBottom, done: () => void) {
             let profile = sd.profileTopBottom;
-            if (profile.profileUpdated)
-            {
+            if (profile.profileUpdated) {
                 console.log('update profile top-bottom' + sd.uniqueName);
 
                 profile.profileUpdated = false;
@@ -191,15 +167,14 @@ module qec
                 let img = new Image();
                 img.onload = () => {
                     {
-                        let topDfCanvas = new distanceFieldCanvas();                    
+                        let topDfCanvas = new distanceFieldCanvas();
                         topDfCanvas.drawUserCanvasForProfileTop(img, profile.profileBounds, margin);
                         topDfCanvas.update();
 
                         // to be done only once
                         // vec4.copy(profile.profileBounds, topDfCanvas.totalBounds);
 
-                        if (this.debugInfoInCanvas)
-                        {
+                        if (this.debugInfoInCanvas) {
                             topDfCanvas.debugInfoInCanvas();
                             document.body.append(topDfCanvas.canvas);
                         }
@@ -207,14 +182,13 @@ module qec
                         profile.profileTopTexture = topDfCanvas.floatTexture;
                     }
                     {
-                        let topDfCanvas = new distanceFieldCanvas();                    
+                        let topDfCanvas = new distanceFieldCanvas();
                         topDfCanvas.drawUserCanvasForProfileBottom(img, profile.profileBounds, margin);
                         topDfCanvas.update();
 
                         vec4.copy(profile.profileBounds, topDfCanvas.totalBounds);
 
-                        if (this.debugInfoInCanvas)
-                        {
+                        if (this.debugInfoInCanvas) {
                             topDfCanvas.debugInfoInCanvas();
                             document.body.append(topDfCanvas.canvas);
                         }
@@ -227,17 +201,14 @@ module qec
                 };
                 img.src = profile.profileSrc;
             }
-            else
-            {
+            else {
                 done();
             }
         }
-        
-        updateBorder(sd:iBorder, done: () => void)
-        {
+
+        updateBorder(sd: iBorder, done: () => void) {
             let b = sd.border;
-            if (b.borderUpdated)
-            {
+            if (b.borderUpdated) {
                 console.log('update border' + sd.uniqueName);
 
                 b.borderUpdated = false;
@@ -248,14 +219,13 @@ module qec
                 // load image
                 let img = new Image();
                 img.onload = () => {
-                    let topDfCanvas = new distanceFieldCanvas();                    
+                    let topDfCanvas = new distanceFieldCanvas();
                     topDfCanvas.drawUserCanvasForBorder(img, b.borderBounds, margin);
                     topDfCanvas.update();
 
                     vec4.copy(b.borderBounds, topDfCanvas.totalBounds);
 
-                    if (this.debugInfoInCanvas)
-                    {
+                    if (this.debugInfoInCanvas) {
                         topDfCanvas.debugInfoInCanvas();
                         document.body.append(topDfCanvas.canvas);
                     }
@@ -266,8 +236,7 @@ module qec
                 };
                 img.src = b.borderSrc;
             }
-            else
-            {
+            else {
                 done();
             }
         }

@@ -7,7 +7,7 @@
    viewBox="0 0 191.39773 260.08963"
    version="1.1"
    id="svg5"
-   sodipodi:docname="owl-0.svg"
+   sodipodi:docname="owl-2.svg"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -23,15 +23,15 @@
      inkscape:pagecheckerboard="0"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="6.8469264"
-     inkscape:cx="291.29859"
-     inkscape:cy="352.05578"
+     inkscape:zoom="120.26091"
+     inkscape:cx="346.54236"
+     inkscape:cy="495.52676"
      inkscape:window-width="1846"
      inkscape:window-height="1016"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g1066-1-7-3-6-6"
+     inkscape:current-layer="layer4"
      inkscape:snap-global="false"
      fit-margin-top="0"
      fit-margin-left="0"
@@ -445,6 +445,20 @@
          d="M 0,0 5,-5 -12.5,0 5,5 Z"
          id="path2160-6-9-2-6-9-6-9-7-3" />
     </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow1Lend-3-2-1-3-2-3-0-4-4-5-1-3"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend"
+       inkscape:isstock="true">
+      <path
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path2160-6-9-2-6-9-6-9-7-9-0-0-6" />
+    </marker>
   </defs>
   <g
      inkscape:groupmode="layer"
@@ -500,6 +514,16 @@
          inkscape:label="thickness"
          style="display:inline"
          transform="translate(224.61452,-57.492573)">
+        <circle
+           style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1060-2-5-6-4-0-8-5"
+           cx="-31.822329"
+           cy="186.91039"
+           r="0.94230598"
+           inkscape:label="end">
+          <desc
+             id="desc1251-7-3-0-3-6-7-9">&quot;z&quot;:1</desc>
+        </circle>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:2.23332px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.418746"
@@ -512,7 +536,35 @@
              id="tspan1495-5-9-6-2-7-9-7-7"
              style="font-size:2.23332px;fill:#000000;fill-opacity:1;stroke-width:0.418746"
              x="-115.10088"
-             y="177.29153">0,1</tspan></text>
+             y="177.29153">0,10</tspan></text>
+        <rect
+           style="display:inline;fill:none;fill-opacity:1;stroke:#00ffd5;stroke-width:0.026;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-3-2-1-3-2-3-0-4-4-5-7)"
+           id="rect1499-3-3-2-6-8-2-2-6"
+           width="2.5773141"
+           height="1.2037506"
+           x="-105.26001"
+           y="183.22202"
+           inkscape:label="frame" />
+        <path
+           style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m -105.28795,183.24882 2.58698,-0.004 -0.006,1.1848 -2.57824,-0.002 z"
+           id="path1503-5-6-9-1-68-6-7-7"
+           sodipodi:nodetypes="ccccc"
+           inkscape:label="shape">
+          <desc
+             id="desc1501-6-0-1-8-84-6-2-3">&quot;height&quot;:10</desc>
+        </path>
+        <ellipse
+           style="display:inline;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1062-6-2-7-3-4-2-6"
+           cx="-110.78633"
+           cy="186.73854"
+           inkscape:label="start"
+           rx="0.94199997"
+           ry="0.94230598">
+          <desc
+             id="desc1249-2-7-9-1-9-6-5">&quot;points&quot;:[0,0,  0,1,  1,1,  1,0]</desc>
+        </ellipse>
       </g>
     </g>
     <g
@@ -530,19 +582,57 @@
          inkscape:label="thickness"
          style="display:inline"
          transform="translate(246.77586,52.883685)">
+        <circle
+           style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1060-2-5-6-4-0-8-1"
+           cx="-111.52568"
+           cy="182.93909"
+           r="0.94230598"
+           inkscape:label="end">
+          <desc
+             id="desc1251-7-3-0-3-6-7-5">&quot;z&quot;:1</desc>
+        </circle>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:2.23332px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.418746"
-           x="-115.10088"
-           y="177.29153"
+           x="-110.32573"
+           y="180.04588"
            id="text1497-7-0-5-6-0-8-1-9"
            inkscape:label="height"
            transform="scale(0.96024397,1.041402)"><tspan
              sodipodi:role="line"
              id="tspan1495-5-9-6-2-7-9-7-4"
              style="font-size:2.23332px;fill:#000000;fill-opacity:1;stroke-width:0.418746"
-             x="-115.10088"
-             y="177.29153">0,2</tspan></text>
+             x="-110.32573"
+             y="180.04588">0,20</tspan></text>
+        <rect
+           style="display:inline;fill:none;fill-opacity:1;stroke:#00ffd5;stroke-width:0.026;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-3-2-1-3-2-3-0-4-4-5-1)"
+           id="rect1499-3-3-2-6-8-2-2-9"
+           width="5.1135955"
+           height="1.9781382"
+           x="-108.54845"
+           y="182.69821"
+           inkscape:label="frame" />
+        <path
+           style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m -108.55143,183.14255 c 1.05334,-0.11338 1.7521,-0.18611 2.6309,-0.17398 0.82144,0.0113 2.45375,0.23043 2.45375,0.23043 l 0.0202,1.50866 -5.08403,-0.0131 z"
+           id="path1503-5-6-9-1-68-6-7-0"
+           sodipodi:nodetypes="cacccc"
+           inkscape:label="shape">
+          <desc
+             id="desc1501-6-0-1-8-84-6-2-9">&quot;height&quot;:10</desc>
+        </path>
+        <ellipse
+           style="display:inline;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1062-6-2-7-3-4-2-1"
+           cx="-111.70858"
+           cy="170.71759"
+           inkscape:label="start"
+           rx="0.94199997"
+           ry="0.94230598">
+          <desc
+             id="desc1249-2-7-9-1-9-6-7">&quot;points&quot;:[0,0,  0,1,  1,1,  1,0]</desc>
+        </ellipse>
       </g>
     </g>
     <g
@@ -560,6 +650,16 @@
          inkscape:label="thickness"
          style="display:inline"
          transform="translate(265.79744,52.900121)">
+        <circle
+           style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1060-2-5-6-4-0-8"
+           cx="-95.439575"
+           cy="183.06915"
+           r="0.94230598"
+           inkscape:label="end">
+          <desc
+             id="desc1251-7-3-0-3-6-7">&quot;z&quot;:1</desc>
+        </circle>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:2.23332px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.418746"
@@ -572,7 +672,37 @@
              id="tspan1495-5-9-6-2-7-9-7"
              style="font-size:2.23332px;fill:#000000;fill-opacity:1;stroke-width:0.418746"
              x="-115.10088"
-             y="177.29153">0,2</tspan></text>
+             y="177.29153">0,20</tspan></text>
+        <ellipse
+           style="display:inline;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1062-6-2-7-3-4-2"
+           cx="-95.561295"
+           cy="170.17735"
+           inkscape:label="start"
+           rx="0.94199997"
+           ry="0.94230598"
+           inkscape:transform-center-x="2.3224147"
+           inkscape:transform-center-y="0.66086226">
+          <desc
+             id="desc1249-2-7-9-1-9-6">&quot;points&quot;:[0,0,  0,1,  1,1,  1,0]</desc>
+        </ellipse>
+        <rect
+           style="display:inline;fill:none;fill-opacity:1;stroke:#00ffd5;stroke-width:0.026;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-3-2-1-3-2-3-0-4-4-5-1-3)"
+           id="rect1499-3-3-2-6-8-2-2-9-7"
+           width="5.1135955"
+           height="1.9781382"
+           x="-105.09779"
+           y="182.82358"
+           inkscape:label="frame" />
+        <path
+           style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m -105.10077,183.26792 c 1.05334,-0.11338 2.01619,-0.19315 3.02604,-0.16643 0.68997,0.0182 2.05861,0.22288 2.05861,0.22288 l 0.0202,1.50866 -5.08403,-0.0131 z"
+           id="path1503-5-6-9-1-68-6-7-0-5"
+           sodipodi:nodetypes="cacccc"
+           inkscape:label="shape">
+          <desc
+             id="desc1501-6-0-1-8-84-6-2-9-3">&quot;height&quot;:10</desc>
+        </path>
       </g>
     </g>
     <g
@@ -590,6 +720,16 @@
          inkscape:label="thickness"
          style="display:inline"
          transform="translate(218.20501,35.331823)">
+        <circle
+           style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1060-2-5-6-4-0"
+           cx="-88.251938"
+           cy="186.63916"
+           r="0.94230598"
+           inkscape:label="end">
+          <desc
+             id="desc1251-7-3-0-3-6">&quot;z&quot;:1</desc>
+        </circle>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:2.23332px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.418746"
@@ -602,7 +742,35 @@
              id="tspan1495-5-9-6-2-7-9"
              style="font-size:2.23332px;fill:#000000;fill-opacity:1;stroke-width:0.418746"
              x="-115.10088"
-             y="177.29153">0,2</tspan></text>
+             y="177.29153">0,14</tspan></text>
+        <rect
+           style="display:inline;fill:none;fill-opacity:1;stroke:#00ffd5;stroke-width:0.026;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-3-2-1-3-2-3-0-4-4)"
+           id="rect1499-3-3-2-6-8-2"
+           width="2.5773141"
+           height="1.2037506"
+           x="-105.26001"
+           y="183.22202"
+           inkscape:label="frame" />
+        <path
+           style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m -105.2848,183.84004 c 0.18381,-0.33479 1.56457,-0.60651 2.03435,-0.60086 0.22998,0.003 0.55725,0.0204 0.56504,0.26409 0.0102,0.31918 0.011,0.92635 0.011,0.92635 l -2.61125,-0.002 c 0,0 -0.004,-0.42701 8.9e-4,-0.58758 z"
+           id="path1503-5-6-9-1-68-6"
+           sodipodi:nodetypes="csscccc"
+           inkscape:label="shape">
+          <desc
+             id="desc1501-6-0-1-8-84-6">&quot;height&quot;:10</desc>
+        </path>
+        <ellipse
+           style="display:inline;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1062-6-2-7-3-4"
+           cx="-110.78633"
+           cy="186.73854"
+           inkscape:label="start"
+           rx="0.94199997"
+           ry="0.94230598">
+          <desc
+             id="desc1249-2-7-9-1-9">&quot;points&quot;:[0,0,  0,1,  1,1,  1,0]</desc>
+        </ellipse>
       </g>
     </g>
     <g
@@ -620,6 +788,16 @@
          inkscape:label="thickness"
          style="display:inline"
          transform="translate(286.32493,36.381075)">
+        <circle
+           style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1060-2-5-6-4"
+           cx="-88.251938"
+           cy="186.63916"
+           r="0.94230598"
+           inkscape:label="end">
+          <desc
+             id="desc1251-7-3-0-3">&quot;z&quot;:1</desc>
+        </circle>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:2.23332px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.418746"
@@ -632,7 +810,35 @@
              id="tspan1495-5-9-6-2-7"
              style="font-size:2.23332px;fill:#000000;fill-opacity:1;stroke-width:0.418746"
              x="-115.10088"
-             y="177.29153">0,2</tspan></text>
+             y="177.29153">0,14</tspan></text>
+        <rect
+           style="display:inline;fill:none;fill-opacity:1;stroke:#00ffd5;stroke-width:0.026;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-3-2-1-3-2-3-0-4)"
+           id="rect1499-3-3-2-6-8"
+           width="2.5773141"
+           height="1.2037506"
+           x="-105.26001"
+           y="183.22202"
+           inkscape:label="frame" />
+        <ellipse
+           style="display:inline;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1062-6-2-7-3"
+           cx="-110.78633"
+           cy="186.73854"
+           inkscape:label="start"
+           rx="0.94199997"
+           ry="0.94230598">
+          <desc
+             id="desc1249-2-7-9-1">&quot;points&quot;:[0,0,  0,1,  1,1,  1,0]</desc>
+        </ellipse>
+        <path
+           style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m -102.67535,183.85001 c -0.18381,-0.33479 -1.56457,-0.60651 -2.03435,-0.60086 -0.22998,0.003 -0.55725,0.0204 -0.56504,0.26409 -0.0102,0.31918 -0.011,0.92635 -0.011,0.92635 l 2.61125,-0.002 c 0,0 0.004,-0.42701 -8.9e-4,-0.58758 z"
+           id="path1503-5-6-9-1-68-6-2"
+           sodipodi:nodetypes="csscccc"
+           inkscape:label="shape">
+          <desc
+             id="desc1501-6-0-1-8-84-6-9">&quot;height&quot;:10</desc>
+        </path>
       </g>
     </g>
     <g
@@ -650,6 +856,16 @@
          inkscape:label="thickness"
          style="display:inline"
          transform="translate(252.22135,17.093025)">
+        <circle
+           style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1060-2-5-6-4-4"
+           cx="-78.891006"
+           cy="186.17886"
+           r="0.94230598"
+           inkscape:label="end">
+          <desc
+             id="desc1251-7-3-0-3-8">&quot;z&quot;:1</desc>
+        </circle>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:2.23332px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.418746"
@@ -662,7 +878,35 @@
              id="tspan1495-5-9-6-2-7-2"
              style="font-size:2.23332px;fill:#000000;fill-opacity:1;stroke-width:0.418746"
              x="-115.10088"
-             y="177.29153">0,1.5</tspan></text>
+             y="177.29153">5,10</tspan></text>
+        <rect
+           style="display:inline;fill:none;fill-opacity:1;stroke:#00ffd5;stroke-width:0.026;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-3-2-1-3-2-3-0-4-6)"
+           id="rect1499-3-3-2-6-8-9"
+           width="2.5773141"
+           height="1.2037506"
+           x="-105.26001"
+           y="183.22202"
+           inkscape:label="frame" />
+        <path
+           style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m -105.2657,183.87758 c 0,0 0.74663,-0.61752 1.22091,-0.63068 0.47429,-0.0132 1.34382,0.60225 1.34382,0.60225 l -0.006,0.58047 -2.57824,-0.002 z"
+           id="path1503-5-6-9-1-68-3"
+           sodipodi:nodetypes="czcccc"
+           inkscape:label="shape">
+          <desc
+             id="desc1501-6-0-1-8-84-9">&quot;height&quot;:10</desc>
+        </path>
+        <ellipse
+           style="display:inline;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1062-6-2-7-3-0"
+           cx="-120.90221"
+           cy="186.73668"
+           inkscape:label="start"
+           rx="0.94199997"
+           ry="0.94230598">
+          <desc
+             id="desc1249-2-7-9-1-8">&quot;points&quot;:[0,0,  0,1,  1,1,  1,0]</desc>
+        </ellipse>
       </g>
     </g>
     <g
@@ -680,6 +924,16 @@
          inkscape:label="thickness"
          style="display:inline"
          transform="translate(239.46631,-25.475152)">
+        <circle
+           style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1060-2-5-6-1-5"
+           cx="-61.757458"
+           cy="186.99464"
+           r="0.94230598"
+           inkscape:label="end">
+          <desc
+             id="desc1251-7-3-0-0-6">&quot;z&quot;:1</desc>
+        </circle>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:2.23332px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.418746"
@@ -692,7 +946,35 @@
              id="tspan1495-5-9-6-2-3-3"
              style="font-size:2.23332px;fill:#000000;fill-opacity:1;stroke-width:0.418746"
              x="-115.10088"
-             y="177.29153">0,1.5</tspan></text>
+             y="177.29153">10,5</tspan></text>
+        <rect
+           style="display:inline;fill:none;fill-opacity:1;stroke:#00ffd5;stroke-width:0.026;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-3-2-1-3-2-3-0-5-4)"
+           id="rect1499-3-3-2-6-20-7"
+           width="2.5773141"
+           height="1.2037506"
+           x="-105.26001"
+           y="183.22202"
+           inkscape:label="frame" />
+        <path
+           style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m -105.28285,184.11744 c 0,-0.3046 0.16133,-0.8326 0.59495,-0.85949 0.43363,-0.0269 0.61073,0.1959 0.65918,0.19599 0.0835,1.6e-4 0.17399,-0.21806 0.72102,-0.20807 0.54703,0.01 0.62913,0.75506 0.62177,0.91239 -0.008,0.17092 -0.27789,0.25962 -0.27789,0.25962 l -1.97386,-0.005 c 0,0 -0.33284,-0.0256 -0.34489,-0.29552 -0.012,-0.26989 -2.8e-4,0 -2.8e-4,0 z"
+           id="path1503-5-6-9-1-6-4"
+           sodipodi:nodetypes="szszscczzs"
+           inkscape:label="shape">
+          <desc
+             id="desc1501-6-0-1-8-1-5">&quot;height&quot;:10</desc>
+        </path>
+        <ellipse
+           style="display:inline;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1062-6-2-7-5-2"
+           cx="-112.60302"
+           cy="186.7524"
+           inkscape:label="start"
+           rx="0.94199997"
+           ry="0.94230598">
+          <desc
+             id="desc1249-2-7-9-5-5">&quot;points&quot;:[0,0,  0,1,  1,1,  1,0]</desc>
+        </ellipse>
       </g>
     </g>
     <g
@@ -710,19 +992,57 @@
          inkscape:label="thickness"
          style="display:inline"
          transform="translate(258.73767,-5.5625975)">
+        <circle
+           style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1060-2-5-6-1"
+           cx="-106.32461"
+           cy="196.61925"
+           r="0.94230598"
+           inkscape:label="end">
+          <desc
+             id="desc1251-7-3-0-0">&quot;z&quot;:1</desc>
+        </circle>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:2.23332px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.418746"
-           x="-115.10088"
-           y="177.29153"
+           x="-119.11427"
+           y="177.29601"
            id="text1497-7-0-5-6-6"
            inkscape:label="height"
            transform="scale(0.96024397,1.041402)"><tspan
              sodipodi:role="line"
              id="tspan1495-5-9-6-2-3"
              style="font-size:2.23332px;fill:#000000;fill-opacity:1;stroke-width:0.418746"
-             x="-115.10088"
-             y="177.29153">0,2</tspan></text>
+             x="-119.11427"
+             y="177.29601">12,5</tspan></text>
+        <rect
+           style="display:inline;fill:none;fill-opacity:1;stroke:#00ffd5;stroke-width:0.026;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-3-2-1-3-2-3-0-5)"
+           id="rect1499-3-3-2-6-20"
+           width="2.5773141"
+           height="1.2037506"
+           x="-113.49333"
+           y="185.05353"
+           inkscape:label="frame" />
+        <path
+           style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m -113.4988,185.37182 c 0,0 0.12001,-0.10482 0.6723,-0.24621 0.55229,-0.14139 1.88459,0.27482 1.88459,0.27482 l 0.002,0.8607 -2.57824,-0.002 z"
+           id="path1503-5-6-9-1-6"
+           sodipodi:nodetypes="czcccc"
+           inkscape:label="shape">
+          <desc
+             id="desc1501-6-0-1-8-1">&quot;height&quot;:10</desc>
+        </path>
+        <ellipse
+           style="display:inline;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1062-6-2-7-5"
+           cx="-106.52691"
+           cy="184.49918"
+           inkscape:label="start"
+           rx="0.94199997"
+           ry="0.94230598">
+          <desc
+             id="desc1249-2-7-9-5">&quot;points&quot;:[0,0,  0,1,  1,1,  1,0]</desc>
+        </ellipse>
       </g>
     </g>
     <g
@@ -740,6 +1060,16 @@
          inkscape:label="thickness"
          style="display:inline"
          transform="translate(253.50896,-17.780488)">
+        <circle
+           style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1060-2-5-6"
+           cx="-102.18253"
+           cy="189.9005"
+           r="0.94230598"
+           inkscape:label="end">
+          <desc
+             id="desc1251-7-3-0">&quot;z&quot;:1</desc>
+        </circle>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:2.23332px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.418746"
@@ -752,7 +1082,35 @@
              id="tspan1495-5-9-6-2"
              style="font-size:2.23332px;fill:#000000;fill-opacity:1;stroke-width:0.418746"
              x="-115.10088"
-             y="177.29153">0,2</tspan></text>
+             y="177.29153">10,7</tspan></text>
+        <rect
+           style="display:inline;fill:none;fill-opacity:1;stroke:#00ffd5;stroke-width:0.026;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-3-2-1-3-2-3-0)"
+           id="rect1499-3-3-2-6"
+           width="2.5773141"
+           height="1.2037506"
+           x="-105.26001"
+           y="183.22202"
+           inkscape:label="frame" />
+        <path
+           style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m -105.28795,183.24882 2.58698,-0.004 -0.006,1.1848 -2.57824,-0.002 z"
+           id="path1503-5-6-9-1"
+           sodipodi:nodetypes="ccccc"
+           inkscape:label="shape">
+          <desc
+             id="desc1501-6-0-1-8">&quot;height&quot;:10</desc>
+        </path>
+        <ellipse
+           style="display:inline;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1062-6-2-7"
+           cx="-110.92827"
+           cy="189.89789"
+           inkscape:label="start"
+           rx="0.94199997"
+           ry="0.94230598">
+          <desc
+             id="desc1249-2-7-9">&quot;points&quot;:[0,0,  0,1,  1,1,  1,0]</desc>
+        </ellipse>
       </g>
     </g>
     <g
@@ -766,23 +1124,61 @@
          inkscape:label="#path3301"
          inkscape:connector-curvature="0" />
       <g
-         id="g1066-1-7-3-3"
+         id="g1066-1-7"
          inkscape:label="thickness"
          style="display:inline"
-         transform="translate(266.47449,-18.017)">
+         transform="translate(264.33251,-17.876029)">
+        <circle
+           style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1060-2-5"
+           cx="-102.18253"
+           cy="189.9005"
+           r="0.94230598"
+           inkscape:label="end">
+          <desc
+             id="desc1251-7-3">&quot;z&quot;:1</desc>
+        </circle>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:2.23332px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.418746"
            x="-115.10088"
            y="177.29153"
-           id="text1497-7-0-5-6-67"
+           id="text1497-7-0-5"
            inkscape:label="height"
            transform="scale(0.96024397,1.041402)"><tspan
              sodipodi:role="line"
-             id="tspan1495-5-9-6-2-5"
+             id="tspan1495-5-9-6"
              style="font-size:2.23332px;fill:#000000;fill-opacity:1;stroke-width:0.418746"
              x="-115.10088"
-             y="177.29153">0,2</tspan></text>
+             y="177.29153">10,7</tspan></text>
+        <rect
+           style="display:inline;fill:none;fill-opacity:1;stroke:#00ffd5;stroke-width:0.026;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-3-2-1-3-2-3)"
+           id="rect1499-3-3-2"
+           width="2.5773141"
+           height="1.2037506"
+           x="-105.26001"
+           y="183.22202"
+           inkscape:label="frame" />
+        <path
+           style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m -105.28795,183.24882 2.58698,-0.004 -0.006,1.1848 -2.57824,-0.002 z"
+           id="path1503-5-6-9"
+           sodipodi:nodetypes="ccccc"
+           inkscape:label="shape">
+          <desc
+             id="desc1501-6-0-1">&quot;height&quot;:10</desc>
+        </path>
+        <ellipse
+           style="display:inline;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1062-6-2"
+           cx="-110.92827"
+           cy="189.89789"
+           inkscape:label="start"
+           rx="0.94199997"
+           ry="0.94230598">
+          <desc
+             id="desc1249-2-7">&quot;points&quot;:[0,0,  0,1,  1,1,  1,0]</desc>
+        </ellipse>
       </g>
     </g>
     <g
@@ -801,19 +1197,57 @@
          inkscape:label="thickness"
          style="display:inline"
          transform="translate(267.28772,-42.481071)">
+        <circle
+           style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1060-2-5-6-3-2"
+           cx="-82.802528"
+           cy="184.70245"
+           r="0.94230598"
+           inkscape:label="end">
+          <desc
+             id="desc1251-7-3-0-7-9">&quot;z&quot;:1</desc>
+        </circle>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:2.23332px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.418746"
-           x="-115.10088"
-           y="177.29153"
+           x="-116.15979"
+           y="176.88823"
            id="text1497-7-0-5-6-5-3"
            inkscape:label="height"
            transform="scale(0.96024397,1.041402)"><tspan
              sodipodi:role="line"
              id="tspan1495-5-9-6-2-9-1"
              style="font-size:2.23332px;fill:#000000;fill-opacity:1;stroke-width:0.418746"
-             x="-115.10088"
-             y="177.29153">0,2</tspan></text>
+             x="-116.15979"
+             y="176.88823">10,10</tspan></text>
+        <rect
+           style="display:inline;fill:none;fill-opacity:1;stroke:#00ffd5;stroke-width:0.026;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-3-2-1-3-2-3-0-2-3)"
+           id="rect1499-3-3-2-6-2-9"
+           width="2.5773141"
+           height="1.2037506"
+           x="-105.26001"
+           y="183.22202"
+           inkscape:label="frame" />
+        <path
+           style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m -102.69437,183.27609 c 0,0 -1.02818,0.38269 -1.28964,0.25512 -0.26147,-0.12757 -0.20511,-0.19964 -0.43993,-0.19734 -0.23482,0.002 -0.85183,0.61046 -0.85183,0.61046 l 4.2e-4,0.51256 1.32973,-0.4116 1.24637,-0.38579 z"
+           id="path1503-5-6-9-1-2-5"
+           sodipodi:nodetypes="czzccccc"
+           inkscape:label="shape">
+          <desc
+             id="desc1501-6-0-1-8-8-6">&quot;height&quot;:10</desc>
+        </path>
+        <ellipse
+           style="display:inline;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1062-6-2-7-9-8"
+           cx="-111.63681"
+           cy="185.56337"
+           inkscape:label="start"
+           rx="0.94199997"
+           ry="0.94230598">
+          <desc
+             id="desc1249-2-7-9-7-4">&quot;points&quot;:[0,0,  0,1,  1,1,  1,0]</desc>
+        </ellipse>
       </g>
     </g>
     <g
@@ -832,19 +1266,57 @@
          inkscape:label="thickness"
          style="display:inline"
          transform="translate(230.87379,-41.533525)">
+        <circle
+           style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1060-2-5-6-3"
+           cx="-83.197838"
+           cy="184.674"
+           r="0.94230598"
+           inkscape:label="end">
+          <desc
+             id="desc1251-7-3-0-7">&quot;z&quot;:1</desc>
+        </circle>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:2.23332px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.418746"
-           x="-115.10088"
-           y="177.29153"
+           x="-116.24186"
+           y="177.17628"
            id="text1497-7-0-5-6-5"
            inkscape:label="height"
            transform="scale(0.96024397,1.041402)"><tspan
              sodipodi:role="line"
              id="tspan1495-5-9-6-2-9"
              style="font-size:2.23332px;fill:#000000;fill-opacity:1;stroke-width:0.418746"
-             x="-115.10088"
-             y="177.29153">0,2</tspan></text>
+             x="-116.24186"
+             y="177.17628">10,10</tspan></text>
+        <rect
+           style="display:inline;fill:none;fill-opacity:1;stroke:#00ffd5;stroke-width:0.026;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-3-2-1-3-2-3-0-2)"
+           id="rect1499-3-3-2-6-2"
+           width="2.5773141"
+           height="1.2037506"
+           x="-105.26001"
+           y="183.22202"
+           inkscape:label="frame" />
+        <path
+           style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m -105.28795,183.24882 c 0,0 0.93723,0.30354 1.43333,0.27386 0.0905,-0.005 0.27788,-0.18798 0.36855,-0.18938 0.34944,-0.005 0.77952,0.58376 0.77952,0.58376 l -4.2e-4,0.51256 -1.32973,-0.4116 -1.24637,-0.38579 z"
+           id="path1503-5-6-9-1-2"
+           sodipodi:nodetypes="cssccccc"
+           inkscape:label="shape">
+          <desc
+             id="desc1501-6-0-1-8-8">&quot;height&quot;:10</desc>
+        </path>
+        <ellipse
+           style="display:inline;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:12.8504;stroke-opacity:1"
+           id="circle1062-6-2-7-9"
+           cx="-111.63681"
+           cy="185.56337"
+           inkscape:label="start"
+           rx="0.94199997"
+           ry="0.94230598">
+          <desc
+             id="desc1249-2-7-9-7">&quot;points&quot;:[0,0,  0,1,  1,1,  1,0]</desc>
+        </ellipse>
       </g>
     </g>
   </g>

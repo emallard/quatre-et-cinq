@@ -15,8 +15,7 @@ module qec {
         animation: animationDTO;
         updaters: updaterBase[];
         renderSettings: renderSettings = new renderSettings();
-
-        sdArray: signedDistance[];
+        video = new video();
 
         loadUrl(src: string, rootElt: HTMLElement) {
             this.rootElt = rootElt;
@@ -40,11 +39,18 @@ module qec {
         setAnimation(animation: animationDTO) {
             this.animation = animation;
 
-
             let loadedOjects = new qec.sceneLoader().load(animation.scenes[0].dtos);
 
             this.renderSettings.sdArray = loadedOjects.filter((x: any) => instanceOfSignedDistance(x));
             this.renderSettings.camera = loadedOjects.filter((x: any) => x instanceof camera)[0];
+
+            if (this.animation.noColor) {
+                console.log('animation.noColor');
+                for (let sd of this.renderSettings.sdArray) {
+                    let grey = 1;
+                    sd.getMaterial(null).setDiffuse(grey, grey, grey);
+                }
+            }
 
             let camTarget = this.renderSettings.camera.target;
             camTarget[2] = 0;
@@ -76,48 +82,66 @@ module qec {
             this.updater.update(this.renderSettings.sdArray, () => {
                 this.renderer.updateShader(this.renderSettings);
                 this.renderer.render(this.renderSettings);
-                //this.loopStart();
+                this.loopStart();
             });
         }
 
         previousNow: number;
 
         loopStart() {
+            console.log('loop start');
             this.previousNow = Date.now();
             this.t = this.animation.start;
+            this.updaters = [];
+            this.loop();
         }
 
         loop() {
             let now = Date.now();
             let dt = (now - this.previousNow) / 1000;
+            this.previousNow = now;
             this.updateTransitions(dt);
             this.updater.update(this.renderSettings.sdArray, () => {
                 this.renderer.updateAllUniformsForAll();
                 this.renderer.render(this.renderSettings);
+
+                this.video.addCanvas(this.renderer.getCanvas());
+
                 if (this.t < this.animation.end)
                     requestAnimationFrame(() => this.loop());
+                else
+                    this.video.finalizeVideo();
             });
         }
 
         updateTransitions(dt: number) {
             let tNext = this.t + dt;
+            //console.log(`transitions : t=${this.t}`);
 
             // check if we need to finish current updaters
             let updatersCopy = this.updaters.slice();
             this.updaters = [];
             for (let updater of updatersCopy) {
-                if (updater.t1 < tNext)
+                if (updater.t1 < tNext) {
+                    console.log(`[t=${this.t.toFixed(1)}] updater stops : ${updater.id} - [${updater.t0},${updater.t1}]`);
                     updater.stop();
+                }
                 else
                     this.updaters.push(updater);
             }
 
             // check if we need to start
-            let starting = this.findStartingSegments(tNext);
+            let starting = this.findStartingSegments(this.t, tNext);
             for (let s of starting) {
-                let newUpdater: updaterBase;
-                let sd = this.sdArray.find(x => x.svgId == s.dto0.svgId);
+                console.log(`[t=${this.t.toFixed(1)}] segment starts : ${s.dto0.svgId} - [${s.t0},${s.t1}]`);
+
+                let sd = this.renderSettings.sdArray.find(x => x.svgId == s.dto0.svgId);
+                if (sd == null)
+                    throw new Error(`svgId not found ${s.dto0.svgId}`);
+
                 for (let p of s.parameters) {
+                    let newUpdater: updaterBase;
+
                     if (p == 'thickness') {
                         newUpdater = new thicknessUpdater(<sdFields1>sd, s.dto0[p], s.dto1[p]);
                     }
@@ -126,23 +150,28 @@ module qec {
                     }
                     else
                         throw Error('unknown parameter')
+
+                    newUpdater.id = s.dto0.svgId;
+                    newUpdater.t0 = s.t0;
+                    newUpdater.t1 = s.t1;
+                    newUpdater.start();
+                    this.updaters.push(newUpdater);
                 }
-                newUpdater.t0 = s.t0;
-                newUpdater.t1 = s.t1;
-                newUpdater.start();
-                this.updaters.push(newUpdater);
+
             }
 
             this.t = tNext;
+
             for (let u of this.updaters)
                 u.update(this.t);
+
         }
 
 
-        findStartingSegments(_t: number): sdAnimationSegmentDTO[] {
+        findStartingSegments(_t: number, _tNext: number): sdAnimationSegmentDTO[] {
             let found: sdAnimationSegmentDTO[] = [];
             for (let s of this.animation.segments) {
-                if (_t > s.t0) {
+                if (s.t0 > _t && s.t0 < _tNext) {
                     found.push(s);
                 }
             }
@@ -161,11 +190,12 @@ module qec {
             let scenes: scSceneDTO[] = [];
 
             console.log('animationLoader: scenes ' + dto.scenes.join(', '));
-            for (let url of dto.scenes) {
-                let captured = url;
+            for (let i = 0; i < dto.scenes.length; ++i) {
+                let url = dto.scenes[i];
+                let captured_i = i;
                 run.push(_done => {
-                    new svgSceneLoader().loadUrl(captured, x => {
-                        scenes.push(x);
+                    new svgSceneLoader().loadUrl(url, x => {
+                        scenes[captured_i] = x;
                         _done();
                     });
                 });
@@ -180,6 +210,8 @@ module qec {
 
             let segments = json.segments;
             let anim = new animationDTO();
+            if (json.noColor != undefined)
+                anim.noColor = json.noColor;
             anim.start = json.start;
             anim.end = json.end;
             anim.scenes.push(...scenes);
@@ -219,6 +251,7 @@ module qec {
         scenes: scSceneDTO[] = [];
         scenesObjectsByName: { [key: string]: any }[] = [];
         segments: sdAnimationSegmentDTO[] = [];
+        noColor: boolean;
     }
 
     export class sdAnimationSegmentDTO {
@@ -257,6 +290,17 @@ module qec {
             this.sd = sd;
             this.thickness0 = thickness0;
             this.thickness1 = thickness1;
+            if (!(this.sd instanceof sdFields1))
+                throw new Error('wrong sd type');
+        }
+
+        override update(t: number): void {
+            let r = (t - this.t0) / (this.t1 - this.t0);
+            this.sd.setThickness(mix(this.thickness0, this.thickness1, r));
+        }
+
+        override stop(): void {
+            this.sd.setThickness(this.thickness1);
         }
     }
 
