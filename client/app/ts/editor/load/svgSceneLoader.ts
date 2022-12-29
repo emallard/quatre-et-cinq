@@ -2,9 +2,10 @@ module qec {
     export class svgSceneLoader {
 
         debug: boolean = false;
+        PIXEL_SIZE = 3.779528;
 
         loadUrl(src: string, done: (sc: scSceneDTO) => void) {
-            var req = new XMLHttpRequest();
+            let req = new XMLHttpRequest();
             req.open('GET', src, true);
             req.onreadystatechange = () => {
                 if (req.readyState == 4) {
@@ -72,11 +73,11 @@ module qec {
                 let canvas = document.createElement('canvas');
                 canvas.width = img.width;
                 canvas.height = img.height;
-                var ctx = canvas.getContext('2d');
+                let ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0);
                 let pixelBounds = this.getBoundingBoxInPx(canvas);
-                let px = 3.779528;
+                let px = this.PIXEL_SIZE;
                 let realBounds = [pixelBounds[0] / px, pixelBounds[1] / px, pixelBounds[2] / px, pixelBounds[3] / px];
                 //console.log("bounding box dimension in pixels : ", realBounds);
 
@@ -91,7 +92,7 @@ module qec {
                 // (Debug) Show the extracted SVG:
                 // document.body.appendChild(svgRootElement);
 
-                var svg_xml = (new XMLSerializer()).serializeToString(svgRootElement);
+                let svg_xml = (new XMLSerializer()).serializeToString(svgRootElement);
                 let topImage = new scImageDTO();
                 topImage.src = "data:image/svg+xml;base64," + btoa(svg_xml);
 
@@ -126,9 +127,11 @@ module qec {
                 };
 
                 // profile line in realBounds matrix
-                let startElt = this.getByLabel(thicknessElt, "start");
-                let radiusElt = this.getByLabel(thicknessElt, "radius");
-                let borderFrameElt = this.getByLabel(thicknessElt, "border_frame");
+                let startElt = this.getByLabelCanBeNull(thicknessElt, "start");
+                let radiusElt = this.getByLabelCanBeNull(thicknessElt, "radius");
+                let borderFrameElt = this.getByLabelCanBeNull(thicknessElt, "border_frame");
+                let skeletonElt = this.getByLabelCanBeNull(thicknessElt, "skeleton_in");
+
                 if (startElt != null && borderFrameElt != null) {
                     let start = this.getXY(thicknessElt, "start");
                     let end = this.getXY(thicknessElt, "end");
@@ -225,6 +228,23 @@ module qec {
                     }
                     done(sdFields);
                 }
+                else if (skeletonElt != null) {
+
+                    this.createSkeleton(thicknessElt, _partSkeleton => {
+
+                        let sdFields: sdFields2SkeletonDTO = {
+                            type: sdFields2SkeletonDTO.TYPE,
+                            svgId: svgId,
+                            top: top,
+                            profile: this.createProfile(thicknessElt, height, height),
+                            skeleton: _partSkeleton,
+
+                            material: material,
+                            transform: transform
+                        }
+                        done(sdFields);
+                    });
+                }
                 else {
                     let sdFields: sdFields1DTO = {
                         type: sdFields1DTO.TYPE,
@@ -267,19 +287,78 @@ module qec {
             }
         }
 
+        createSkeleton(
+            thicknessElt: SVGGraphicsElement,
+            done: (part: partSkeletonDTO) => void) {
+
+            // clone/extract
+            let [outSvg, outG, outElt] = this.copySvgAndKeepOnly(this.getByLabel(thicknessElt, "skeleton_out"));
+            let [inSvg, inG, inElt] = this.copySvgAndKeepOnly(this.getByLabel(thicknessElt, "skeleton_in"));
+
+            // change stroke to fill
+            outElt.style.stroke = 'none';
+            outElt.style.fill = 'black';
+            //outElt.removeAttribute('stroke');
+            //outElt.setAttribute('fill', 'black');
+
+            this.getBoundingBoxInMm(outSvg, outBounds => {
+
+                let outSrc = this.isolate(outSvg, outBounds);
+                let inSrc = this.isolate(inSvg, outBounds);
+
+                let halfWidth = (outBounds[2] - outBounds[0]) / 2;
+                let halfHeight = (outBounds[3] - outBounds[1]) / 2;
+                let centeredBounds = [-halfWidth, -halfHeight, halfWidth, halfHeight];
+
+                let part: partSkeletonDTO = {
+                    inImage: inSrc,
+                    inBounds: centeredBounds,
+                    outImage: outSrc,
+                    outBounds: centeredBounds
+                }
+                done(part);
+            });
+        }
+
+        isolate(svg: SVGSVGElement, realBounds: number[]): string {
+
+            /*
+            let parser = new DOMParser();
+            let doc = parser.parseFromString(src, "image/svg+xml");
+            let svgRootElement = doc.querySelector('svg');*/
+            let svgRootElement = svg;
+            svgRootElement.setAttribute('viewBox', realBounds[0] + ' ' + realBounds[1] + ' ' + (realBounds[2] - realBounds[0]) + ' ' + (realBounds[3] - realBounds[1]));
+            svgRootElement.setAttribute('width', (realBounds[2] - realBounds[0]) + 'mm');
+            svgRootElement.setAttribute('height', (realBounds[3] - realBounds[1]) + 'mm');
+
+            // (Debug) Show the extracted SVG:
+            // document.body.appendChild(svgRootElement);
+
+            let isolated_svg_xml = (new XMLSerializer()).serializeToString(svgRootElement);
+            let isolated_src = "data:image/svg+xml;base64," + btoa(isolated_svg_xml);
+            return isolated_src;
+            /*
+            let halfWidth = (realBounds[2] - realBounds[0]) / 2;
+            let halfHeight = (realBounds[3] - realBounds[1]) / 2;
+            let topBounds = [-halfWidth, -halfHeight, halfWidth, halfHeight];
+
+            return [isolated_src, topBounds];
+            */
+        }
+
         createSvgFromPoints(width: number, height: number, points: number[]): string {
-            var widthAndHeight = 'width="' + width + '" height="' + height + '"';
-            var viewbox = 'viewbox="0 0 ' + width + ' ' + height + '"';
+            let widthAndHeight = 'width="' + width + '" height="' + height + '"';
+            let viewbox = 'viewbox="0 0 ' + width + ' ' + height + '"';
 
             let pointy = height - points[1];
-            var path = 'M ' + points[0] + ' ' + pointy + ' ';
+            let path = 'M ' + points[0] + ' ' + pointy + ' ';
             for (let i = 0; i < points.length; i += 2) {
                 pointy = height - points[i + 1];
                 path = path + 'L ' + points[i] + ' ' + pointy + ' ';
             }
             path = path + 'Z';
 
-            var text = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n'
+            let text = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n'
                 + '<svg '
                 + ' xmlns:svg="http://www.w3.org/2000/svg" '
                 + ' xmlns="http://www.w3.org/2000/svg" '
@@ -300,15 +379,39 @@ module qec {
             return text;
         }
 
-        getBoundingBoxInPx(canvas: HTMLCanvasElement): number[] {
-            var ctx = canvas.getContext('2d');
-            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        getBoundingBoxInMm(svg: SVGSVGElement, done: (bounds: number[]) => void) {
+            let src = (new XMLSerializer()).serializeToString(svg);
 
-            var bounds = [0, 0, 0, 0];
-            var first = true;
-            for (var i = 0; i < imageData.width; ++i) {
-                for (var j = 0; j < imageData.height; ++j) {
-                    var q = 4 * (i + j * imageData.width);
+            let img = new Image();
+            img.onload = () => {
+
+                // real bounds
+                console.log("img dimension : " + img.width + "," + img.height);
+                let canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                let ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                let pixelBounds = this.getBoundingBoxInPx(canvas);
+                let px = this.PIXEL_SIZE;
+                let realBounds = [pixelBounds[0] / px, pixelBounds[1] / px, pixelBounds[2] / px, pixelBounds[3] / px];
+                //console.log("bounding box dimension in pixels : ", realBounds);
+
+                done(realBounds);
+            }
+            img.src = "data:image/svg+xml;base64," + btoa(src);
+        }
+
+        getBoundingBoxInPx(canvas: HTMLCanvasElement): number[] {
+            let ctx = canvas.getContext('2d');
+            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            let bounds = [0, 0, 0, 0];
+            let first = true;
+            for (let i = 0; i < imageData.width; ++i) {
+                for (let j = 0; j < imageData.height; ++j) {
+                    let q = 4 * (i + j * imageData.width);
                     if (imageData.data[q + 3] > 0 &&
                         (imageData.data[q] != 255
                             || imageData.data[q + 1] != 255
@@ -399,7 +502,7 @@ module qec {
 
         getXYDescByLabel(elt: SVGGraphicsElement, name: string): [number, number, any] {
             let positionElt = this.getByLabel(elt, name);
-            var descs = positionElt.getElementsByTagName("desc");
+            let descs = positionElt.getElementsByTagName("desc");
             let z = 0;
             let desc: any = null;
             if (descs.length > 0) {
@@ -498,7 +601,7 @@ module qec {
             clonedRoot.setAttribute('width', '' + width + 'mm');
             clonedRoot.setAttribute('height', '' + height + 'mm');
             clonedRoot.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
-            var svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
+            let svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
             //console.log("frame SVG");
             //console.log(svg_xml);
             return [svg_xml, [0, 0, width, height]];
@@ -515,6 +618,13 @@ module qec {
         }
 
         getByLabel(elt: SVGGraphicsElement, name: string): SVGGraphicsElement {
+            let found = this.getByLabelCanBeNull(elt, name);
+            if (found == null)
+                throw new Error("label not found : " + name);
+            return found;
+        }
+
+        getByLabelCanBeNull(elt: SVGGraphicsElement, name: string): SVGGraphicsElement {
             let found: SVGGraphicsElement;
             elt.childNodes.forEach(x => {
                 let attributes = (<SVGGraphicsElement>x).attributes;
@@ -542,7 +652,7 @@ module qec {
 
         extractSvgIgnoringThickness(elt: SVGGraphicsElement): string {
             let [clonedRoot, g] = this.extractIgnoringThickness(elt);
-            var svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
+            let svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
             return svg_xml;
         }
 
@@ -580,10 +690,10 @@ module qec {
         }
 
         getColorIgnoringThickness(elt: SVGGraphicsElement): number[] {
-            var style = elt.getAttribute('style');
+            let style = elt.getAttribute('style');
             if (style != null) {
                 let col = '';
-                var i = style.indexOf('fill:');
+                let i = style.indexOf('fill:');
                 if (i >= 0) {
                     col = style.substring(i + 5, i + 5 + 7);
                 }
@@ -595,7 +705,7 @@ module qec {
                 }
 
                 if (col != '') {
-                    var rgb = this.hexToRgb(col);
+                    let rgb = this.hexToRgb(col);
                     if (rgb != null)
                         return rgb;
                 }
@@ -615,14 +725,42 @@ module qec {
             return null;
         }
 
+        copySvgAndKeepOnly(elt: SVGGraphicsElement): [SVGSVGElement, SVGGElement, SVGGraphicsElement] {
+            let current = elt;
+            let chain: SVGGraphicsElement[] = [];
+            while (current != null) {
+                chain.push(current);
+                if (current instanceof SVGSVGElement)
+                    break;
+                current = <SVGGraphicsElement>current.parentNode;
+            }
+
+            let clonedRoot = <SVGSVGElement>chain[chain.length - 1].cloneNode(false);
+            let cloned = <SVGGraphicsElement>clonedRoot;
+
+
+            let g = clonedRoot.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "g");
+            cloned.appendChild(g);
+            cloned = g;
+
+            for (let i = chain.length - 2; i >= 0; --i) {
+                let deep = (i == 0);
+                let newCloned = <SVGGraphicsElement>chain[i].cloneNode(deep);
+                cloned.appendChild(newCloned);
+                cloned = newCloned;
+            }
+
+            return [clonedRoot, g, cloned];
+        }
+
         private hexToRgb(hex): number[] {
             // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
-            var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+            let shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
             hex = hex.replace(shorthandRegex, function (m, r, g, b) {
                 return r + r + g + g + b + b;
             });
 
-            var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return result ? [
                 parseInt(result[1], 16) / 255,
                 parseInt(result[2], 16) / 255,

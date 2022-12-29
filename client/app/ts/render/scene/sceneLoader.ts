@@ -7,12 +7,13 @@ module qec {
             }
 
             switch (dto['type']) {
-                case cameraDTO.TYPE: return new camera().createFrom(dto); break;
-                case sdFields1DTO.TYPE: return new sdFields1().createFrom(dto); break;
-                case sdFields2DTO.TYPE: return new sdFields2().createFrom(dto); break;
-                case sdFields2BorderDTO.TYPE: return new sdFields2Border().createFrom(dto); break;
-                case sdFields2ProfileBorderDTO.TYPE: return new sdFields2ProfileBorder().createFrom(dto); break;
-                case sdFields2RadialDTO.TYPE: return new sdFields2Radial().createFrom(dto); break;
+                case cameraDTO.TYPE: return new camera().createFrom(dto);
+                case sdFields1DTO.TYPE: return new sdFields1().createFrom(dto);
+                case sdFields2DTO.TYPE: return new sdFields2().createFrom(dto);
+                case sdFields2BorderDTO.TYPE: return new sdFields2Border().createFrom(dto);
+                case sdFields2ProfileBorderDTO.TYPE: return new sdFields2ProfileBorder().createFrom(dto);
+                case sdFields2RadialDTO.TYPE: return new sdFields2Radial().createFrom(dto);
+                case sdFields2SkeletonDTO.TYPE: return new sdFields2Skeleton().createFrom(dto);
                 default:
                     throw new Error(`unknown scene dto type : ${dto['type']}`);
             }

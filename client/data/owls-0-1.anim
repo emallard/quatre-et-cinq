@@ -1,5 +1,5 @@
 {
-    "start":-0.1,
+    "start":-0.01,
     "end":5,
     "scenes": ["data/owl-0.svg", "data/owl-1.svg"],
     "segments": [

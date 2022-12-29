@@ -5,6 +5,7 @@ module qec {
         texturePacker: texturePacker;
         needRepack: boolean;
         debugInfoInCanvas = false;
+        debugInfoCanvasSkeleton = true;
 
         constructor() {
             this.texturePacker = new texturePacker();
@@ -39,6 +40,10 @@ module qec {
                 if (instanceOfBorder(sd)) {
                     let captured = <iBorder>sd;
                     run.push(x => this.updateBorder(captured, x));
+                }
+                if (instanceOfSkeleton(sd)) {
+                    let captured = <iSkeleton>sd;
+                    run.push(x => this.updateSkeleton(captured, x));
                 }
             }
             run.run(done);
@@ -78,6 +83,19 @@ module qec {
                     b.borderSprite = new textureSprite();
                     b.borderSprite.originalTexture = b.borderTexture;
                     allSprites.push(b.borderSprite);
+                }
+                if (instanceOfSkeleton(sd)) {
+                    let skel = sd.skeleton;
+                    {
+                        skel.outSprite = new textureSprite();
+                        skel.outSprite.originalTexture = skel.outTexture;
+                        allSprites.push(skel.outSprite);
+                    }
+                    {
+                        skel.inSprite = new textureSprite();
+                        skel.inSprite.originalTexture = skel.inTexture;
+                        allSprites.push(skel.inSprite);
+                    }
                 }
             }
             this.texturePacker.repack(allSprites);
@@ -120,7 +138,12 @@ module qec {
 
         updateProfile(sd: iProfile, done: () => void) {
             let profile = sd.profile;
-            if (profile.profileUpdated) {
+            if (profile.profileTextureUpdated) {
+                profile.profileTextureUpdated = false;
+                this.needRepack = true;
+                done();
+            }
+            else if (profile.profileUpdated) {
                 console.log('update profile' + sd.uniqueName);
 
                 profile.profileUpdated = false;
@@ -143,7 +166,7 @@ module qec {
                     }
 
                     profile.profileTexture = topDfCanvas.floatTexture;
-                    profile.profileTextureUpdated = true;
+                    //profile.profileTextureUpdated = true;
                     done();
                 };
                 img.src = profile.profileSrc;
@@ -239,6 +262,94 @@ module qec {
             else {
                 done();
             }
+        }
+
+        updateSkeleton(sd: iSkeleton, done: () => void) {
+            let skel = sd.skeleton;
+            if (skel.inUpdated || skel.outUpdated) {
+                console.log('update skeleton ' + sd.uniqueName);
+
+                skel.inUpdated = false;
+                skel.outUpdated = false;
+                this.needRepack = true;
+
+                var margin = 2;
+
+                // load images
+                //let outImg = new Image();
+                //let inImg = new Image();
+                //let outFloatTexture: floatTexture;
+                //let inFloatTexture: floatTexture;
+
+                let run = new runAll();
+
+                run.push(_done => {
+                    this.createFloatTextureForTop(
+                        margin,
+                        skel.outSrc,
+                        skel.outBounds,
+                        this.debugInfoInCanvas || this.debugInfoCanvasSkeleton,
+                        (ft, newBounds) => {
+                            vec4.copy(skel.outBounds, newBounds);
+
+                            skel.outTexture = ft;
+                            skel.outTextureUpdated = true;
+
+                            _done();
+                        });
+                });
+
+                run.push(_done => {
+                    this.createFloatTextureForTop(
+                        margin,
+                        skel.inSrc,
+                        skel.inBounds,
+                        this.debugInfoInCanvas || this.debugInfoCanvasSkeleton,
+                        (ft, newBounds) => {
+                            vec4.copy(skel.inBounds, newBounds);
+
+                            skel.inTexture = ft;
+                            skel.inTextureUpdated = true;
+
+                            _done();
+                        });
+                });
+
+                run.run(() => {
+                    /*
+                    for (let q = 0; q < outFloatTexture.data.length; ++q) {
+                        let outD = outFloatTexture.data[q];
+                        let inD = inFloatTexture.data[q];
+                        let ratio = inD / (inD + outD);
+                        outFloatTexture.data[q] = ratio;
+                    }
+
+                    sd.skeleton.skelTexture = outFloatTexture;
+                    sd.skeleton.skelTextureUpdated = true;
+                    */
+                    done();
+                });
+            }
+            else {
+                done();
+            }
+        }
+
+        createFloatTextureForTop(margin: number, src: string, outBounds: Float32Array, debug: boolean, done: (ft: floatTexture, bounds: Float32Array) => void) {
+            let outImg = new Image();
+            outImg.onload = () => {
+                let outCanvas = new distanceFieldCanvas();
+                outCanvas.drawUserCanvasForTop(outImg, outBounds, margin);
+                outCanvas.update();
+
+                if (this.debugInfoInCanvas || this.debugInfoCanvasSkeleton) {
+                    outCanvas.debugInfoInCanvas();
+                    document.body.append(outCanvas.canvas);
+                }
+
+                done(outCanvas.floatTexture, outCanvas.totalBounds);
+            };
+            outImg.src = src;
         }
     }
 }

@@ -41,6 +41,44 @@ module qec {
             this.updateFloatTexture();
         }
 
+        updateFromInterpolation(df0: distanceFieldCanvas, df1: distanceFieldCanvas, r: number) {
+            let d0 = df0.distanceField.D;
+            let d1 = df1.distanceField.D;
+
+            let w = this.canvas.width;
+            let h = this.canvas.height;
+
+            let ctx = this.canvas.getContext('2d');
+            let imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            //ctx.clearRect(0, 0, w, h);
+
+            console.log('updateFromInterpolation ' + r + ' ' + df0.distanceField.D.length);
+            for (let q = 0; q < df0.distanceField.D.length; ++q) {
+
+                let interpolated = d0[q] * (1 - r) + d1[q] * r;
+                let alpha = interpolated < 0 ? 255 : 0;
+
+                imageData.data[q * 4] = 0;
+                imageData.data[q * 4 + 1] = 0;
+                imageData.data[q * 4 + 2] = 0;
+                imageData.data[q * 4 + 3] = alpha;
+            }
+            ctx.putImageData(imageData, 0, 0, 0, 0, w, h);
+
+            this.computeDistanceFromCanvas(df0.distanceField.halfSize[0], df0.distanceField.halfSize[1]);
+        }
+
+        drawSrcForTop(src: string, bounds: Float32Array, margin: number, done: () => void) {
+            // load image
+            let img = new Image();
+            img.onload = () => {
+                this.drawUserCanvasForTop(img, bounds, margin);
+                done();
+
+            };
+            img.src = src;
+        }
+
         drawUserCanvasForTop(img: HTMLCanvasElement | HTMLImageElement, _bounds: Float32Array, margin: number) {
             this.drawUserCanvasBase(img, _bounds, margin, false, distanceFieldBorderType.all);
         }
@@ -57,7 +95,7 @@ module qec {
             this.drawUserCanvasBase(img, _bounds, margin, true, distanceFieldBorderType.all);
         }
 
-        private drawUserCanvasBase(img: HTMLCanvasElement | HTMLImageElement, _bounds: Float32Array, margin: number, border: boolean, borderType:distanceFieldBorderType) {
+        private drawUserCanvasBase(img: HTMLCanvasElement | HTMLImageElement, _bounds: Float32Array, margin: number, border: boolean, borderType: distanceFieldBorderType) {
             this.totalBounds = vec4.fromValues(_bounds[0] - margin, _bounds[1] - margin, _bounds[2] + margin, _bounds[3] + margin);
 
             var boundW = _bounds[2] - _bounds[0];
@@ -106,25 +144,30 @@ module qec {
                 ctx.drawImage(img, 0, 0, 1, img.height, 0, offsetY, offsetX, newImgHeight);
             }
             */
-            if (border)
-            {
+            if (border) {
                 // draw left margin if profile
                 ctx.drawImage(img, 0, 0, 1, img.height, 0, offsetY, offsetX, newImgHeight);
 
                 // draw bottom margin if profile
-                ctx.drawImage(img, 0, img.height - 1, img.width, 1, offsetX, dfHeight-offsetY, newImgWidth, offsetY);
+                ctx.drawImage(img, 0, img.height - 1, img.width, 1, offsetX, dfHeight - offsetY, newImgWidth, offsetY);
 
                 // draw bottom left
-                ctx.drawImage(img, 0, img.height - 1, 1, 1, 0, dfHeight-offsetY, offsetX, offsetY);
+                ctx.drawImage(img, 0, img.height - 1, 1, 1, 0, dfHeight - offsetY, offsetX, offsetY);
             }
 
             if (this.distanceField == null) {
                 this.distanceField = new distanceField();
                 this.distanceField.setBorderType(borderType);
             }
+
+            this.computeDistanceFromCanvas(0.5 * totalBoundW, 0.5 * totalBoundH);
+        }
+
+        computeDistanceFromCanvas(halfWidth: number, halfHeight: number) {
+            var ctx = this.canvas.getContext('2d');
             var df = this.distanceField;
             var imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-            df.initFromImageData(imageData.data, this.canvas.width, this.canvas.height, 0.5 * totalBoundW, 0.5 * totalBoundH);
+            df.initFromImageData(imageData.data, this.canvas.width, this.canvas.height, halfWidth, halfHeight);
             df.setSignFromImageData(imageData.data, this.canvas.width, this.canvas.height);
         }
 

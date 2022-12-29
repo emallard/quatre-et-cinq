@@ -1,0 +1,8 @@
+{
+    "start":0,
+    "end":5,
+    "scenes": ["data/test/profile-0.svg", "data/test/profile-1.svg"],
+    "segments": [
+        [1, 4, "petals", ["profile"]]
+    ]
+}

@@ -4,7 +4,10 @@ module qec {
 
         isHardware = true;
         isDirectionalLight = false;
-        isFullScreen = false;
+        isFullScreen = true;
+        recordVideo = false;
+        realTime = true;
+        realTimeMultiplier = 0.1;
 
         rootElt: HTMLElement;
         updater: updater;
@@ -87,36 +90,50 @@ module qec {
         }
 
         previousNow: number;
-
+        adjustEndStart = 0.001;
         loopStart() {
             console.log('loop start');
             this.previousNow = Date.now();
-            this.t = this.animation.start;
+            this.t = this.animation.start - this.adjustEndStart;
             this.updaters = [];
+            this.clearColors();
             this.loop();
         }
 
+        clearColors() {
+            for (let sd of this.renderSettings.sdArray) {
+                sd.getMaterial(null).setDiffuse(1, 1, 1);
+            }
+        }
+
         loop() {
-            let now = Date.now();
-            let dt = (now - this.previousNow) / 1000;
-            this.previousNow = now;
-            this.updateTransitions(dt);
-            this.updater.update(this.renderSettings.sdArray, () => {
-                this.renderer.updateAllUniformsForAll();
-                this.renderer.render(this.renderSettings);
+            let dt = 0.1;
+            if (this.realTime) {
+                let now = Date.now();
+                dt = (now - this.previousNow) / 1000;
+                dt *= this.realTimeMultiplier;
+                this.previousNow = now;
+            }
+            this.updateTransitions(dt, () => {
+                this.updater.update(this.renderSettings.sdArray, () => {
+                    this.renderer.updateAllUniformsForAll();
+                    this.renderer.render(this.renderSettings);
 
-                this.video.addCanvas(this.renderer.getCanvas());
+                    if (this.recordVideo)
+                        this.video.addCanvas(this.renderer.getCanvas());
 
-                if (this.t < this.animation.end)
-                    requestAnimationFrame(() => this.loop());
-                else
-                    this.video.finalizeVideo();
+                    if (this.t < this.animation.end + this.adjustEndStart)
+                        requestAnimationFrame(() => this.loop());
+                    else
+                        if (this.recordVideo)
+                            this.video.finalizeVideo();
+                });
             });
         }
 
-        updateTransitions(dt: number) {
+        updateTransitions(dt: number, done: () => void) {
             let tNext = this.t + dt;
-            //console.log(`transitions : t=${this.t}`);
+            console.log(`transitions : t=${this.t}`);
 
             // check if we need to finish current updaters
             let updatersCopy = this.updaters.slice();
@@ -132,6 +149,7 @@ module qec {
 
             // check if we need to start
             let starting = this.findStartingSegments(this.t, tNext);
+            let newUpdaters: updaterBase[] = [];
             for (let s of starting) {
                 console.log(`[t=${this.t.toFixed(1)}] segment starts : ${s.dto0.svgId} - [${s.t0},${s.t1}]`);
 
@@ -139,14 +157,20 @@ module qec {
                 if (sd == null)
                     throw new Error(`svgId not found ${s.dto0.svgId}`);
 
-                for (let p of s.parameters) {
+                let parameters = s.parameters.slice();
+                parameters.push('redMaterial');
+
+                for (let parameter of parameters) {
                     let newUpdater: updaterBase;
 
-                    if (p == 'thickness') {
-                        newUpdater = new thicknessUpdater(<sdFields1>sd, s.dto0[p], s.dto1[p]);
+                    if (parameter == 'thickness') {
+                        newUpdater = new thicknessUpdater(<sdFields1>sd, s.dto0[parameter], s.dto1[parameter]);
                     }
-                    else if (p == 'redMaterial') {
+                    else if (parameter == 'redMaterial') {
                         newUpdater = new redMaterialUpdater(sd);
+                    }
+                    else if (parameter == 'profile') {
+                        newUpdater = new profileUpdater(<sdFields2>sd, s.dto0[parameter], s.dto1[parameter]);
                     }
                     else
                         throw Error('unknown parameter')
@@ -154,16 +178,24 @@ module qec {
                     newUpdater.id = s.dto0.svgId;
                     newUpdater.t0 = s.t0;
                     newUpdater.t1 = s.t1;
-                    newUpdater.start();
+                    newUpdaters.push(newUpdater);
                     this.updaters.push(newUpdater);
                 }
-
             }
 
-            this.t = tNext;
+            let run = new runAll();
+            for (let u of newUpdaters)
+                run.push(_done => u.start(_done));
 
-            for (let u of this.updaters)
-                u.update(this.t);
+            run.run(() => {
+                this.t = tNext;
+
+                for (let u of this.updaters)
+                    u.update(this.t);
+
+                done();
+            })
+
 
         }
 
@@ -171,7 +203,7 @@ module qec {
         findStartingSegments(_t: number, _tNext: number): sdAnimationSegmentDTO[] {
             let found: sdAnimationSegmentDTO[] = [];
             for (let s of this.animation.segments) {
-                if (s.t0 > _t && s.t0 < _tNext) {
+                if (s.t0 >= _t && s.t0 < _tNext) {
                     found.push(s);
                 }
             }
@@ -268,7 +300,7 @@ module qec {
         id: string;
         t0: number;
         t1: number;
-        start() { }
+        start(done: () => void) { done(); }
         update(t: number) { }
         stop() { }
     }
@@ -310,12 +342,167 @@ module qec {
             super();
             this.sd = sd;
         }
+
+        override start(done: () => void): void {
+            this.sd.getMaterial(null).setDiffuse(1, 0.5, 0.5);
+            done();
+        }
+
+        override stop(): void {
+            this.sd.getMaterial(null).setDiffuse(1, 1, 1);
+        }
     }
 
-    export class profileUpdater {
+    export class profileUpdater extends updaterBase {
+        sd: sdFields2;
+
+        dto0: partProfileDTO;
+        dto1: partProfileDTO;
+
+        df0: distanceFieldCanvas;
+        df1: distanceFieldCanvas;
+        df: distanceFieldCanvas;
+
+        constructor(
+            sd: sdFields2,
+            dto0: partProfileDTO,
+            dto1: partProfileDTO
+        ) {
+            super();
+            this.sd = sd;
+            this.dto0 = dto0;
+            this.dto1 = dto1;
+            if (this.dto0 == null || this.dto0.profileImage == null || this.dto0.profileBounds == null)
+                throw new Error('wrong dto0 type');
+            if (this.dto1 == null || this.dto1.profileImage == null || this.dto1.profileBounds == null)
+                throw new Error('wrong dto1 type');
+            if (!(this.sd instanceof sdFields2))
+                throw new Error('wrong sd type');
+        }
+
+        margin = 2;
+        debugInfoInCanvas = true;
+        debugCanvas: HTMLCanvasElement;
+
+        override start(done: () => void): void {
+
+            this.df0 = new distanceFieldCanvas();
+            this.df1 = new distanceFieldCanvas();
+            this.df = new distanceFieldCanvas();
+
+            if (this.debugInfoInCanvas) {
+                this.debugCanvas = document.createElement('canvas');
+                document.body.append(this.debugCanvas);
+            }
+
+            this.df0.drawSrcForTop(this.dto0.profileImage.src, new Float32Array(this.dto0.profileBounds), this.margin,
+                () => {
+                    this.df.drawSrcForTop(this.dto0.profileImage.src, new Float32Array(this.dto0.profileBounds), this.margin,
+                        () => {
+                            this.df1.drawSrcForTop(this.dto1.profileImage.src, new Float32Array(this.dto1.profileBounds), this.margin,
+                                () => {
+                                    this.createSegments();
+                                    done();
+                                });
+                        });
+                });
+            //}
+            //else {
+            //    let swap = this.df0;
+            //    this.df0 = this.df1;
+            //    this.df1 = swap;
+            //    this.start2(done);
+            //}
+        }
+
+        columns: number[];
+
+        createSegments(): void {
+            this.columns = [];
+
+            let w = this.df1.canvas.width;
+            let h = this.df1.canvas.height;
+            let ctx0 = this.df0.canvas.getContext('2d');
+            let ctx1 = this.df1.canvas.getContext('2d');
+            let data0 = ctx0.getImageData(0, 0, w, h);
+            let data1 = ctx1.getImageData(0, 0, w, h);
+
+            for (let i = 0; i < w; i++) {
+                let [s0, e0] = this.getColumnSegment(data0, i);
+                let [s1, e1] = this.getColumnSegment(data1, i);
+
+                let m0 = (e0 + s0) / 2;
+                let m1 = (e1 + s1) / 2;
+
+                this.columns.push(m0, m0 - s0, m1, m1 - s1);
+            }
+        }
+
+        getColumnSegment(data: ImageData, i: number): [number, number] {
+            let start = -1;
+            let end = -1;
+            for (let j = 0; j < data.height; j++) {
+                let q = (data.width * j + i) * 4;
+                let alpha = data.data[q + 3];
+                if (alpha > 0 && start == -1)
+                    start = j;
+                if (alpha == 0 && start != -1) {
+                    end = j;
+                    break;
+                }
+            }
+            return [start, end];
+        }
+
+
+        override update(t: number): void {
+
+            let r = (t - this.t0) / (this.t1 - this.t0);
+
+            let ctx = this.df.canvas.getContext('2d');
+            ctx.clearRect(0, 0, this.df.canvas.width, this.df.canvas.height);
+
+            let imageData = ctx.getImageData(0, 0, this.df.canvas.width, this.df.canvas.height);
+            let data = imageData.data;
+
+            for (let i = 0; i < imageData.width; i++) {
+                let m0 = this.columns[4 * i + 0];
+                let h0 = this.columns[4 * i + 1];
+                let m1 = this.columns[4 * i + 2];
+                let h1 = this.columns[4 * i + 3];
+
+                if (m0 == -1)
+                    continue;
+
+                let m = mix(m0, m1, r);
+                let h = mix(h0, h1, r);
+                for (let j = Math.floor(m - h); j < Math.ceil(m + h); ++j) {
+                    let q = (j * imageData.width + i) * 4;
+                    data[q + 0] = 0;
+                    data[q + 1] = 0;
+                    data[q + 2] = 0;
+                    data[q + 3] = 255;
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+
+            this.df.computeDistanceFromCanvas(this.df.distanceField.halfSize[0], this.df.distanceField.halfSize[1]);
+            this.df.update();
+            this.sd.profile.profileTexture = this.df.floatTexture;
+            this.sd.profile.profileTextureUpdated = true;
+
+            if (this.debugInfoInCanvas)
+                this.df.debugInfoInExistingCanvas(this.debugCanvas);
+        }
+
+        override stop(): void {
+            if (this.df0 != null && this.df1 != null)
+                this.df.floatTexture = this.df1.floatTexture;
+        }
     }
 
     export class cameraUpdater {
+
     }
 
     export class lightUpdater {
