@@ -22,6 +22,8 @@ module qec {
             let d0 = this.getDistTop(hd.top, p);
 
             let result = Math.max(boxDist, d0);
+            result = Math.min(d, result);
+
             if (col != null && result < d) {
                 vec3.copy(col, hd.material.diffuse);
             }

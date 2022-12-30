@@ -1,16 +1,17 @@
-module qec 
-{
+module qec {
 
-    export class renderSettings
-    {
-        sdArray:signedDistance[];
-        lights:ilight[] = [];
-        
-        camera:camera = new camera();
-        shadows:boolean;
-        refraction:boolean;
+    export class renderSettings {
+        sdArray: signedDistance[];
+        lights: ilight[] = [];
 
-        boundingBoxes:boolean;
-        noColor=false;
+        camera: camera = new camera();
+        shadows: boolean;
+        refraction: boolean;
+
+        boundingBoxes: boolean;
+        noColor = false;
+        zColor = false;
+
+        floorPlane = true;
     }
 }
