@@ -4,6 +4,8 @@ module qec {
         debug: boolean = false;
         PIXEL_SIZE = 3.779528;
 
+        templates: any;
+
         loadUrl(src: string, done: (sc: scSceneDTO) => void) {
             let req = new XMLHttpRequest();
             req.open('GET', src, true);
@@ -30,6 +32,8 @@ module qec {
 
             scene.dtos.push(...this.getCameras(svgRootElement));
 
+            this.templates = this.loadTemplates(svgRootElement);
+
             this.getSdFields(svgRootElement, (sdFieldsArray) => {
                 scene.dtos.push(...sdFieldsArray);
                 done(scene);
@@ -55,15 +59,14 @@ module qec {
 
             console.log("getSdFieldsOne " + this.getLabel(parent));
 
-            let src = this.extractSvgIgnoringThickness(parent);
-
-            /*
-            let sdFields = new sdFields1DTO();
-            sdFields.topImage = new scImageDTO();
-            sdFields.topImage.src = src;
-            sdFields.topBounds = [];
-            */
-
+            let [src, srcSvg] = this.extractSvgIgnoringThickness(parent);
+            let hasViewBox = srcSvg.getAttribute('viewBox') != null;
+            let templateInThicknessElt = this.getByLabelCanBeNull(thicknessElt, 'template');
+            let templateName: string = null;
+            if (templateInThicknessElt != null) {
+                templateName = this.getTextContent(templateInThicknessElt);
+                console.log("template : " + templateName);
+            }
 
             let img = new Image();
             img.onload = () => {
@@ -78,19 +81,29 @@ module qec {
                 ctx.drawImage(img, 0, 0);
                 let pixelBounds = this.getBoundingBoxInPx(canvas);
                 let px = this.PIXEL_SIZE;
+                if (!hasViewBox)
+                    px = 1;
                 let realBounds = [pixelBounds[0] / px, pixelBounds[1] / px, pixelBounds[2] / px, pixelBounds[3] / px];
-                //console.log("bounding box dimension in pixels : ", realBounds);
+                let viewBox = realBounds[0] + ' ' + realBounds[1] + ' ' + (realBounds[2] - realBounds[0]) + ' ' + (realBounds[3] - realBounds[1]);
+                if (this.debug) {
+                    console.log("bounding box dimension in pixels : ", pixelBounds);
+                    console.log("bounding box dimension in mm : ", realBounds);
+                    console.log("viewbox : ", viewBox);
+                }
 
                 let parser = new DOMParser();
                 let doc = parser.parseFromString(src, "image/svg+xml");
                 let svgRootElement = doc.querySelector('svg');
 
-                svgRootElement.setAttribute('viewBox', realBounds[0] + ' ' + realBounds[1] + ' ' + (realBounds[2] - realBounds[0]) + ' ' + (realBounds[3] - realBounds[1]));
+                svgRootElement.setAttribute('viewBox', viewBox);
                 svgRootElement.setAttribute('width', (realBounds[2] - realBounds[0]) + 'mm');
                 svgRootElement.setAttribute('height', (realBounds[3] - realBounds[1]) + 'mm');
 
                 // (Debug) Show the extracted SVG:
-                // document.body.appendChild(svgRootElement);
+                if (this.debug) {
+                    document.body.appendChild(canvas);
+                    document.body.appendChild(svgRootElement);
+                }
 
                 let svg_xml = (new XMLSerializer()).serializeToString(svgRootElement);
                 let topImage = new scImageDTO();
@@ -108,9 +121,12 @@ module qec {
                 cy = this.toLeftHanded(cy, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
 
                 // height
-                let heightElt = this.getByLabel(thicknessElt, 'height');
-                let tspan = heightElt.children.item(0);
-                let textContentSplit = tspan.textContent.split(',');
+                let heightElt: SVGGraphicsElement;
+                if (templateName != null)
+                    heightElt = this.getTemplate(templateName)['height'];
+                if (heightElt == null)
+                    heightElt = this.getByLabel(thicknessElt, 'height');
+                let textContentSplit = this.getTextContent(heightElt).split(',');
                 let z = parseFloat(textContentSplit[0]);
                 let height = parseFloat(textContentSplit[1]);
 
@@ -638,6 +654,21 @@ module qec {
             return found;
         }
 
+        getAllByLabel(elt: SVGGraphicsElement, name: string): SVGGraphicsElement[] {
+            let found: SVGGraphicsElement[] = [];
+            let all = elt.querySelectorAll(`text`)
+            all.forEach(x => {
+                let attributes = (<SVGGraphicsElement>x).attributes;
+                if (attributes != null) {
+                    let attr = attributes.getNamedItem('inkscape:label');
+                    if (attr != null && attr.textContent == name) {
+                        found.push((<SVGGraphicsElement>x));
+                    }
+                }
+            });
+            return found;
+        }
+
         getLabel(elt: SVGGraphicsElement): string {
             let attributes = elt.attributes;
             if (attributes != null) {
@@ -650,10 +681,10 @@ module qec {
 
         ///////
 
-        extractSvgIgnoringThickness(elt: SVGGraphicsElement): string {
+        extractSvgIgnoringThickness(elt: SVGGraphicsElement): [string, SVGGElement] {
             let [clonedRoot, g] = this.extractIgnoringThickness(elt);
             let svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
-            return svg_xml;
+            return [svg_xml, clonedRoot];
         }
 
         extractIgnoringThickness(elt: SVGGraphicsElement): [SVGSVGElement, SVGGElement] {
@@ -690,6 +721,19 @@ module qec {
         }
 
         getColorIgnoringThickness(elt: SVGGraphicsElement): number[] {
+            for (let i = 0; i < elt.childNodes.length; ++i) {
+                let child = elt.childNodes.item(i);
+                if (child instanceof SVGGraphicsElement) {
+                    if (this.getLabel(child) != 'thickness') {
+                        let childColor = this.getColorIgnoringThicknessRec(child);
+                        if (childColor != null)
+                            return childColor;
+                    }
+                }
+            }
+        }
+
+        getColorIgnoringThicknessRec(elt: SVGGraphicsElement): number[] {
             let style = elt.getAttribute('style');
             if (style != null) {
                 let col = '';
@@ -715,7 +759,7 @@ module qec {
                 let child = elt.childNodes.item(i);
                 if (child instanceof SVGGraphicsElement) {
                     if (this.getLabel(child) != 'thickness') {
-                        let childColor = this.getColorIgnoringThickness(child);
+                        let childColor = this.getColorIgnoringThicknessRec(child);
                         if (childColor != null)
                             return childColor;
                     }
@@ -766,6 +810,49 @@ module qec {
                 parseInt(result[2], 16) / 255,
                 parseInt(result[3], 16) / 255
             ] : null;
+        }
+
+        getTextContent(elt: SVGGraphicsElement): string {
+            let tspan = elt.children.item(0);
+            return tspan.textContent;
+        }
+
+        loadTemplates(svg: SVGSVGElement): any {
+            let templates: any = {};
+            let templatesElt = this.getByLabelCanBeNull(svg, 'Templates');
+            if (templatesElt == null)
+                return templates;
+
+            let allNameElts = this.getAllByLabel(templatesElt, 'name');
+            for (let nameElt of allNameElts) {
+
+                let template = {};
+                let name = nameElt.children.item(0).textContent;
+                nameElt.parentElement.childNodes.forEach(x => {
+                    let y = <SVGGraphicsElement>x;
+                    if (y == null)
+                        return;
+                    let label = this.getLabel(y);
+                    if (label == null) {
+                        return;
+                        throw new Error('label not found in template element ' + name);
+                    }
+                    if (label == 'name')
+                        return;
+                    template[label] = y;
+                });
+                templates[name] = template;
+
+            }
+
+            return templates;
+        }
+
+        getTemplate(name: string) {
+            let t = this.templates[name];
+            if (t == null)
+                throw new Error(`template ${name} not found`);
+            return t;
         }
     }
 

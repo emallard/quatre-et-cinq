@@ -24,11 +24,11 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.70252308"
-     inkscape:cx="410.66266"
-     inkscape:cy="474.7175"
+     inkscape:zoom="0.97534804"
+     inkscape:cx="397.29408"
+     inkscape:cy="405.49628"
      inkscape:document-units="px"
-     inkscape:current-layer="layer3"
+     inkscape:current-layer="layer2"
      showgrid="false"
      inkscape:window-width="1846"
      inkscape:window-height="1016"
@@ -69,7 +69,7 @@
          rx="3.3759999"
          ry="3.3758767">
         <desc
-           id="desc2229">&quot;z&quot;:100</desc>
+           id="desc2229">&quot;z&quot;:1000</desc>
       </ellipse>
       <circle
          style="fill:#f6f906;fill-opacity:1;stroke:none;stroke-width:3.4;stroke-opacity:1"
@@ -268,10 +268,6 @@
              y="177.29153">l3</tspan></text>
       </g>
     </g>
-    <g
-       id="g1380"
-       inkscape:label="arm_l"
-       style="fill:#bc3400;fill-opacity:1" />
   </g>
   <g
      inkscape:groupmode="layer"
@@ -293,7 +289,7 @@
            style="font-size:8.44089px;fill:#000000;fill-opacity:1;stroke-width:1.58266"
            x="113.75647"
            y="546.25934"
-           id="tspan38375-2">0,1</tspan></text>
+           id="tspan38375-2">20,30</tspan></text>
       <text
          xml:space="preserve"
          style="font-style:normal;font-weight:normal;font-size:8.44089px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1.58266"
@@ -324,7 +320,7 @@
            style="font-size:8.44089px;fill:#000000;fill-opacity:1;stroke-width:1.58266"
            x="113.75647"
            y="546.25934"
-           id="tspan38375-2-7">0,1</tspan></text>
+           id="tspan38375-2-7">10,20</tspan></text>
       <text
          xml:space="preserve"
          style="font-style:normal;font-weight:normal;font-size:8.44089px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1.58266"
@@ -355,7 +351,7 @@
            style="font-size:8.44089px;fill:#000000;fill-opacity:1;stroke-width:1.58266"
            x="113.75647"
            y="546.25934"
-           id="tspan38375-2-43">0,1</tspan></text>
+           id="tspan38375-2-43">0,10</tspan></text>
       <text
          xml:space="preserve"
          style="font-style:normal;font-weight:normal;font-size:8.44089px;line-height:1.25;font-family:sans-serif;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1.58266"

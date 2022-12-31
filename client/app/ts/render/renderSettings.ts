@@ -12,6 +12,6 @@ module qec {
         noColor = false;
         zColor = false;
 
-        floorPlane = true;
+        floorPlane = false;
     }
 }
