@@ -13,7 +13,7 @@ module qec {
         noColor = false;
         zColor = false;
         generateVideo = false;
-        generateOBJ = false;
+        exportOBJ = false;
 
         debugDistanceField = false;
         renderSteps = false;
@@ -130,14 +130,17 @@ module qec {
 
         render() {
             this.updater.update(this.renderSettings.sd, () => {
-                this.renderers.forEach(r => {
-                    r.updateShader(this.renderSettings);
-                    r.render(this.renderSettings);
-                });
 
-                if (this.settings.generateOBJ) {
+                if (!this.settings.exportOBJ) {
+                    this.renderers.forEach(r => {
+                        r.updateShader(this.renderSettings);
+                        r.render(this.renderSettings);
+                    });
+                }
+
+                if (this.settings.exportOBJ) {
                     let toTriangles = new signedDistanceToTriangles();
-                    toTriangles.compute(this.renderSettings.sd, 200, 200, 10, 1);
+                    toTriangles.compute(this.renderSettings.sd, 200, 200, 50, 1);
 
                     //let obj = new exportOBJ().getText(toTriangles.triangles, toTriangles.normals, toTriangles.colors);
                     //saveAs(obj, "example.obj");

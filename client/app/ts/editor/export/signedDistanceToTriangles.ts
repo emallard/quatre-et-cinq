@@ -63,7 +63,9 @@ module qec {
         compute(sd: signedDistance, icount: number, jcount: number, kcount: number, multiplier: number): void {
             let min = vec3.create();
             let max = vec3.create();
-            this.getBoundingBox([sd], min, max);
+            let allSd = getAllSignedDistances.getAll(sd);
+            allSd.filter(x => !(x instanceof sdUnion) && !(x instanceof sdSubtraction));
+            this.getBoundingBox(allSd, min, max);
             this.computeBase(sd, min, max, icount, jcount, kcount, multiplier);
         }
 

@@ -7,7 +7,7 @@ module qec {
         texturePacker: texturePacker = inject(texturePacker);
 
         exportSTL: exportSTL = inject(exportSTL);
-        exportOBJ: exportOBJ = inject(exportOBJ);
+        exportOBJ: exporterOBJ = inject(exporterOBJ);
         signedDistanceToTriangles: signedDistanceToTriangles = inject(signedDistanceToTriangles);
 
         renderSettings = new renderSettings();

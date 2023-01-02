@@ -103,7 +103,9 @@ module qec {
                     let distanceFromTop = posLocal[2] - hd.thickness;
                     let d1 = this.getDistBorder(hd.border, d0, distanceFromTop);
 
-                    return Math.max(d0, d1);//Math.max(d1, boxDist));
+                    let dUpperPlane = posLocal[2] - (2 * hd.boundingBox[2]);
+                    let dLowerPlane = -posLocal[2];
+                    return Math.max(d1, dUpperPlane, dLowerPlane);
                 },
                 (posWorld, posLocal, col) => hd.material.getColor(col)
             );

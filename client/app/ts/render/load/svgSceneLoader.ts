@@ -125,12 +125,6 @@ module qec {
 
             let [src, srcSvg] = this.extractSvgIgnoringThickness(parent);
             let hasViewBox = srcSvg.getAttribute('viewBox') != null;
-            let templateInThicknessElt = this.getByLabelCanBeNull(thicknessElt, 'template');
-            let templateName: string = null;
-            if (templateInThicknessElt != null) {
-                templateName = this.getTextContent(templateInThicknessElt);
-                console.log("template : " + templateName);
-            }
 
             let img = new Image();
             img.onload = () => {
@@ -185,11 +179,7 @@ module qec {
                 cy = this.toLeftHanded(cy, thicknessElt.ownerSVGElement.viewBox.baseVal.height);
 
                 // height
-                let heightElt: SVGGraphicsElement;
-                if (templateName != null)
-                    heightElt = this.getTemplate(templateName)['height'];
-                if (heightElt == null)
-                    heightElt = this.getByLabel(thicknessElt, 'height');
+                let heightElt = this.getEltWithTemplate(thicknessElt, 'height');
                 let textContentSplit = this.getTextContent(heightElt).split(',');
                 let z = parseFloat(textContentSplit[0]);
                 let height = parseFloat(textContentSplit[1]);
@@ -209,8 +199,8 @@ module qec {
                 // profile line in realBounds matrix
                 let startElt = this.getByLabelCanBeNull(thicknessElt, "start");
                 let radiusElt = this.getByLabelCanBeNull(thicknessElt, "radius");
-                let borderFrameElt = this.getByLabelCanBeNull(thicknessElt, "border_frame");
-                let skeletonElt = this.getByLabelCanBeNull(thicknessElt, "skeleton_in");
+                let borderFrameElt = this.getEltWithTemplateCanBeNull(thicknessElt, "border_frame");
+                let skeletonElt = this.getEltWithTemplateCanBeNull(thicknessElt, "skeleton_in");
 
                 if (startElt != null && borderFrameElt != null) {
                     let start = this.getXY(thicknessElt, "start");
@@ -352,7 +342,7 @@ module qec {
 
         createBorder(thicknessElt: SVGGraphicsElement): partBorderDTO {
             // height
-            let borderDimensionsElt = this.getByLabel(thicknessElt, 'border_dimensions');
+            let borderDimensionsElt = this.getEltWithTemplate(thicknessElt, 'border_dimensions');
             let borderDimensionstspan = borderDimensionsElt.children.item(0);
             let borderDimensionsTextContentSplit = borderDimensionstspan.textContent.split(',');
             let borderWidth = parseFloat(borderDimensionsTextContentSplit[0]);
@@ -637,7 +627,7 @@ module qec {
         }
 
         getFrame(eltThickness: SVGGraphicsElement, width: number, height: number, prefix: string): [string, number[]] {
-            let frameElt = this.getByLabel(eltThickness, prefix + 'frame');
+            let frameElt = this.getEltWithTemplate(eltThickness, prefix + 'frame');
 
 
             let origin = frameElt.ownerSVGElement.createSVGPoint();
@@ -662,7 +652,7 @@ module qec {
                 frameElt = <SVGGraphicsElement>frameElt.parentNode;
             }
 
-            let shapeElt = this.getByLabel(eltThickness, prefix + 'shape');
+            let shapeElt = this.getEltWithTemplate(eltThickness, prefix + 'shape');
             let [clonedRoot, clonedGroup] = this.extractIgnoringThickness(shapeElt);
 
             let matrix = clonedRoot.createSVGMatrix();
@@ -682,6 +672,10 @@ module qec {
             clonedRoot.setAttribute('height', '' + height + 'mm');
             clonedRoot.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
             let svg_xml = (new XMLSerializer()).serializeToString(clonedRoot);
+
+            if (this.debug) {
+                document.body.appendChild(clonedRoot);
+            }
             //console.log("frame SVG");
             //console.log(svg_xml);
             return [svg_xml, [0, 0, width, height]];
@@ -921,6 +915,32 @@ module qec {
             return t;
         }
 
+        getEltWithTemplate(thicknessElt: SVGGraphicsElement, paramName: string): SVGGraphicsElement {
+            let result = this.getEltWithTemplateCanBeNull(thicknessElt, paramName);
+            if (result == null)
+                throw new Error("Element can't be null : " + paramName);
+            return result;
+        }
+
+        getEltWithTemplateCanBeNull(thicknessElt: SVGGraphicsElement, paramName: string): SVGGraphicsElement {
+            let templateInThicknessElt = this.getByLabelCanBeNull(thicknessElt, 'template');
+            let templateName: string = null;
+            if (templateInThicknessElt != null) {
+                templateName = this.getTextContent(templateInThicknessElt);
+            }
+
+            let paramElt: SVGGraphicsElement = null;
+            if (templateName != null) {
+                for (let name of templateName.split(',')) {
+                    let found = this.getTemplate(name)[paramName];
+                    if (found != null)
+                        paramElt = found;
+                }
+            }
+            if (paramElt != null)
+                return paramElt;
+            return this.getByLabelCanBeNull(thicknessElt, paramName);
+        }
     }
 
     interface XYZThickness {

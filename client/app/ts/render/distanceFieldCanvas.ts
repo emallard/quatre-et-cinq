@@ -145,14 +145,16 @@ module qec {
             }
             */
             if (border) {
+                let fillGap = 2;
                 // draw left margin if profile
-                ctx.drawImage(img, 0, 0, 1, img.height, 0, offsetY, offsetX, newImgHeight);
+                ctx.drawImage(img, 0, 0, 1, img.height, 0, offsetY - fillGap, offsetX, newImgHeight + fillGap);
 
                 // draw bottom margin if profile
-                ctx.drawImage(img, 0, img.height - 1, img.width, 1, offsetX, dfHeight - offsetY, newImgWidth, offsetY);
+                let take2ndRow = 1;
+                ctx.drawImage(img, 0, img.height - 1 - take2ndRow, img.width, 1, offsetX, dfHeight - offsetY - fillGap, newImgWidth, offsetY + fillGap * 2);
 
                 // draw bottom left
-                ctx.drawImage(img, 0, img.height - 1, 1, 1, 0, dfHeight - offsetY, offsetX, offsetY);
+                ctx.drawImage(img, 0, img.height - 1 - take2ndRow, 1, 1, 0, dfHeight - offsetY - fillGap, offsetX, offsetY + fillGap * 2);
             }
 
             if (this.distanceField == null) {
