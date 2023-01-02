@@ -1,7 +1,6 @@
 module qec {
 
-    export class renderPixelStepCount implements irenderPixel
-    {
+    export class renderPixelStepCount implements irenderPixel {
         debug = false;
 
         out = vec4.create();
@@ -21,25 +20,23 @@ module qec {
         pos2 = vec3.create();
         toLight = vec3.create();
         distEpsPos = vec3.create();
-        
-        showBoundingBox = false; 
+
+        showBoundingBox = false;
         rayToBounds = false;
 
-        getDist: (Float32Array) => number;
+        getDist: (pos: Float32Array) => number;
+        getColor: (pos: Float32Array, col: Float32Array) => void;
 
-        updateShader(settings:renderSettings)
-        {
-            this.getDist = new renderPixelGetDist().generateGetDist(settings.sdArray);
+        updateShader(settings: renderSettings) {
+            [this.getDist, this.getColor] = new renderPixelGetDist2().generateGetDistAndGetColor(settings.sd);
         }
 
-        render (ro:Float32Array, rd:Float32Array, debugInfo:boolean = false):Float32Array 
-        {
+        render(ro: Float32Array, rd: Float32Array, debugInfo: boolean = false): Float32Array {
             this.debug = debugInfo;
             return this.doRender(ro, rd);
         }
 
-        private doRender (ro:Float32Array, rd:Float32Array):Float32Array 
-        {
+        private doRender(ro: Float32Array, rd: Float32Array): Float32Array {
             if (this.debug) console.log('ro', ro, 'rd', rd);
             this.rayMarch(this.getDist, ro, rd, this.out);
             /*
@@ -49,15 +46,14 @@ module qec {
                 col = col*(1.0-KR) + rayMarch(currPos+reflRay*EPS1, reflRay)*KR;
             }
             #endif
-            */    
+            */
             //return col;
             return this.out;
         }
 
 
         stepCount = [0];
-        rayMarch (sd:(Float32Array)=>number, ro:Float32Array, rd:Float32Array, out:Float32Array) 
-        {
+        rayMarch(sd: (Float32Array) => number, ro: Float32Array, rd: Float32Array, out: Float32Array) {
             /*
             #ifdef CHECK_BOUNDS
             if (intersectBounds(ro, rd)) {
@@ -71,16 +67,14 @@ module qec {
 
             var t = this.intersectDist(sd, ro, rd, 0, 100, this.stepCount);
 
-            if (t>0.0) 
-            {   
-                var r = this.stepCount[0]/this.MAX_STEPS;
+            if (t > 0.0) {
+                var r = this.stepCount[0] / this.MAX_STEPS;
                 out[0] = r;
                 out[1] = 0;
                 out[2] = 0;
                 out[3] = 1.0;
             }
-            else
-            {
+            else {
                 out[0] = 1.0;
                 out[1] = 1.0;
                 out[2] = 1.0;
@@ -90,62 +84,58 @@ module qec {
 
 
         intersectPos = vec3.create();
-        intersectDist(sd:(Float32Array)=>number, ro:Float32Array, rd:Float32Array, tMin:number, tMax:number, stepCount:number[]) : number
-        {  
+        intersectDist(sd: (Float32Array) => number, ro: Float32Array, rd: Float32Array, tMin: number, tMax: number, stepCount: number[]): number {
             var t = tMin;
             var dist = -1.0;
-            
-            var i=0;
-            for(i=0; i < this.MAX_STEPS; ++i)
-            {
-                this.intersectPos[0] = ro[0] + rd[0]*t;
-                this.intersectPos[1] = ro[1] + rd[1]*t;
-                this.intersectPos[2] = ro[2] + rd[2]*t;
 
-                var dt:number;
+            var i = 0;
+            for (i = 0; i < this.MAX_STEPS; ++i) {
+                this.intersectPos[0] = ro[0] + rd[0] * t;
+                this.intersectPos[1] = ro[1] + rd[1] * t;
+                this.intersectPos[2] = ro[2] + rd[2] * t;
+
+                var dt: number;
                 /*
                 if (this.rayToBounds)
                     dt = sd.getDist2(this.intersectPos, rd, this.showBoundingBox, this.debug);// * this.c_fSmooth;
                 else
                     dt = sd.getDist(this.intersectPos, this.showBoundingBox, this.debug);// * this.c_fSmooth;
                 */
-               dt = sd(this.intersectPos);
+                dt = sd(this.intersectPos);
 
-                if (this.debug) console.log('march #'+i + ' : ' + dt + ' : ' + vec3.str(this.intersectPos));
+                if (this.debug) console.log('march #' + i + ' : ' + dt + ' : ' + vec3.str(this.intersectPos));
 
-                if(dt < this.EPS_INTERSECT) {
+                if (dt < this.EPS_INTERSECT) {
                     dist = t;
                     break;
                 }
-                
-                t += dt;    
-                
-                if(t > tMax)
+
+                t += dt;
+
+                if (t > tMax)
                     break;
             }
-            
+
             stepCount[0] = i;
             return dist;
         }
 
 
-        getNormal(sd:signedDistance, pos:Float32Array, out:Float32Array) 
-        {        
+        getNormal(sd: signedDistance, pos: Float32Array, out: Float32Array) {
             out[0] = this.getNormalAt(sd, pos, 0);
             out[1] = this.getNormalAt(sd, pos, 1);
             out[2] = this.getNormalAt(sd, pos, 2);
             vec3.normalize(out, out);
         }
 
-        
-        getNormalAt(sd:signedDistance, pos:Float32Array, index:number) : number
-        {
+
+        getNormalAt(sd: signedDistance, pos: Float32Array, index: number): number {
             if (this.debug) console.log('Compute Normal');
             var eps = this.EPS_NORMAL_2;
             vec3.copy(this.distEpsPos, pos);
             this.distEpsPos[index] += eps;
             var a = sd.getDist(this.distEpsPos, this.showBoundingBox, this.debug);
-            this.distEpsPos[index] -= 2*eps;
+            this.distEpsPos[index] -= 2 * eps;
             var b = sd.getDist(this.distEpsPos, this.showBoundingBox, this.debug);
             return a - b;
         }

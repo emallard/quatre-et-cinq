@@ -1,7 +1,7 @@
 module qec {
 
     export class renderSettings {
-        sdArray: signedDistance[];
+        sd: signedDistance;
         lights: ilight[] = [];
 
         camera: camera = new camera();

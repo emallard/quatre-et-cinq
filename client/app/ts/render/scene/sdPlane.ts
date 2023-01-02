@@ -11,6 +11,8 @@ module qec {
         isSignedDistance = true;
         svgId: string;
         uniqueName: string = uniqueName.new();
+        transform = mat4.create();
+        inverseTransform = mat4.create();
 
         material = new material();
         normal = vec3.set(vec3.create(), 0, 0, 1);

@@ -30,7 +30,7 @@ module qec {
             // find bounding boxes
             for (let s of sds) {
                 s.getBounds(tmpMin, tmpMax);
-                s.getTransform(tmpTransform);
+                tmpTransform = s.transform;
 
                 vec3.transformMat4(point, tmpMin, tmpTransform);
 
@@ -60,14 +60,14 @@ module qec {
 
         }
 
-        compute(sds: signedDistance[], icount: number, jcount: number, kcount: number, multiplier: number): void {
+        compute(sd: signedDistance, icount: number, jcount: number, kcount: number, multiplier: number): void {
             let min = vec3.create();
             let max = vec3.create();
-            this.getBoundingBox(sds, min, max);
-            this.computeBase(sds, min, max, icount, jcount, kcount, multiplier);
+            this.getBoundingBox([sd], min, max);
+            this.computeBase(sd, min, max, icount, jcount, kcount, multiplier);
         }
 
-        computeBase(sds: signedDistance[], min: Float32Array, max: Float32Array, icount: number, jcount: number, kcount: number, multiplier: number): void {
+        computeBase(sd: signedDistance, min: Float32Array, max: Float32Array, icount: number, jcount: number, kcount: number, multiplier: number): void {
             this.icount = icount;
             this.jcount = jcount;
             this.kcount = kcount;
@@ -82,9 +82,10 @@ module qec {
             //let sdUni:sdUnion = new sdUnion();
             //sds.forEach(x=>sdUni.array.push(x));
 
-            let getDistGenerator = new renderPixelGetDist();
-            let getDist = getDistGenerator.generateGetDist(sds);
-            let getColor = getDistGenerator.generateGetColor(sds);
+            let [getDist, getColor] = new renderPixelGetDist2().generateGetDistAndGetColor(sd);
+            //let getDistGenerator = new renderPixelGetDist();
+            //let getDist = getDistGenerator.generateGetDist(sds);
+            //let getColor = getDistGenerator.generateGetColor(sds);
 
             let pos = vec3.create();
             let diffuse = vec3.create();

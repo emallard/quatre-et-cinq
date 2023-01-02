@@ -10,8 +10,8 @@ http://localhost:8000/svg.html?scene=owl-profile-axis.svg&isHardware=1&isFullScr
 [ ] Feuille d'érable courbée
 [ ] Perf : start with a ray to full scene boundingbox collision
 
-[ ] Templates pour ne pas avoir à répéter des valeurs
-[ ] Exemple: Boldair
+[X] Templates pour ne pas avoir à répéter des valeurs
+[-] Exemple: Boldair
 [ ] Permettre une soustraction
 [ ] Permettre de graver une surface (hériter du profile ?)
-[ ] Heightmap?
+[ ] Heightmap rendering

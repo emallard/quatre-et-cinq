@@ -11,6 +11,7 @@ module qec {
         isDirectionalLight = false;
         showGrid = false;
         noColor = false;
+        zColor = false;
         generateVideo = false;
         generateOBJ = false;
 
@@ -101,17 +102,18 @@ module qec {
                 this.renderSettings.refraction = false;
                 this.renderSettings.boundingBoxes = false;
                 this.renderSettings.noColor = this.settings.noColor;
+                this.renderSettings.zColor = this.settings.zColor;
 
-                let loadedOjects = new qec.sceneLoader().load(sceneDTO.dtos);
+                let loadedOjects = qec.sceneLoader.load(sceneDTO.dtos);
 
-                this.renderSettings.sdArray = loadedOjects.filter(x => instanceOfSignedDistance(x));
+                this.renderSettings.sd = loadedOjects.find(x => x instanceof sdUnion);
                 this.renderSettings.camera = loadedOjects.filter(x => x instanceof camera)[0];
                 let camTarget = this.renderSettings.camera.target;
                 camTarget[2] = 0;
                 // grid
 
-                if (this.settings.showGrid)
-                    this.renderSettings.sdArray.push(devRendererTools.createGrid(camTarget));
+                //if (this.settings.showGrid)
+                //    this.renderSettings.sdArray.push(devRendererTools.createGrid(camTarget));
 
                 // light
                 this.renderSettings.lights = devRendererTools.createLights(this.settings.isDirectionalLight, camTarget);
@@ -127,7 +129,7 @@ module qec {
 
 
         render() {
-            this.updater.update(this.renderSettings.sdArray, () => {
+            this.updater.update(this.renderSettings.sd, () => {
                 this.renderers.forEach(r => {
                     r.updateShader(this.renderSettings);
                     r.render(this.renderSettings);
@@ -135,7 +137,7 @@ module qec {
 
                 if (this.settings.generateOBJ) {
                     let toTriangles = new signedDistanceToTriangles();
-                    toTriangles.compute(this.renderSettings.sdArray, 200, 200, 10, 1);
+                    toTriangles.compute(this.renderSettings.sd, 200, 200, 10, 1);
 
                     //let obj = new exportOBJ().getText(toTriangles.triangles, toTriangles.normals, toTriangles.colors);
                     //saveAs(obj, "example.obj");
@@ -173,7 +175,7 @@ module qec {
             this.previousNow = Date.now();
             this.rotateLoop.setRenderSettings(this.renderSettings);
 
-            this.updater.update(this.renderSettings.sdArray, () => {
+            this.updater.update(this.renderSettings.sd, () => {
                 this.renderers.forEach(r => {
                     r.updateShader(this.renderSettings);
                 });

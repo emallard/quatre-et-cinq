@@ -1,0 +1,32 @@
+{
+    "array": [
+        {
+            "sceneName": "data/test/thickness.svg",
+            "isSoftware": true
+        },
+        {
+            "sceneName": "data/test/profile.svg",
+            "isSoftware": true
+        },
+        {
+            "sceneName": "data/test/thickness-border.svg",
+            "isSoftware": true
+        },
+        {
+            "sceneName": "data/test/union.svg",
+            "isSoftware": true
+        },
+        {
+            "sceneName": "data/test/unionzmirror.svg",
+            "isSoftware": true
+        },
+        {
+            "sceneName": "data/test/subtraction.svg",
+            "isSoftware": true
+        },
+        {
+            "sceneName": "data/test/subtraction-union.svg",
+            "isSoftware": true
+        }
+    ]
+}

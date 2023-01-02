@@ -18,6 +18,7 @@ module qec {
         animation: animationDTO;
         updaters: updaterBase[];
         renderSettings: renderSettings = new renderSettings();
+        sdArray: signedDistance[];
         video = new video();
 
         loadUrl(src: string, rootElt: HTMLElement) {
@@ -42,14 +43,14 @@ module qec {
         setAnimation(animation: animationDTO) {
             this.animation = animation;
 
-            let loadedOjects = new qec.sceneLoader().load(animation.scenes[0].dtos);
+            let loadedOjects = qec.sceneLoader.load(animation.scenes[0].dtos);
 
-            this.renderSettings.sdArray = loadedOjects.filter((x: any) => instanceOfSignedDistance(x));
+            this.renderSettings.sd = loadedOjects.filter((x: any) => instanceOfSignedDistance(x));
             this.renderSettings.camera = loadedOjects.filter((x: any) => x instanceof camera)[0];
 
             if (this.animation.noColor) {
                 console.log('animation.noColor');
-                for (let sd of this.renderSettings.sdArray) {
+                for (let sd of getAllSignedDistances.getAll(this.renderSettings.sd)) {
                     let grey = 1;
                     sd.getMaterial(null).setDiffuse(grey, grey, grey);
                 }
@@ -82,7 +83,7 @@ module qec {
             this.rootElt.append(elt);
             this.renderer.setContainerAndSize(elt, w, h);
 
-            this.updater.update(this.renderSettings.sdArray, () => {
+            this.updater.update(this.renderSettings.sd, () => {
                 this.renderer.updateShader(this.renderSettings);
                 this.renderer.render(this.renderSettings);
                 this.loopStart();
@@ -96,12 +97,13 @@ module qec {
             this.previousNow = Date.now();
             this.t = this.animation.start - this.adjustEndStart;
             this.updaters = [];
+            this.sdArray = getAllSignedDistances.getAll(this.renderSettings.sd);
             this.clearColors();
             this.loop();
         }
 
         clearColors() {
-            for (let sd of this.renderSettings.sdArray) {
+            for (let sd of this.sdArray) {
                 sd.getMaterial(null).setDiffuse(1, 1, 1);
             }
         }
@@ -115,7 +117,7 @@ module qec {
                 this.previousNow = now;
             }
             this.updateTransitions(dt, () => {
-                this.updater.update(this.renderSettings.sdArray, () => {
+                this.updater.update(this.renderSettings.sd, () => {
                     this.renderer.updateAllUniformsForAll();
                     this.renderer.render(this.renderSettings);
 
@@ -153,7 +155,7 @@ module qec {
             for (let s of starting) {
                 console.log(`[t=${this.t.toFixed(1)}] segment starts : ${s.dto0.svgId} - [${s.t0},${s.t1}]`);
 
-                let sd = this.renderSettings.sdArray.find(x => x.svgId == s.dto0.svgId);
+                let sd = this.sdArray.find(x => x.svgId == s.dto0.svgId);
                 if (sd == null)
                     throw new Error(`svgId not found ${s.dto0.svgId}`);
 

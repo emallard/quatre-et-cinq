@@ -17,6 +17,7 @@ module qec {
         svgId: string;
         uniqueName: string = uniqueName.new();
 
+        localTransform = mat4.create();
         transform = mat4.create();
         inverseTransform = mat4.identity(mat4.create());
         material = new material();
@@ -32,6 +33,7 @@ module qec {
             this.top.createFrom(dto.top);
             this.thickness = dto.thickness;
             this.material.createFrom(dto.material);
+            mat4.copy(this.localTransform, dto.transform);
             mat4.copy(this.transform, dto.transform);
             this.inverseTransform = mat4.invert(this.inverseTransform, dto.transform);
 

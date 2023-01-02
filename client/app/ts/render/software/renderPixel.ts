@@ -52,8 +52,9 @@ module qec {
         getColor: (pos: Float32Array, out: Float32Array) => void;
 
         updateShader(settings: renderSettings) {
-            this.getDist = new renderPixelGetDist().generateGetDist(settings.sdArray);
-            this.getColor = new renderPixelGetDist().generateGetColor(settings.sdArray);
+            //this.getDist = new renderPixelGetDist().generateGetDist(settings.sdArray);
+            //this.getColor = new renderPixelGetDist().generateGetColor(settings.sdArray);
+            [this.getDist, this.getColor] = new renderPixelGetDist2().generateGetDistAndGetColor(settings.sd);
             this.lights = settings.lights;
             this.shadows = settings.shadows;
             this.settings = settings;

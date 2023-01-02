@@ -10,6 +10,8 @@ module qec {
         isSignedDistance: boolean;
         svgId: string;
         uniqueName: string;
+        transform: Float32Array;
+        inverseTransform: Float32Array;
 
         getDist(pos: Float32Array, boundingBox: boolean, debug: boolean): number;
 
@@ -23,6 +25,6 @@ module qec {
 
         getBounds(min: Float32Array, max: Float32Array);
 
-        getTransform(out: Float32Array);
+        //getTransform(out: Float32Array);
     }
 }

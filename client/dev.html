@@ -37,24 +37,34 @@
             var json = getParameterByName('json');
             var anim = getParameterByName('anim');
             var test = getParameterByName('test');
+            var dir = getParameterByName('dir');
             if (svg == undefined && json == undefined && anim == undefined && test == undefined) {
-                alert("?svg=x.svg - ?json=x.json - ?anim=x.json - ?test=all");
+                alert("?svg=x.svg - ?json=x.json - ?anim=x.json");
                 return;
             }
 
             let rootElt = document.getElementById('root');
 
+            if (dir == undefined)
+                dir = 'data/';
+            else
+                dir = 'data/' + dir + '/';
+
             if (svg != undefined) {
+                console.log('dev.html : svg ' + dir + svg);
                 let settings = getSettings();
-                settings.sceneName = 'data/' + svg;
+                settings.sceneName = dir + svg;
                 new qec.devRenderer().start(rootElt, settings);
             }
             else if (json != undefined) {
-                qec.devRendererBatch.loadUrl('data/' + json, rootElt);
+                console.log('dev.html : json ' + dir + json);
+                qec.devRendererBatch.loadUrl(dir + json, rootElt);
             }
             else if (anim != undefined) {
-                new qec.devRendererAnimation().loadUrl('data/' + anim, rootElt);
+                console.log('dev.html : anim ' + dir + anim);
+                new qec.devRendererAnimation().loadUrl(dir + anim, rootElt);
             }
+            /*
             else if (test != undefined) {
                 if (test == 'all') {
                     var r = new qec.devRenderer();
@@ -66,6 +76,7 @@
                     new qec.devRenderer().start(rootElt, settings);
                 }
             }
+            */
         }
 
         function getSettings() {
@@ -77,6 +88,7 @@
             settings.isFullScreen = getParameterByName('isFullScreen') == '1';
             settings.isDirectionalLight = getParameterByName('isDirectionalLight') == '1';
             settings.noColor = getParameterByName('noColor') == '1';
+            settings.zColor = getParameterByName('zColor') == '1';
             settings.renderSteps = getParameterByName('renderSteps') == '1';
             settings.generateOBJ = getParameterByName('generateOBJ') == '1';
             settings.debugDistanceField = getParameterByName('debugDistanceField') == '1';

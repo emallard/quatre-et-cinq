@@ -34,6 +34,7 @@ module qec {
         private sdBox: sdBox;
         private debug: boolean;
 
+        transform = mat4.identity(mat4.create());
         inverseTransform = mat4.identity(mat4.create());
         private tmp = vec3.create();
 

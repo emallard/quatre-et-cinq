@@ -24,6 +24,7 @@ module qec {
 
         material = new material();
         radius: number = 1;
+        transform = mat4.create();
         inverseTransform = mat4.create();
         tmp = vec3.create();
 

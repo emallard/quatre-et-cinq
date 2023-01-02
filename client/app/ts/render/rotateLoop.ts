@@ -1,14 +1,11 @@
-module qec 
-{
+module qec {
 
-    export class rotateLoop
-    {
-        rs:renderSettings;
-        rotates:rotateOne[] = [];
-        t:number = 0;
+    export class rotateLoop {
+        rs: renderSettings;
+        rotates: rotateOne[] = [];
+        t: number = 0;
 
-        setRenderSettings(rs:renderSettings)
-        {
+        setRenderSettings(rs: renderSettings) {
             this.rs = rs;
             let camTarget = vec3.fromValues(this.rs.camera.target[0], this.rs.camera.target[1], 0);
 
@@ -17,6 +14,8 @@ module qec
             mat4.translate(invCameraTarget, invCameraTarget, camTarget);
             mat4.invert(invCameraTarget, invCameraTarget);
 
+            throw new Error("TODO rotateLoop : Update transforms");
+            /*
             console.log('this.rs.SdArray ', this.rs.sdArray);
             for (let x of this.rs.sdArray)
             {
@@ -30,18 +29,17 @@ module qec
                     this.rotates.push(r);
                 }
             };
+            */
         }
 
-        update(dt:number)
-        {
+        update(dt: number) {
             let camTarget = vec3.fromValues(this.rs.camera.target[0], this.rs.camera.target[1], 0);
 
             this.t += dt;
             let dr = mat4.create();
             mat4.fromZRotation(dr, this.t * Math.PI * 2.0 / 10.0);
 
-            for (let r of this.rotates)
-            {
+            for (let r of this.rotates) {
                 mat4.copy(r.transformRotate, dr);
                 mat4.identity(r.sd.transform);
                 mat4.translate(r.sd.transform, r.sd.transform, camTarget);
@@ -53,9 +51,8 @@ module qec
     }
 
 
-    export class rotateOne
-    {
-        sd:any;
+    export class rotateOne {
+        sd: any;
         transformInit = mat4.create();
         transformFromCamTarget = mat4.create();
         transformRotate = mat4.create();

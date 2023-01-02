@@ -67,7 +67,8 @@ module qec {
 
         updateShader(settings: renderSettings) {
 
-            this.sd = settings.sdArray;
+            throw new Error("TODO hardwareRenderer updateShader");
+            this.sd = (<sdUnion>settings.sd).array;
             this.text.setArray(this.sd);
             this.textLights.setLights(settings.lights);
 
@@ -77,10 +78,9 @@ module qec {
             {
                 let structs = {};
                 this.text.declareStruct(structs);
-                
 
-                for (let t in structs)
-                {
+
+                for (let t in structs) {
                     generatedPart += `struct ${t} { ${structs[t]} };\n`;
                 }
 
@@ -96,12 +96,11 @@ module qec {
             {
                 let structsLight = {};
                 this.textLights.declareStruct(structsLight);
-                for (let t in structsLight)
-                {
+                for (let t in structsLight) {
                     generatedPart += `struct ${t} { ${structsLight[t]} };\n`;
                 }
 
-                
+
                 generatedLight += this.textLights.declareUniforms() + '\n';
                 generatedLight += this.textLights.generateLight();
             }
@@ -297,11 +296,11 @@ module qec {
             this.rendererCanvas.style.height = '' + this.height + 'px';
         }
 
-        updateAllUniforms(sd: signedDistance) {}
-        updateDiffuse(sd: signedDistance) {}
-        updateTransform(sd: signedDistance) {}
-        updateFloatTextures(sd: sdFields) {}
-        updateAllPackedTextures(packer:texturePacker){}
+        updateAllUniforms(sd: signedDistance) { }
+        updateDiffuse(sd: signedDistance) { }
+        updateTransform(sd: signedDistance) { }
+        updateFloatTextures(sd: sdFields) { }
+        updateAllPackedTextures(packer: texturePacker) { }
     }
 
 }

@@ -35,9 +35,73 @@ module qec {
             this.templates = this.loadTemplates(svgRootElement);
 
             this.getSdFields(svgRootElement, (sdFieldsArray) => {
-                scene.dtos.push(...sdFieldsArray);
+                let union: sdUnionDTO = {
+                    type: sdUnionDTO.TYPE,
+                    svgId: '__ROOT__',
+                    array: this.loadBooleans(svgRootElement, sdFieldsArray)
+                }
+                scene.dtos.push(union);
+                console.log(scene);
                 done(scene);
             });
+        }
+
+        loadBooleans(svg: SVGGraphicsElement, dtos: any[]): any[] {
+            let booleansElt = this.getAllByLabel(svg, 'booleans');
+            if (booleansElt.length == 0)
+                return dtos;
+            let text = this.getTextContent(booleansElt[0]);
+            let lines = text.split('\n');
+            for (let l of lines)
+                dtos = this.loadOneBoolean(l, dtos);
+            return dtos;
+        }
+
+        loadOneBoolean(text: string, dtos: any[]): any[] {
+            let split = text.split(',');
+            split = split.map(x => x.trim());
+            let name = split[0];
+            let type = split[1];
+
+            if (type == 'sub') {
+                let a = dtos.find(x => x.svgId == split[2]);
+                let b = dtos.find(x => x.svgId == split[3]);
+                if (a == null)
+                    throw new Error(`Booleans definition : Can't find ${split[2]} in ${text}`);
+                if (b == null)
+                    throw new Error(`Booleans definition : Can't find ${split[3]} in ${text}`);
+
+                let subtractionDTO: sdSubtractionDTO =
+                {
+                    type: sdSubtractionDTO.TYPE,
+                    svgId: name,
+                    a: a,
+                    b: b
+                };
+                dtos = dtos.filter(x => x != a && x != b);
+                dtos.push(subtractionDTO);
+            }
+            else if (type == 'unionzmirror' || type == 'union') {
+                let all = split.slice(2).map(x => {
+                    let found = dtos.find(y => y.svgId == x);
+                    if (found == null)
+                        throw Error(`svgId ${x} not found in ${text}`);
+                    return found;
+                });
+
+                let union: sdUnionDTO =
+                {
+                    type: sdUnionDTO.TYPE,
+                    svgId: name,
+                    array: all,
+                    zMirror: (type == 'unionzmirror')
+                };
+                dtos = dtos.filter(x => all.indexOf(x) == -1);
+                dtos.push(union);
+            }
+            else
+                throw new Error(`Unrecognized type ${type} in ${text}`);
+            return dtos;
         }
 
         getSdFields(elt: SVGGraphicsElement, done: (x: any[]) => void) {
@@ -357,7 +421,7 @@ module qec {
             let halfWidth = (realBounds[2] - realBounds[0]) / 2;
             let halfHeight = (realBounds[3] - realBounds[1]) / 2;
             let topBounds = [-halfWidth, -halfHeight, halfWidth, halfHeight];
-
+ 
             return [isolated_src, topBounds];
             */
         }
@@ -813,8 +877,10 @@ module qec {
         }
 
         getTextContent(elt: SVGGraphicsElement): string {
-            let tspan = elt.children.item(0);
-            return tspan.textContent;
+            let tspan = elt.querySelectorAll('tspan');
+            let texts = [];
+            tspan.forEach(x => texts.push(x.textContent));
+            return texts.join('\n');
         }
 
         loadTemplates(svg: SVGSVGElement): any {
@@ -854,6 +920,7 @@ module qec {
                 throw new Error(`template ${name} not found`);
             return t;
         }
+
     }
 
     interface XYZThickness {

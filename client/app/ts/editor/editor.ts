@@ -157,7 +157,8 @@ module qec {
             // update scene
             this.sdUnion.array = [];
             this.sdHoleUnion.array = [];
-            this.sdSubtraction.array = [this.sdUnion, this.sdHoleUnion];
+            this.sdSubtraction.A = this.sdUnion;
+            this.sdSubtraction.B = this.sdHoleUnion;
             this.sdUnionWithHoleSd.array = [this.sdSubtraction];
 
             if (this.groundVisible)
@@ -219,7 +220,7 @@ module qec {
         private render() {
             if (this.renderer == null)
                 return;
-            this.renderSettings.sdArray = this.sdUnion.array;
+            this.renderSettings.sd = this.sdUnion;
             //console.log("render");
             this.renderer.render(this.renderSettings);
             //this.renderer.renderDebug(100, 100, this.rp, this.cam);
@@ -260,28 +261,35 @@ module qec {
             return this.workspace.editorObjects.map(l => l.sd);
         }
 
+        getUnionSd(): sdUnion {
+            let union = new sdUnion();
+            union.array = this.workspace.editorObjects.map(l => l.sd);
+            union.updateBoundingBox();
+            return union;
+        }
+
         toggleShadows() {
             this.renderSettings.shadows = !this.renderSettings.shadows;
             this.setRenderFlag();
         }
 
         computeOBJ(): string {
-            this.signedDistanceToTriangles.compute(this.getAllSd(), 50, 50, 50, 1);
+            this.signedDistanceToTriangles.compute(this.getUnionSd(), 50, 50, 50, 1);
             return this.exportOBJ.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals, this.signedDistanceToTriangles.colors);
         }
 
         computeOBJAsZip(icount: number, jcount: number, kcount: number, multiplier: number, done: (content: any) => void) {
-            this.signedDistanceToTriangles.compute(this.getAllSd(), icount, jcount, kcount, multiplier);
+            this.signedDistanceToTriangles.compute(this.getUnionSd(), icount, jcount, kcount, multiplier);
             return this.exportOBJ.getZip(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals, this.signedDistanceToTriangles.colors, done);
         }
 
         computeTextSTL(): string {
-            this.signedDistanceToTriangles.compute(this.getAllSd(), 50, 50, 50, 1);
+            this.signedDistanceToTriangles.compute(this.getUnionSd(), 50, 50, 50, 1);
             return this.exportSTL.getText(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals);
         }
 
         computeBinarySTL(icount: number, jcount: number, kcount: number, multiplier: number): DataView {
-            this.signedDistanceToTriangles.compute(this.getAllSd(), icount, jcount, kcount, multiplier);
+            this.signedDistanceToTriangles.compute(this.getUnionSd(), icount, jcount, kcount, multiplier);
             console.log("check tris, normals", this.signedDistanceToTriangles.triangles.length, 3 * this.signedDistanceToTriangles.normals.length)
             return this.exportSTL.getBinary(this.signedDistanceToTriangles.triangles, this.signedDistanceToTriangles.normals);
         }

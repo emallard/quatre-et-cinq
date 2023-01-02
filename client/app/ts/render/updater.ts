@@ -11,7 +11,11 @@ module qec {
             this.texturePacker = new texturePacker();
         }
 
-        update(array: signedDistance[], done: () => void) {
+        update(sd: signedDistance, done: () => void) {
+            this.updateArray(getAllSignedDistances.getAll(sd), done);
+        }
+
+        updateArray(array: signedDistance[], done: () => void) {
             //console.log('updater.update');
             this.updateImages(array, () => {
                 if (this.needRepack) {

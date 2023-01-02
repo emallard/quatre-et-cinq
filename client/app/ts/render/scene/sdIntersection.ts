@@ -12,6 +12,8 @@ module qec {
         svgId: string;
         uniqueName: string = uniqueName.new();
         array: signedDistance[] = [];
+        transform = mat4.create();
+        inverseTransform = mat4.create();
 
         createFrom(dto: sdIntersectionDTO) {
 
