@@ -67,7 +67,6 @@ module qec {
 
         updateShader(settings: renderSettings) {
 
-            throw new Error("TODO hardwareRenderer updateShader");
             this.sd = (<sdUnion>settings.sd).array;
             this.text.setArray(this.sd);
             this.textLights.setLights(settings.lights);

@@ -4,14 +4,23 @@ http://localhost:8000/svg.html?scene=owl-profile-axis.svg&isHardware=1&isFullScr
 [X] Spot light
 [X] Comparaison facile software / hardware
 [X] Enlever debug texture
+[X] Exmples Hibou avec profile : ventre en dent de scie, bec courbé, bordures?
+
+[X] Templates pour ne pas avoir à répéter des valeurs
+[X] Exemple: Boldair
+[X] Permettre une soustraction
+[X] Permettre une soustraction d'union
+
+[X] Repair quickly hardwareRenderer sdUnion(array)
+[ ] Promote sdFields1 to sdFields2, sdFields2 to sdFieldsProfileBorder
+[ ] Highlight the border only
+[ ] Camera Zoom
+
 [-] Mettre une grille en fond
 [ ] getColor
-[ ] Exmples Hibou avec profile : ventre en dent de scie, bec courbé, bordures?
 [ ] Feuille d'érable courbée
 [ ] Perf : start with a ray to full scene boundingbox collision
 
-[X] Templates pour ne pas avoir à répéter des valeurs
-[-] Exemple: Boldair
-[ ] Permettre une soustraction
 [ ] Permettre de graver une surface (hériter du profile ?)
 [ ] Heightmap rendering
+

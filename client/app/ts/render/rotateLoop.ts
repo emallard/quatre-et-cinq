@@ -14,13 +14,10 @@ module qec {
             mat4.translate(invCameraTarget, invCameraTarget, camTarget);
             mat4.invert(invCameraTarget, invCameraTarget);
 
-            throw new Error("TODO rotateLoop : Update transforms");
-            /*
-            console.log('this.rs.SdArray ', this.rs.sdArray);
-            for (let x of this.rs.sdArray)
-            {
-                if (x['transform'] != undefined)
-                {
+            let array = (<sdUnion>this.rs.sd).array;
+            console.log('array ', array);
+            for (let x of array) {
+                if (x['transform'] != undefined) {
                     let r = new rotateOne();
                     r.sd = x;
                     mat4.copy(r.transformInit, x['transform']);
@@ -29,7 +26,6 @@ module qec {
                     this.rotates.push(r);
                 }
             };
-            */
         }
 
         update(dt: number) {
