@@ -19,5 +19,26 @@ module qec {
                 getAllSignedDistances.getRec(sd.B, result);
             }
         }
+
+
+        static getAllDTO(dtos: any[]): any[] {
+            let results = [];
+            for (let dto of dtos) {
+                getAllSignedDistances.getRecDTO(dto, results);
+            }
+            return results;
+        }
+
+        static getRecDTO(dto: any, result: any[]) {
+            result.push(dto);
+            if (dto.type == sdUnionDTO.TYPE) {
+                for (let a of dto.array)
+                    this.getRecDTO(a, result);
+            }
+            else if (dto.type == sdSubtractionDTO.TYPE) {
+                getAllSignedDistances.getRecDTO(dto.a, result);
+                getAllSignedDistances.getRecDTO(dto.b, result);
+            }
+        }
     }
 }

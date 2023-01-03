@@ -235,7 +235,12 @@ module qec {
 
         updateBorder(sd: iBorder, done: () => void) {
             let b = sd.border;
-            if (b.borderUpdated) {
+            if (b.borderTextureUpdated) {
+                b.borderTextureUpdated = false;
+                this.needRepack = true;
+                done();
+            }
+            else if (b.borderUpdated) {
                 console.log('update border' + sd.uniqueName);
 
                 b.borderUpdated = false;
@@ -258,7 +263,7 @@ module qec {
                     }
 
                     b.borderTexture = topDfCanvas.floatTexture;
-                    b.borderTextureUpdated = true;
+                    //b.borderTextureUpdated = true;
                     done();
                 };
                 img.src = b.borderSrc;

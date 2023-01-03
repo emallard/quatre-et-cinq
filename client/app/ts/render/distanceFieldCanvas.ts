@@ -79,6 +79,17 @@ module qec {
             img.src = src;
         }
 
+        drawSrcForBorder(src: string, bounds: Float32Array, margin: number, done: () => void) {
+            // load image
+            let img = new Image();
+            img.onload = () => {
+                this.drawUserCanvasForBorder(img, bounds, margin);
+                done();
+
+            };
+            img.src = src;
+        }
+
         drawUserCanvasForTop(img: HTMLCanvasElement | HTMLImageElement, _bounds: Float32Array, margin: number) {
             this.drawUserCanvasBase(img, _bounds, margin, false, distanceFieldBorderType.all);
         }

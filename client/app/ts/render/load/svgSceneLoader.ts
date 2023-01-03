@@ -918,6 +918,11 @@ module qec {
         }
 
         getEltWithTemplateCanBeNull(thicknessElt: SVGGraphicsElement, paramName: string): SVGGraphicsElement {
+
+            let foundInThickness = this.getByLabelCanBeNull(thicknessElt, paramName);
+            if (foundInThickness != null)
+                return foundInThickness;
+
             let templateInThicknessElt = this.getByLabelCanBeNull(thicknessElt, 'template');
             let templateName: string = null;
             if (templateInThicknessElt != null) {
@@ -932,9 +937,8 @@ module qec {
                         paramElt = found;
                 }
             }
-            if (paramElt != null)
-                return paramElt;
-            return this.getByLabelCanBeNull(thicknessElt, paramName);
+
+            return paramElt;
         }
     }
 

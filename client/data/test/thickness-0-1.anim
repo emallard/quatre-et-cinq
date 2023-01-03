@@ -3,6 +3,6 @@
     "end":5,
     "scenes": ["data/test/thickness-0.svg", "data/test/thickness-1.svg"],
     "segments": [
-        [2, 3, "petals", ["thickness", "redMaterial"]]
+        [1, 4, "square2", ["thickness", "redMaterial"]]
     ]
 }
