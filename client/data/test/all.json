@@ -10,7 +10,7 @@
         },
         {
             "sceneName": "data/test/thickness-border.svg",
-            "isBoth": false
+            "isBoth": true
         },
         {
             "sceneName": "data/test/profile-border.svg",

@@ -3,7 +3,7 @@ module qec {
 
     export class sdFields2ProfileBorderDTO {
         static TYPE: string = 'sdFields2ProfileBorderDTO';
-        type: string = sdFields1DTO.TYPE;
+        type: string = sdFields2ProfileBorderDTO.TYPE;
         svgId: string;
         top: partTopDTO;
 

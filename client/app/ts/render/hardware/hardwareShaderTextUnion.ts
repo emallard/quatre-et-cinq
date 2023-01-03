@@ -9,6 +9,8 @@ module qec {
                     return new hardwareShaderTextFields1(x);
                 else if (x instanceof sdFields2)
                     return new hardwareShaderTextFields2(x);
+                else if (x instanceof sdFields2Border)
+                    return new hardwareShaderTextFields2Border(x);
                 else {
                     console.error(x);
                     throw new Error("unsupported harware shader");

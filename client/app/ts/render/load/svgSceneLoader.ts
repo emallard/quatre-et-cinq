@@ -164,15 +164,14 @@ module qec {
                 }
 
                 let svg_xml = (new XMLSerializer()).serializeToString(svgRootElement);
-                let topImage = new scImageDTO();
-                topImage.src = "data:image/svg+xml;base64," + btoa(svg_xml);
+                let topSrc = "data:image/svg+xml;base64," + btoa(svg_xml);
 
                 let cx = (realBounds[0] + realBounds[2]) / 2;
                 let cy = (realBounds[1] + realBounds[3]) / 2;
                 let halfWidth = (realBounds[2] - realBounds[0]) / 2;
                 let halfHeight = (realBounds[3] - realBounds[1]) / 2;
                 let topBounds = [-halfWidth, -halfHeight, halfWidth, halfHeight];
-                let top: partTopDTO = { topImage: topImage, topBounds: topBounds };
+                let top: partTopDTO = { topSrc: topSrc, topBounds: topBounds };
 
                 let transform = mat4.create();
 
@@ -332,10 +331,8 @@ module qec {
 
         createProfile(thicknessElt: SVGGraphicsElement, width: number, height: number): partProfileDTO {
             let [profileSrc, profileBounds] = this.getFrame(thicknessElt, width, height, '');
-            let profileImage = new scImageDTO();
-            profileImage.src = "data:image/svg+xml;base64," + btoa(profileSrc);
             return {
-                profileImage: profileImage,
+                profileSrc: "data:image/svg+xml;base64," + btoa(profileSrc),
                 profileBounds: profileBounds,
             }
         }
@@ -348,11 +345,9 @@ module qec {
             let borderWidth = parseFloat(borderDimensionsTextContentSplit[0]);
             let borderHeight = parseFloat(borderDimensionsTextContentSplit[1]);
             let [borderSrc, borderBounds] = this.getFrame(thicknessElt, borderWidth, borderHeight, 'border_');
-            let borderImage = new scImageDTO();
-            borderImage.src = "data:image/svg+xml;base64," + btoa(borderSrc);
 
             return {
-                borderImage: borderImage,
+                borderSrc: "data:image/svg+xml;base64," + btoa(borderSrc),
                 borderBounds: borderBounds,
             }
         }

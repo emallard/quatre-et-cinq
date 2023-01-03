@@ -1,5 +1,8 @@
 module qec {
 
+    export class scImageDTO {
+        src: string;
+    }
 
     export class sdFieldsDTO {
         type: string;

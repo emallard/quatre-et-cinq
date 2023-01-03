@@ -374,9 +374,9 @@ module qec {
             this.sd = sd;
             this.dto0 = dto0;
             this.dto1 = dto1;
-            if (this.dto0 == null || this.dto0.profileImage == null || this.dto0.profileBounds == null)
+            if (this.dto0 == null || this.dto0.profileSrc == null || this.dto0.profileBounds == null)
                 throw new Error('wrong dto0 type');
-            if (this.dto1 == null || this.dto1.profileImage == null || this.dto1.profileBounds == null)
+            if (this.dto1 == null || this.dto1.profileSrc == null || this.dto1.profileBounds == null)
                 throw new Error('wrong dto1 type');
             if (!(this.sd instanceof sdFields2))
                 throw new Error('wrong sd type');
@@ -397,11 +397,11 @@ module qec {
                 document.body.append(this.debugCanvas);
             }
 
-            this.df0.drawSrcForTop(this.dto0.profileImage.src, new Float32Array(this.dto0.profileBounds), this.margin,
+            this.df0.drawSrcForTop(this.dto0.profileSrc, new Float32Array(this.dto0.profileBounds), this.margin,
                 () => {
-                    this.df.drawSrcForTop(this.dto0.profileImage.src, new Float32Array(this.dto0.profileBounds), this.margin,
+                    this.df.drawSrcForTop(this.dto0.profileSrc, new Float32Array(this.dto0.profileBounds), this.margin,
                         () => {
-                            this.df1.drawSrcForTop(this.dto1.profileImage.src, new Float32Array(this.dto1.profileBounds), this.margin,
+                            this.df1.drawSrcForTop(this.dto1.profileSrc, new Float32Array(this.dto1.profileBounds), this.margin,
                                 () => {
                                     this.createSegments();
                                     done();

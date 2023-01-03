@@ -17,7 +17,7 @@ http://localhost:8000/svg.html?scene=owl-profile-axis.svg&isHardware=1&isFullScr
 [ ] Camera Zoom
 
 [-] Mettre une grille en fond
-[ ] getColor
+[ ] getColor - material Grid
 [ ] Feuille d'érable courbée
 [ ] Perf : start with a ray to full scene boundingbox collision
 
