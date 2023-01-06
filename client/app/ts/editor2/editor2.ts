@@ -12,11 +12,8 @@ module qec {
 
         selectedObjectName: string;
         selectedObjectDTO: any;
-        updater: updater;
-        renderer: irenderer;
-        sdRoot: sdUnion;
-        settings: renderSettings;
 
+        view3d: editor2_view3d;
 
         constructor() {
             this.root = document.createElement('div');
@@ -53,11 +50,8 @@ module qec {
             document.body.appendChild(this.root);
 
 
-            this.updater = new updater();
-            //this.renderer = new simpleRenderer();
-            this.updater.texturePacker.isHardware = true;
-            this.renderer = new hardwareRenderer();
-            this.renderer.setContainerAndSize(this.rendererElt, this.rendererElt.clientWidth, this.rendererElt.clientHeight);
+            this.view3d = new editor2_view3d();
+            this.view3d.setRendererElt(this.rendererElt);
 
             let svg = getParameterByName('svg', null);
             if (svg != null)
@@ -102,33 +96,7 @@ module qec {
 
             // Render
             let loaded: any[] = sceneLoader.load(this.scene.dtos);
-            this.sdRoot = loaded.find(x => x instanceof sdUnion);
-            let camDTO = new cameraDTO();
-            camDTO.target = [this.sdRoot.boundingBox[0], this.sdRoot.boundingBox[1], this.sdRoot.boundingBox[2]];
-            camDTO.position = [camDTO.target[0], camDTO.target[1] - 100, camDTO.target[2] + 300];
-            camDTO.up = [0, 0, 1];
-            let cam = new camera();
-            cam.createFrom(camDTO);
-
-            let lightDto = new directionalLightDTO();
-            lightDto.direction = [1, 1, -1];
-            lightDto.intensity = 1;
-
-            let light = new directionalLight();
-            light.createFrom(lightDto);
-
-            let lights = [light];
-
-            this.settings = new renderSettings();
-            this.settings.camera = cam;
-            this.settings.lights = lights;
-            this.settings.sd = this.sdRoot;
-
-            this.updater.update(this.sdRoot, () => {
-                this.renderer.updateShader(this.settings);
-                this.renderer.updateAllUniformsForAll();
-                this.renderer.render(this.settings);
-            });
+            this.view3d.setSdRoot(loaded.find(x => x instanceof sdUnion));
         }
 
         selectObject(objectName: string) {
@@ -154,19 +122,14 @@ module qec {
 
 
         updateThickness(objectName: string, value: number) {
-            let sd = getAllSignedDistances.getAll(this.sdRoot).find(x => x.svgId == objectName);
-            console.log('updateThickness ', sd, value);
+            let sd = getAllSignedDistances.getAll(this.view3d.sdRoot).find(x => x.svgId == objectName);
+            //console.log('updateThickness ', sd, value);
             let sd1 = <sdFields1>sd;
             sd1.thickness = value;
             sd1.updateBoundingBox();
-            this.render1();
+            this.view3d.setRenderFlag();
         }
 
-        render1() {
-            console.log('render1');
-            this.renderer.updateShader(this.settings);
-            this.renderer.updateAllUniformsForAll();
-            this.renderer.render(this.settings);
-        }
+
     }
 }

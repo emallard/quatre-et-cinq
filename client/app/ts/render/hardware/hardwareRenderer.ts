@@ -237,6 +237,12 @@ module qec {
                 this.gShaderMaterial.uniforms.u_lightIntensities = { type: "1fv", value: [] };
             }
 
+            if (this.gShaderMaterial.uniforms.u_backgroundColor == null) {
+                this.gShaderMaterial.uniforms.u_backgroundColor = { value: new THREE.Vector3() };
+            }
+            this.gShaderMaterial.uniforms.u_backgroundColor.value.fromArray(settings.backgroundColor);
+            //this.gShaderMaterial.uniforms.u_backgroundColor = { type: "3f", value: settings.backgroundColor };
+
             this.gRenderer.render(this.gScene, this.gCamera);
         }
 

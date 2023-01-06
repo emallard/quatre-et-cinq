@@ -23,6 +23,7 @@ uniform mat4 u_inversePMatrix;
 uniform mat4 u_inverseTransformMatrix;
 uniform vec3 u_lightP;
 uniform int u_shadows;
+uniform vec3 u_backgroundColor;
 
 varying vec2 vUv;
 
@@ -115,7 +116,8 @@ RayMarch rayMarch (in vec3 ro, in vec3 rd, float multiplier) {
     }
 
     result.noIntersection = 1;
-    result.color = vec3(0.0,0.0,0.0);
+    result.color = u_backgroundColor;
+    //result.color = vec3(0.0,0.0,0.0);
     //result.color = GetSkyGradient(rd);
     //return vec3(0.0,0.0,0.0);
 

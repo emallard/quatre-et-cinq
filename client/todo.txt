@@ -15,12 +15,14 @@ http://localhost:8000/svg.html?scene=owl-profile-axis.svg&isHardware=1&isFullScr
 [ ] Promote sdFields1 to sdFields2, sdFields2 to sdFieldsProfileBorder
 [ ] Highlight the border only
 [ ] Camera Zoom
-
 [-] Mettre une grille en fond
 [ ] getColor - material Grid
 [ ] Feuille d'érable courbée
 [ ] Perf : start with a ray to full scene boundingbox collision
-
 [ ] Permettre de graver une surface (hériter du profile ?)
 [ ] Heightmap rendering
 
+[ ] Deployer
+[ ] CameraController
+[ ] Liste au lieu de <select>
+[ ] Embed send to sculpteo

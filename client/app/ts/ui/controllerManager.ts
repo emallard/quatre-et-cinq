@@ -7,7 +7,7 @@ module qec {
         currentController: iController;
 
         afterInject() {
-            this.cameraController.setButton(2);
+            //this.cameraController.setButton(2);
             //this.cameraController.updateCamera();
         }
         /*

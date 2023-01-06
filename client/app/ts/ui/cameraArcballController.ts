@@ -3,14 +3,14 @@ module qec {
 
     export class cameraArcballController implements iController {
 
-        editor: editor = inject(editor);
-        transformObjectView: transformObjectView = inject(transformObjectView);
+        cameraControllerCallbacks: cameraControllerCallbacks;
+        //transformObjectView: transformObjectView = inject(transformObjectView);
 
         button: number;
         arcball = new arcball();
-        cameraTransforms: cameraTransforms = injectNew(cameraTransforms);
+        cameraTransforms: cameraTransforms = new cameraTransforms();
 
-        collide: renderCollide = injectNew(renderCollide);
+        //collide: renderCollide = injectNew(renderCollide);
         ro = vec3.create();
         rd = vec3.create();
 
@@ -38,15 +38,19 @@ module qec {
 
 
         wm5Plane = new wm5Plane3();
-        wm5IntrRay3Plane3: wm5IntrRay3Plane3 = inject(wm5IntrRay3Plane3);
+        wm5IntrRay3Plane3: wm5IntrRay3Plane3 = new wm5IntrRay3Plane3();
         panPlaneFrom = vec3.create();
         panPlaneTo = vec3.create();
         panPlaneMove = vec3.create();
 
-        afterInject() {
+        constructor(cameraControllerCallbacks: cameraControllerCallbacks) {
+            this.cameraControllerCallbacks = cameraControllerCallbacks;
+        }
+
+        reset() {
             this.cameraTransforms.reset();
             this.cameraTransforms.updateTransformMatrix();
-            this.cameraTransforms.updateCamera(this.editor.getCamera());
+            this.cameraTransforms.updateCamera(this.cameraControllerCallbacks.getCamera());
         }
 
         setButton(button: number) {
@@ -82,9 +86,8 @@ module qec {
                 //console.log('mousewheel', orig.deltaY);
 
                 this.cameraTransforms.zoom(d, 1.1);
-                this.cameraTransforms.updateCamera(this.editor.getCamera());
-                this.editor.setRenderFlag();
-                this.transformObjectView.draw();
+                this.cameraTransforms.updateCamera(this.cameraControllerCallbacks.getCamera());
+                this.cameraControllerCallbacks.setRenderFlag();
             }
         }
 
@@ -100,73 +103,72 @@ module qec {
         }
 
 
-        onMouseDown(e: MouseEvent) { };
-        onMouseUp(e: MouseEvent) { };
-        onMouseMove(e: MouseEvent) { };
-        /*
-    onMouseDown(e: MouseEvent) {
-        this.isRightClick = (e.which == 3);
-        this.isLeftClick = (e.which == 1);
-        this.isMiddleClick = (e.which == 2);
-        this.isShiftKey = e.shiftKey;
-        this.isAltKey = e.altKey;
-        this.isCtrlKey = e.ctrlKey;
-        this.isMouseDown = true;
+        //onMouseDown(e: MouseEvent) { };
+        //onMouseUp(e: MouseEvent) { };
+        //onMouseMove(e: MouseEvent) { };
 
-        // copy start state
-        vec2.set(this.startXY, e.offsetX, e.offsetY)
-        quat.copy(this.startQuat, this.cameraTransforms.rotation);
-        mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
+        onMouseDown(e: MouseEvent) {
+            this.isRightClick = (e.which == 3);
+            this.isLeftClick = (e.which == 1);
+            this.isMiddleClick = (e.which == 2);
+            this.isShiftKey = e.shiftKey;
+            this.isAltKey = e.altKey;
+            this.isCtrlKey = e.ctrlKey;
+            this.isMouseDown = true;
 
-        // pick point in 3D
-        this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
-        this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
-        if (this.collide.hasCollided) {
+            // copy start state
+            vec2.set(this.startXY, e.offsetX, e.offsetY)
+            quat.copy(this.startQuat, this.cameraTransforms.rotation);
+            mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
+
+            // pick point in 3D
+            //this.editor.getCamera().getRay(e.offsetX, e.offsetY, this.ro, this.rd);
+            //this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
+            //if (this.collide.hasCollided) {
+            //
+            //}
 
         }
 
-    }
+        onMouseUp(e: MouseEvent) {
+            this.isMouseDown = false;
+        }
 
-    onMouseUp(e: MouseEvent) {
-        this.isMouseDown = false;
-    }
 
-    
-    onMouseMove(e: MouseEvent) {
-        vec2.set(this.currentMouseXY, e.offsetX, e.offsetY);
-        this.hasMouseMoved = true;
-    }*/
+        onMouseMove(e: MouseEvent) {
+            vec2.set(this.currentMouseXY, e.offsetX, e.offsetY);
+            this.hasMouseMoved = true;
+        }
 
         updateLoop() {
             if (!this.hasMouseMoved)
                 return;
+
             this.hasMouseMoved = false;
-
-
 
             if (this.isRotateEnabled) {
                 //if (this.isMouseDown && this.isRightClick || this.isMouseDown && this.isCtrlKey) {
                 if (this.isMouseDown && this.isLeftClick && !this.isShiftKey) {
-                    var viewportWidth = this.editor.getViewportWidth();
-                    var viewportHeight = this.editor.getViewportHeight();
+
+                    var viewportWidth = this.cameraControllerCallbacks.getViewportWidth();
+                    var viewportHeight = this.cameraControllerCallbacks.getViewportHeight();
                     var sphereRadius = 0.5 * Math.min(viewportWidth, viewportHeight);
                     this.arcball.getRotationFrom2dPoints(viewportWidth, viewportHeight, sphereRadius, this.startXY, this.currentMouseXY, this.dragQuat);
 
                     quat.multiply(this.tmpRotation, this.dragQuat, this.startQuat);
                     this.cameraTransforms.setRotation(this.tmpRotation);
 
-                    this.cameraTransforms.updateCamera(this.editor.getCamera());
-                    this.editor.setRenderFlag();
-                    this.transformObjectView.draw();
+                    this.cameraTransforms.updateCamera(this.cameraControllerCallbacks.getCamera());
+                    this.cameraControllerCallbacks.setRenderFlag();
                 }
             }
 
-
+            /*
             if (this.isPanEnabled) {
                 if ((this.isMouseDown && this.isShiftKey)
                     || (this.isMouseDown && this.isMiddleClick)) {
 
-                    var cam = this.editor.getCamera();
+                    var cam = this.cameraControllerCallbacks.getCamera();
                     this.cameraTransforms.getCenter(this.tmpVec3);
                     cam.getRayOrigin(this.ro);
                     vec3.subtract(this.wm5Plane.normal, this.ro, cam.tmpVec3);
@@ -191,11 +193,11 @@ module qec {
                     mat4.multiply(this.tmpTranslation, this.tmpTranslation, this.startTranslation);
 
                     this.cameraTransforms.setTranslation(this.tmpTranslation);
-                    this.cameraTransforms.updateCamera(this.editor.getCamera());
-                    this.editor.setRenderFlag();
-                    this.transformObjectView.draw();
+                    this.cameraTransforms.updateCamera(this.cameraControllerCallbacks.getCamera());
+                    this.cameraControllerCallbacks.setRenderFlag();
                 }
             }
+            */
 
         }
 
@@ -246,8 +248,8 @@ module qec {
 
 
             // pick point in 3D
-            this.editor.getCamera().getRay(e.center.x, e.center.y, this.ro, this.rd);
-            this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
+            this.cameraControllerCallbacks.getCamera().getRay(e.center.x, e.center.y, this.ro, this.rd);
+            //this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
         }
 
         onPanMove(e: HammerInput) {
@@ -274,8 +276,8 @@ module qec {
             mat4.copy(this.startTranslation, this.cameraTransforms.panTranslation);
 
             // pick point in 3D
-            this.editor.getCamera().getRay(e.pointers[0].offsetX, e.pointers[0].offsetY, this.ro, this.rd);
-            this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
+            //this.editor.getCamera().getRay(e.pointers[0].offsetX, e.pointers[0].offsetY, this.ro, this.rd);
+            //this.collide.collideAll(this.editor.getAllSd(), this.ro, this.rd);
         }
 
         onPan2Move(e: HammerInput) {

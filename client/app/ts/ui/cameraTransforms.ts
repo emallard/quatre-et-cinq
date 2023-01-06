@@ -12,7 +12,7 @@ module qec {
         up = vec3.create();
         right = vec3.create();
 
-        afterInject() {
+        constructor() {
             quat.normalize(this.rotation, this.rotation);
         }
 
