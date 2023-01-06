@@ -177,7 +177,7 @@ module qec {
             }
             else {
                 //vec4.set(outColor, 0, 0, 0, 1);
-                vec4.set(outColor, 0, 0, 0, 1);
+                vec4.copy(outColor, this.settings.backgroundColor);
                 if (this.settings.floorPlane && tp1 > 0) {
                     let x = ro[0] + tp1 * rd[0];
                     let y = ro[1] + tp1 * rd[1];

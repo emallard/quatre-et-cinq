@@ -105,11 +105,14 @@ module qec {
             }
 
             this.fragmentShader = ''
-                + resources.all['app/ts/render/hardware/10_sd.glsl']
+                //+ resources.all['app/ts/render/hardware/10_sd.glsl']
+                + glsl_sd()
                 + generatedPart
-                + resources.all['app/ts/render/hardware/20_light.glsl']
+                //+ resources.all['app/ts/render/hardware/20_light.glsl']
+                + glsl_lights()
                 + generatedLight
-                + resources.all['app/ts/render/hardware/30_renderPixel.glsl'];
+                //+ resources.all['app/ts/render/hardware/30_renderPixel.glsl']
+                + glsl_renderPixel();
 
             console.log(generatedPart);
             console.log(generatedLight);

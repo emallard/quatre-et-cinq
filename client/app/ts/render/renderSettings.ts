@@ -8,6 +8,7 @@ module qec {
         shadows: boolean;
         refraction: boolean;
 
+        backgroundColor = vec4.fromValues(1, 1, 1, 1);
         boundingBoxes: boolean;
         noColor = false;
         zColor = false;

@@ -1,3 +1,8 @@
+
+module qec {
+    export function glsl_sd(): string {
+        return `
+
 /*
 uniform samplerCube u_cubemap;
 vec3 GetSkyGradient( const in vec3 vDir )
@@ -63,3 +68,6 @@ float opBorder(float d1, float thickness)
     return (d1 < 0.0) ? -d1 - thickness : d1;
 }
 
+`
+    }
+}

@@ -508,7 +508,7 @@ module qec {
             groups.forEach(x => {
 
                 let label = this.getLabel(x);
-                if (label.indexOf("camera") == 0) {
+                if (label != null && label.indexOf("camera") == 0) {
                     let cam = new cameraDTO();
                     cam.position = this.getXYZByLabel(x, 'position');
                     cam.target = this.getXYZByLabel(x, 'target');

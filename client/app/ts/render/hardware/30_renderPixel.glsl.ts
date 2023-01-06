@@ -1,3 +1,6 @@
+module qec {
+  export function glsl_renderPixel(): string {
+    return `
 //#define MAX_DIST_FROM_CAMERA 100.0;
 //#define MAX_STEPS 25
 //#define EPS_INTERSECT 0.001
@@ -154,4 +157,6 @@ void main()
 
   gl_FragColor.a = 1.0;
   gl_FragColor.rgb = render(ro, rd);
+}`;
+  }
 }

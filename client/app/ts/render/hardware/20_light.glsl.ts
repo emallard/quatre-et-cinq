@@ -1,3 +1,6 @@
+module qec {
+  export function glsl_lights(): string {
+    return `
 #define SS_K  15.0
 #define SS_EPS 0.005
 #define SS_MAX_STEPS 64
@@ -60,4 +63,7 @@ vec3 applyLight(vec3 lightPos, float intensity, int isShadow, vec3 color, vec3 p
     
     float KD = 0.7; float KS = 0.5; 
     return shadow * ( KS*specular + KD*diffuse * color);
+}
+`;
+  }
 }

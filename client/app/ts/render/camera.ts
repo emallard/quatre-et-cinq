@@ -6,7 +6,7 @@ module qec {
         constructor(
             public position: number[] = [1, 1, 1],
             public target: number[] = [0, 0, 0],
-            public up: number[] = [1, 0, 0],
+            public up: number[] = [0, 0, 1],
             public fov = Math.PI / 6
         ) { }
     }

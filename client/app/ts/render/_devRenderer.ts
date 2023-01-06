@@ -17,6 +17,7 @@ module qec {
 
         debugDistanceField = false;
         renderSteps = false;
+        backgroundColor = vec4.fromValues(1, 1, 1, 1);
     }
 
     export class devRenderer {
@@ -103,6 +104,7 @@ module qec {
                 this.renderSettings.boundingBoxes = false;
                 this.renderSettings.noColor = this.settings.noColor;
                 this.renderSettings.zColor = this.settings.zColor;
+                this.renderSettings.backgroundColor = this.settings.backgroundColor;
 
                 let loadedOjects = qec.sceneLoader.load(sceneDTO.dtos);
 
